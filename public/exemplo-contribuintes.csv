@@ -1,0 +1,6 @@
+congregação,data,talão,nome,cpf,valor,descrição
+CG001,2024-01-15,T001,João Silva,12345678901,50.00,Oferta
+CG001,2024-01-15,T002,Maria Santos,98765432100,25.50,Dízimo
+CG002,2024-01-15,T001,Pedro Oliveira,11122233344,100.00,Oferta Especial
+CG002,2024-01-15,T002,Ana Costa,55566677788,75.25,Dízimo
+CG003,2024-01-15,T001,Carlos Lima,99988877766,30.00,Oferta
