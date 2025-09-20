@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge'
 import { Plus, Edit, Trash2, User, Upload } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { PermissionGuard } from '@/components/auth/PermissionGuard'
 
 interface Contributor {
   id: string
@@ -226,6 +227,13 @@ export default function Contributors() {
   }
 
   return (
+    <PermissionGuard 
+      requiredPermissions={{
+        canCreate: true,
+        canEdit: true,
+        canExclude: true
+      }}
+    >
     <div className="min-h-screen bg-gray-50">
       <Sidebar />
       
@@ -471,5 +479,6 @@ export default function Contributors() {
         </div>
       </div>
     </div>
+    </PermissionGuard>
   )
 }

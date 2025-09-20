@@ -18,9 +18,9 @@ export async function PUT(request: NextRequest, props: any) {
       if (body.status !== undefined) {
         body.status = body.status;
       }
-      if (body.approved !== undefined) {
-        body.approved = body.approved;
-      }
+      // if (body.approved !== undefined) {
+      //   body.approved = body.approved;
+      // }
 
       // Se não houver dados para atualizar, retorne um erro
       if (Object.keys(body).length === 0) {
@@ -30,7 +30,7 @@ export async function PUT(request: NextRequest, props: any) {
       // Verifique se o lançamento já foi exportado
       const existingLaunch = await prisma.launch.findUnique({
           where: { id },
-          select: { exported: true, type: true, status: true }
+          select: { type: true, status: true }
       });
 
       if (!existingLaunch) {
@@ -38,7 +38,7 @@ export async function PUT(request: NextRequest, props: any) {
       }
 
  
-      if (body.exported) {
+      if (body.status !== undefined && existingLaunch.status === "EXPORTED") {
         return NextResponse.json({ error: "Lançamento já exportado não pode ser alterado" }, { status: 400 })
       }
   
@@ -49,7 +49,7 @@ export async function PUT(request: NextRequest, props: any) {
 
   
       // Verificar permissões de aprovação
-      if (body.approved !== undefined) {
+      if (body.status === "APPROVED" !== undefined) {
           if (body.type === "ENTRADA" && !session.user.canApproveEntry) {
               return NextResponse.json({ error: "Sem permissão para aprovar entradas" }, { status: 403 });
           }
@@ -74,7 +74,7 @@ export async function PUT(request: NextRequest, props: any) {
         where: { id },
         data: {
             status: body.status,
-            approved: body.approved
+            // approved: body.approved
         },
         // include: {
         //   congregation: true,

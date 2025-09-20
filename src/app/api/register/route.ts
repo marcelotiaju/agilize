@@ -73,7 +73,8 @@ export async function POST(request: NextRequest) {
         canApproveExpense: canApproveExpense || false,
         canCreate: canCreate || false,
         canEdit: canEdit || false,
-        canExclude: canExclude || false
+        canExclude: canExclude || false,
+        defaultPage: defaultPage || "/dashboard"
       }
     })
 

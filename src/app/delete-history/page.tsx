@@ -13,6 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Trash2, AlertTriangle, Shield } from 'lucide-react'
 import { format } from 'date-fns'
+import { PermissionGuard } from '@/components/auth/PermissionGuard'
 
 interface Congregation {
   id: string
@@ -129,6 +130,11 @@ export default function DeleteHistory() {
   const allSelected = congregations.length > 0 && formData.congregationIds.length === congregations.length
 
   return (
+    <PermissionGuard 
+      requiredPermissions={{
+        canDelete: true
+      }}
+    >
     <div className="min-h-screen bg-gray-50">
       <Sidebar />
       
@@ -334,5 +340,6 @@ export default function DeleteHistory() {
         </DialogContent>
       </Dialog>
     </div>
+    </PermissionGuard>
   )
 }

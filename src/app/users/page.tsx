@@ -1,4 +1,4 @@
-'use client'
+"use client"
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
@@ -14,6 +14,10 @@ import { Badge } from '@/components/ui/badge'
 import { Plus, Edit, Trash2, Building, Download, Trash } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { PermissionGuard } from '@/components/auth/PermissionGuard'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs' // Adicione esta linha
+
 
 interface UserData {
   id: string
@@ -36,6 +40,7 @@ interface UserData {
   canCreate: boolean
   canEdit: boolean
   canExclude: boolean
+  defaultPage: string
   createdAt: string
   updatedAt: string
   congregations: {
@@ -59,6 +64,8 @@ export default function Users() {
   const [isAssociationDialogOpen, setIsAssociationDialogOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<UserData | null>(null)
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [defaultPage, setDefaultPage] = useState(session?.user?.defaultPage || '/dashboard')
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -82,7 +89,8 @@ export default function Users() {
     // Permissões de CRUD
     canCreate: false,
     canEdit: false,
-    canExclude: false
+    canExclude: false,
+    defaultPage: '/dashboard'
   })
   const [associationData, setAssociationData] = useState({
     congregationIds: [] as string[]
@@ -97,6 +105,7 @@ export default function Users() {
   }, [session])
 
   const fetchUsers = async () => {
+        setIsLoading(true)
     try {
       console.log('Buscando usuários...')
       const response = await fetch('/api/users')
@@ -106,12 +115,14 @@ export default function Users() {
         const data = await response.json()
         console.log('Usuários carregados:', data)
         setUsers(data)
+        setIsLoading(false)
       } else {
         const error = await response.json()
         console.error('Erro ao carregar usuários:', error)
       }
     } catch (error) {
       console.error('Erro ao carregar usuários:', error)
+      setIsLoading(false)
     }
   }
 
@@ -143,6 +154,10 @@ export default function Users() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }))
+  }
+
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData(prev => ({ ...prev, [name]: value }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -207,7 +222,8 @@ export default function Users() {
       // Permissões de CRUD
       canCreate: user.canCreate || false,
       canEdit: user.canEdit || false,
-      canExclude: user.canExclude || false
+      canExclude: user.canExclude || false,
+      defaultPage: user.defaultPage || '/dashboard'
     })
     setIsDialogOpen(true)
   }
@@ -234,14 +250,13 @@ export default function Users() {
     }
   }
 
-  const handleAssociation = (user: UserData) => {
-    console.log('Abrindo modal de associação para usuário:', user)
+const handleAssociation = (user: UserData) => {
     setSelectedUser(user)
     setAssociationData({
-      congregationIds: congregations.map(c => c.id)
+        congregationIds: user.congregations.map(c => c.id) // <--- Esta linha é a mais importante.
     })
     setIsAssociationDialogOpen(true)
-  }
+}
 
   const handleAssociationSubmit = async () => {
     if (!selectedUser) return
@@ -316,7 +331,8 @@ export default function Users() {
       canApproveExpense: false,
       canCreate: false,
       canEdit: false,
-      canExclude: false
+      canExclude: false,
+      defaultPage: '/dashboard'
       
     })
   }
@@ -324,6 +340,12 @@ export default function Users() {
 
   if (!session?.user?.canCreate && !session?.user?.canEdit) {
     return (
+    <PermissionGuard 
+        requiredPermissions={{
+          canCreate: true,
+          canEdit: true
+        }}
+    >
       <div className="min-h-screen bg-gray-50">
         <Sidebar />
         <div className="lg:pl-64 flex items-center justify-center">
@@ -335,6 +357,7 @@ export default function Users() {
           </Card>
         </div>
       </div>
+    </PermissionGuard>
     )
   }
 
@@ -357,303 +380,304 @@ export default function Users() {
                   Novo Usuário
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px]">
+              <DialogContent className="sm:max-w-[800px]">
                 <DialogHeader>
                   <DialogTitle>
                     {editingUser ? 'Editar Usuário' : 'Novo Usuário'}
                   </DialogTitle>
                   <DialogDescription>
-                    Preencha os dados do usuário
+                    Preencha os dados do usuário e defina as permissões
                   </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit}>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="name">Nome</Label>
-                        <Input
-                          id="name"
-                          name="name"
-                          value={formData.name}
-                          onChange={handleInputChange}
-                          required
-                        />
+                  <Tabs defaultValue="user-data" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+                      <TabsTrigger value="user-data">Dados do Usuário</TabsTrigger>
+                      <TabsTrigger value="launch-permissions">Lançamentos</TabsTrigger>
+                      <TabsTrigger value="approve-permissions">Aprovação</TabsTrigger>
+                      <TabsTrigger value="crud-permissions">Cadastros</TabsTrigger>
+                      <TabsTrigger value="system-permissions">Sistema</TabsTrigger>
+                    </TabsList>
+
+                    {/* Conteúdo da Aba: Dados do Usuário */}
+                    <TabsContent value="user-data" className="mt-4">
+                      <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="name">Nome</Label>
+                            <Input
+                              id="name"
+                              name="name"
+                              value={formData.name}
+                              onChange={handleInputChange}
+                              required
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="email">Email</Label>
+                            <Input
+                              id="email"
+                              name="email"
+                              type="email"
+                              value={formData.email}
+                              onChange={handleInputChange}
+                              required
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="cpf">CPF</Label>
+                            <Input
+                              id="cpf"
+                              name="cpf"
+                              value={formData.cpf}
+                              onChange={handleInputChange}
+                              required
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="phone">Telefone</Label>
+                            <Input
+                              id="phone"
+                              name="phone"
+                              value={formData.phone}
+                              onChange={handleInputChange}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label htmlFor="password">Senha</Label>
+                          <Input
+                            id="password"
+                            name="password"
+                            type="password"
+                            value={formData.password}
+                            onChange={handleInputChange}
+                            placeholder={editingUser ? 'Deixe em branco para não alterar' : ''}
+                            required={!editingUser}
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="validFrom">Válido de</Label>
+                            <Input
+                              id="validFrom"
+                              name="validFrom"
+                              type="date"
+                              value={formData.validFrom}
+                              onChange={handleInputChange}
+                              required
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="validTo">Válido até</Label>
+                            <Input
+                              id="validTo"
+                              name="validTo"
+                              type="date"
+                              value={formData.validTo}
+                              onChange={handleInputChange}
+                              required
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label htmlFor="historyDays">Dias de Histórico</Label>
+                          <Input
+                            id="historyDays"
+                            name="historyDays"
+                            type="number"
+                            value={formData.historyDays}
+                            onChange={handleInputChange}
+                            min="1"
+                            max="365"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="defaultPage">Página Inicial</Label>
+                          <Select
+                            value={formData.defaultPage}
+                            onValueChange={(value) => handleSelectChange('defaultPage', value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="/dashboard">Dashboard</SelectItem>
+                              <SelectItem value="/launches">Lançamentos</SelectItem>
+                              <SelectItem value="/contributors">Contribuintes</SelectItem>
+                              <SelectItem value="/classifications">Classificações</SelectItem>
+                              <SelectItem value="/suppliers">Fornecedores</SelectItem>
+                              <SelectItem value="/congregations">Congregações</SelectItem>
+                              <SelectItem value="/export">Exportar Dados</SelectItem>
+                              <SelectItem value="/delete-history">Excluir Histórico</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
-                      <div>
-                        <Label htmlFor="email">Email</Label>
-                        <Input
-                          id="email"
-                          name="email"
-                          type="email"
-                          value={formData.email}
-                          onChange={handleInputChange}
-                          required
-                        />
+                    </TabsContent>
+
+                    {/* Conteúdo da Aba: Lançamento */}
+                    <TabsContent value="launch-permissions" className="mt-4">
+                      <div className="space-y-4 py-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="canLaunchEntry"
+                              name="canLaunchEntry"
+                              checked={formData.canLaunchEntry}
+                              onCheckedChange={(checked) => 
+                                setFormData(prev => ({ ...prev, canLaunchEntry: checked }))
+                              }
+                            />
+                            <Label htmlFor="canLaunchEntry">Lançar Entrada</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="canLaunchTithe"
+                              name="canLaunchTithe"
+                              checked={formData.canLaunchTithe}
+                              onCheckedChange={(checked) => 
+                                setFormData(prev => ({ ...prev, canLaunchTithe: checked }))
+                              }
+                            />
+                            <Label htmlFor="canLaunchTithe">Lançar Dízimo</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="canLaunchExpense"
+                              name="canLaunchExpense"
+                              checked={formData.canLaunchExpense}
+                              onCheckedChange={(checked) => 
+                                setFormData(prev => ({ ...prev, canLaunchExpense: checked }))
+                              }
+                            />
+                            <Label htmlFor="canLaunchExpense">Lançar Saída</Label>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    </TabsContent>
+
+                    {/* Conteúdo da Aba: Aprovação */}
+                    <TabsContent value="approve-permissions" className="mt-4">
+                      <div className="space-y-4 py-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="canApproveEntry"
+                              name="canApproveEntry"
+                              checked={formData.canApproveEntry}
+                              onCheckedChange={(checked) => 
+                                setFormData(prev => ({ ...prev, canApproveEntry: checked }))
+                              }
+                            />
+                            <Label htmlFor="canApproveEntry">Aprovar Entrada</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="canApproveTithe"
+                              name="canApproveTithe"
+                              checked={formData.canApproveTithe}
+                              onCheckedChange={(checked) => 
+                                setFormData(prev => ({ ...prev, canApproveTithe: checked }))
+                              }
+                            />
+                            <Label htmlFor="canApproveTithe">Aprovar Dízimo</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="canApproveExpense"
+                              name="canApproveExpense"
+                              checked={formData.canApproveExpense}
+                              onCheckedChange={(checked) => 
+                                setFormData(prev => ({ ...prev, canApproveExpense: checked }))
+                              }
+                            />
+                            <Label htmlFor="canApproveExpense">Aprovar Saída</Label>
+                          </div>
+                        </div>
+                      </div>
+                    </TabsContent>
+
+                    {/* Conteúdo da Aba: Cadastros (CRUD) */}
+                    <TabsContent value="crud-permissions" className="mt-4">
+                      <div className="space-y-4 py-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="canCreate"
+                              name="canCreate"
+                              checked={formData.canCreate}
+                              onCheckedChange={(checked) => 
+                                setFormData(prev => ({ ...prev, canCreate: checked }))
+                              }
+                            />
+                            <Label htmlFor="canCreate">Incluir Registros</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="canEdit"
+                              name="canEdit"
+                              checked={formData.canEdit}
+                              onCheckedChange={(checked) => 
+                                setFormData(prev => ({ ...prev, canEdit: checked }))
+                              }
+                            />
+                            <Label htmlFor="canEdit">Editar Registros</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="canExclude"
+                              name="canExclude"
+                              checked={formData.canExclude}
+                              onCheckedChange={(checked) => 
+                                setFormData(prev => ({ ...prev, canExclude: checked }))
+                              }
+                            />
+                            <Label htmlFor="canExclude">Excluir Registros</Label>
+                          </div>
+                        </div>
+                      </div>
+                    </TabsContent>
                     
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="cpf">CPF</Label>
-                        <Input
-                          id="cpf"
-                          name="cpf"
-                          value={formData.cpf}
-                          onChange={handleInputChange}
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="phone">Telefone</Label>
-                        <Input
-                          id="phone"
-                          name="phone"
-                          value={formData.phone}
-                          onChange={handleInputChange}
-                        />
-                      </div>
-                    </div>
-
-                    {/* {!editingUser && ( */}
-                      <div>
-                        <Label htmlFor="password">Senha</Label>
-                        <Input
-                          id="password"
-                          name="password"
-                          type="password"
-                          value={formData.password}
-                          onChange={handleInputChange}
-                          placeholder={editingUser ? 'Deixe em branco para não alterar' : ''}
-                          required={!editingUser}
-                        />
-                      </div>
-                    {/* )} */}
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="validFrom">Válido de</Label>
-                        <Input
-                          id="validFrom"
-                          name="validFrom"
-                          type="date"
-                          value={formData.validFrom}
-                          onChange={handleInputChange}
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="validTo">Válido até</Label>
-                        <Input
-                          id="validTo"
-                          name="validTo"
-                          type="date"
-                          value={formData.validTo}
-                          onChange={handleInputChange}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="historyDays">Dias de Histórico</Label>
-                      <Input
-                        id="historyDays"
-                        name="historyDays"
-                        type="number"
-                        value={formData.historyDays}
-                        onChange={handleInputChange}
-                        min="1"
-                        max="365"
-                        required
-                      />
-                    </div>
-
-                    {/* <div className="flex space-x-4">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="canExport"
-                          name="canExport"
-                          checked={formData.canExport}
-                          onCheckedChange={(checked) => setFormData(prev => ({ ...prev, canExport: checked as boolean }))}
-                        />
-                        <Label htmlFor="canExport">Pode Exportar</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="canDelete"
-                          name="canDelete"
-                          checked={formData.canDelete}
-                          onCheckedChange={(checked) => setFormData(prev => ({ ...prev, canDelete: checked as boolean }))}
-                        />
-                        <Label htmlFor="canDelete">Pode Excluir</Label>
-                      </div>
-                    </div> */}
-
-                    {/* Permissões de Sistema */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-medium border-b pb-2">Permissões de Sistema</h3>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="canExport"
-                            name="canExport"
-                            checked={formData.canExport}
-                            onCheckedChange={(checked) => 
-                              setFormData(prev => ({ ...prev, canExport: checked }))
-                            }
-                          />
-                          <Label htmlFor="canExport">Permissão para exportar dados</Label>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="canDelete"
-                            name="canDelete"
-                            checked={formData.canDelete}
-                            onCheckedChange={(checked) => 
-                              setFormData(prev => ({ ...prev, canDelete: checked }))
-                            }
-                          />
-                          <Label htmlFor="canDelete">Permissão para excluir histórico</Label>
+                    {/* Conteúdo da Aba: Sistema */}
+                    <TabsContent value="system-permissions" className="mt-4">
+                      <div className="space-y-4 py-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="canExport"
+                              name="canExport"
+                              checked={formData.canExport}
+                              onCheckedChange={(checked) => 
+                                setFormData(prev => ({ ...prev, canExport: checked }))
+                              }
+                            />
+                            <Label htmlFor="canExport">Permissão para exportar dados</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="canDelete"
+                              name="canDelete"
+                              checked={formData.canDelete}
+                              onCheckedChange={(checked) => 
+                                setFormData(prev => ({ ...prev, canDelete: checked }))
+                              }
+                            />
+                            <Label htmlFor="canDelete">Permissão para excluir histórico</Label>
+                          </div>
                         </div>
                       </div>
-                    </div>
-
-                    {/* Permissões de Lançamento */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-medium border-b pb-2">Permissões de Lançamento</h3>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="canLaunchEntry"
-                            name="canLaunchEntry"
-                            checked={formData.canLaunchEntry}
-                            onCheckedChange={(checked) => 
-                              setFormData(prev => ({ ...prev, canLaunchEntry: checked }))
-                            }
-                          />
-                          <Label htmlFor="canLaunchEntry">Lançar Entrada</Label>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="canLaunchTithe"
-                            name="canLaunchTithe"
-                            checked={formData.canLaunchTithe}
-                            onCheckedChange={(checked) => 
-                              setFormData(prev => ({ ...prev, canLaunchTithe: checked }))
-                            }
-                          />
-                          <Label htmlFor="canLaunchTithe">Lançar Dízimo</Label>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="canLaunchExpense"
-                            name="canLaunchExpense"
-                            checked={formData.canLaunchExpense}
-                            onCheckedChange={(checked) => 
-                              setFormData(prev => ({ ...prev, canLaunchExpense: checked }))
-                            }
-                          />
-                          <Label htmlFor="canLaunchExpense">Lançar Saída</Label>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Permissões de Aprovação */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-medium border-b pb-2">Permissões de Aprovação</h3>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="canApproveEntry"
-                            name="canApproveEntry"
-                            checked={formData.canApproveEntry}
-                            onCheckedChange={(checked) => 
-                              setFormData(prev => ({ ...prev, canApproveEntry: checked }))
-                            }
-                          />
-                          <Label htmlFor="canApproveEntry">Aprovar Entrada</Label>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="canApproveTithe"
-                            name="canApproveTithe"
-                            checked={formData.canApproveTithe}
-                            onCheckedChange={(checked) => 
-                              setFormData(prev => ({ ...prev, canApproveTithe: checked }))
-                            }
-                          />
-                          <Label htmlFor="canApproveTithe">Aprovar Dízimo</Label>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="canApproveExpense"
-                            name="canApproveExpense"
-                            checked={formData.canApproveExpense}
-                            onCheckedChange={(checked) => 
-                              setFormData(prev => ({ ...prev, canApproveExpense: checked }))
-                            }
-                          />
-                          <Label htmlFor="canApproveExpense">Aprovar Saída</Label>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Permissões de CRUD */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-medium border-b pb-2">Permissões de Cadastros</h3>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="canCreate"
-                            name="canCreate"
-                            checked={formData.canCreate}
-                            onCheckedChange={(checked) => 
-                              setFormData(prev => ({ ...prev, canCreate: checked }))
-                            }
-                          />
-                          <Label htmlFor="canCreate">Incluir Registros</Label>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="canEdit"
-                            name="canEdit"
-                            checked={formData.canEdit}
-                            onCheckedChange={(checked) => 
-                              setFormData(prev => ({ ...prev, canEdit: checked }))
-                            }
-                          />
-                          <Label htmlFor="canEdit">Editar Registros</Label>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="canExclude"
-                            name="canExclude"
-                            checked={formData.canExclude}
-                            onCheckedChange={(checked) => 
-                              setFormData(prev => ({ ...prev, canExclude: checked }))
-                            }
-                          />
-                          <Label htmlFor="canExclude">Excluir Registros</Label>
-                        </div>
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button type="submit">
-                       {editingUser ? 'Atualizar' : 'Salvar'}
-                      </Button>
-                    </DialogFooter>
-                  </div>
+                    </TabsContent>
+                  </Tabs>
+                  
+                  <DialogFooter className="mt-6">
+                    <Button type="submit">
+                      {editingUser ? 'Atualizar' : 'Salvar'}
+                    </Button>
+                  </DialogFooter>
                 </form>
               </DialogContent>
             </Dialog>
@@ -665,9 +689,9 @@ export default function Users() {
               <CardDescription>Lista de usuários do sistema</CardDescription>
             </CardHeader>
             <CardContent>
-              {users.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  Nenhum usuário encontrado
+              {isLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
                 </div>
               ) : (
                 <Table>
@@ -677,8 +701,6 @@ export default function Users() {
                       <TableHead>Email</TableHead>
                       <TableHead>CPF</TableHead>
                       <TableHead>Validade</TableHead>
-                      <TableHead>Permissões</TableHead>
-                      <TableHead>Congregações</TableHead>
                       <TableHead>Ações</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -692,37 +714,6 @@ export default function Users() {
                           <div className="text-sm">
                             <div>De: {format(new Date(user.validFrom), 'dd/MM/yyyy', { locale: ptBR })}</div>
                             <div>Até: {format(new Date(user.validTo), 'dd/MM/yyyy', { locale: ptBR })}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex space-x-1">
-                            {user.canExport && (
-                              <Badge variant="secondary" className="text-xs">
-                                <Download className="w-3 h-3 mr-1" />
-                                Exportar
-                              </Badge>
-                            )}
-                            {user.canDelete && (
-                              <Badge variant="destructive" className="text-xs">
-                                <Trash className="w-3 h-3 mr-1" />
-                                Excluir
-                              </Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            {user.congregations.length > 0 ? (
-                              <div className="space-y-1">
-                                {user.congregations.map(cong => (
-                                  <Badge key={cong.id} variant="outline" className="text-xs">
-                                    {cong.code}
-                                  </Badge>
-                                ))}
-                              </div>
-                            ) : (
-                              <span className="text-gray-500">Nenhuma</span>
-                            )}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -768,28 +759,28 @@ export default function Users() {
               Selecione as congregações para o usuário <strong>{selectedUser?.name}</strong>
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            {congregations.length === 0 ? (
-              <div className="text-center py-4 text-gray-500">
-                Nenhuma congregação encontrada
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-60 overflow-y-auto p-2 border rounded-md">
-                {congregations.map((congregation) => (
-                  <div key={congregation.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`congregation-${congregation.id}`}
-                      checked={associationData.congregationIds.includes(congregation.id)}
-                      onCheckedChange={(checked) => handleCongregationChange(congregation.id, checked as boolean)}
-                    />
-                    <Label htmlFor={`congregation-${congregation.id}`}>
-                      {congregation.code} - {congregation.name}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+            <div className="space-y-4 py-4">
+                {congregations.length === 0 ? (
+                    <div className="text-center py-4 text-gray-500">
+                        Nenhuma congregação encontrada
+                    </div>
+                ) : (
+                    <div className="space-y-2 max-h-60 overflow-y-auto p-2 border rounded-md">
+                        {congregations.map((congregation) => (
+                            <div key={congregation.id} className="flex items-center space-x-2">
+                                <Checkbox
+                                    id={`congregation-${congregation.id}`}
+                                    checked={associationData.congregationIds.includes(congregation.id)}
+                                    onCheckedChange={(checked) => handleCongregationChange(congregation.id, checked as boolean)}
+                                />
+                                <Label htmlFor={`congregation-${congregation.id}`}>
+                                    {congregation.code} - {congregation.name}
+                                </Label>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
           <DialogFooter>
             <Button 
               onClick={handleAssociationSubmit}

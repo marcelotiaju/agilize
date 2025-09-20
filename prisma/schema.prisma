@@ -66,6 +66,8 @@ model User {
   canCreate         Boolean            @default(false)
   canEdit           Boolean            @default(false)
   canExclude        Boolean            @default(false)
+  canManageUsers    Boolean            @default(false)
+  defaultPage       String    @default("/dashboard")
   accounts          Account[]
   sessions          Session[]
   congregations     UserCongregation[]
@@ -96,11 +98,11 @@ model Congregation {
 }
 
 model UserCongregation {
-  id               String       @id @default(cuid())
-  userId           String
+  id             String       @id @default(cuid())
+  userId         String
   congregationId String
-  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  congregation     Congregation @relation(fields: [congregationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  congregation   Congregation @relation(fields: [congregationId], references: [id], onDelete: Cascade)
 
   @@unique([userId, congregationId])
 }
@@ -115,15 +117,16 @@ model Launch {
   offerValue       Float?
   votesValue       Float?
   ebdValue         Float?
+  campaignValue    Float?
   value            Float?
   description      String?
   status           LaunchStatus    @default(NORMAL)
-  exported         Boolean         @default(false)
-  approved         Boolean         @default(false) // Campo para aprovação
-  contributorId    Int?            @default(1) // Relacionamento com contribuinte
+  // exported         Boolean         @default(false)
+  // approved         Boolean         @default(false) // Campo para aprovação
+  contributorId    String? // Relacionamento com contribuinte
   contributor      Contributor?    @relation(fields: [contributorId], references: [id])
   contributorName  String?
-  supplierId       Int?            @default(1) // Relacionamento com fornecedor
+  supplierId       String? // Relacionamento com fornecedor
   supplier         Supplier?       @relation(fields: [supplierId], references: [id])
   supplierName     String?
   classificationId String? // Novo campo para classificação
@@ -135,9 +138,9 @@ model Launch {
 }
 
 model Contributor {
-  id                     Int              @id @default(autoincrement())
-  congregationId        String?
-  congregation          Congregation?    @relation(fields: [congregationId], references: [id], onDelete: Cascade)
+  id                     String           @id @default(cuid())
+  congregationId         String?
+  congregation           Congregation?    @relation(fields: [congregationId], references: [id], onDelete: Cascade)
   code                   String           @unique
   name                   String
   cpf                    String?
@@ -147,15 +150,15 @@ model Contributor {
   updatedAt              DateTime         @updatedAt
   Launch                 Launch[]
 
-  //@@unique([congregationId, talonNumber, name, value, status], name: "unique_contributor_talon_name_value_status")
+  @@unique([congregationId, code, name], name: "unique_contributor_code_name")
 }
 
 model Supplier {
-  id          Int      @id @default(autoincrement())
+  id          String   @id @default(cuid())
   code        String   @unique
   razaoSocial String
   tipoPessoa  String?
-  cpfCnpj     String?  @unique
+  cpfCnpj     String?  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   Launch      Launch[]
@@ -179,8 +182,9 @@ enum LaunchType {
 
 enum LaunchStatus {
   NORMAL
-  APPROVED
   CANCELED
+  APPROVED
+  EXPORTED
 }
 
 enum ContributorType {

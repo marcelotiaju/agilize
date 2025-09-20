@@ -32,7 +32,8 @@ export default function Register() {
     canApproveExpense: false,
     canCreate: false,
     canEdit: false,
-    canExclude: false
+    canExclude: false,
+    defaultPage: '/dashboard'
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
@@ -99,7 +100,8 @@ export default function Register() {
           canApproveExpense: formData.canApproveExpense,
           canCreate: formData.canCreate,
           canEdit: formData.canEdit,
-          canExclude: formData.canExclude
+          canExclude: formData.canExclude,
+          defaultPage: formData.defaultPage
         })
       })
 
@@ -435,6 +437,33 @@ export default function Register() {
                       }
                     />
                     <Label htmlFor="canExclude">Excluir Registros</Label>
+                  </div>
+
+                  // No formulário, adicione a seção para selecionar a página inicial
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium border-b pb-2">Página Inicial</h3>
+                    
+                    <div>
+                      <Label htmlFor="defaultPage">Página inicial ao fazer login</Label>
+                      <Select
+                        value={formData.defaultPage}
+                        onValueChange={(value) => handleSelectChange('defaultPage', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="/dashboard">Dashboard</SelectItem>
+                          <SelectItem value="/launches">Lançamentos</SelectItem>
+                          <SelectItem value="/contributors">Contribuintes</SelectItem>
+                          <SelectItem value="/classifications">Classificações</SelectItem>
+                          <SelectItem value="/suppliers">Fornecedores</SelectItem>
+                          <SelectItem value="/congregations">Congregações</SelectItem>
+                          <SelectItem value="/export">Exportar Dados</SelectItem>
+                          <SelectItem value="/delete-history">Excluir Histórico</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
               </div>

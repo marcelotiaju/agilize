@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   try {
     const classifications = await prisma.classification.findMany({
       orderBy: {
-        code: 'asc'
+        description: 'asc'
       }
     })
 

@@ -22,6 +22,8 @@ declare module "next-auth" {
     canCreate?: boolean
     canEdit?: boolean
     canExclude?: boolean
+    canManageUsers?: boolean
+    defaultPage?: string
     
   }
   interface Session {
@@ -45,6 +47,8 @@ declare module "next-auth" {
       canCreate?: boolean
       canEdit?: boolean
       canExclude?: boolean
+      canManageUsers?: boolean
+      defaultPage?: string
     }
   }
 }
@@ -101,6 +105,8 @@ const nextAuthOptions: NextAuthOptions = {
           canCreate: user.canCreate,
           canEdit: user.canEdit,
           canExclude: user.canExclude,
+          canManageUsers: user.canManageUsers,
+          defaultPage: user.defaultPage,
         }
       }
     })
@@ -131,6 +137,8 @@ const nextAuthOptions: NextAuthOptions = {
           canCreate: user.canCreate,
           canEdit: user.canEdit,
           canExclude: user.canExclude,
+          canManageUsers: user.canManageUsers,
+          defaultPage: user.defaultPage,
         }
       }
       return token
@@ -161,6 +169,8 @@ const nextAuthOptions: NextAuthOptions = {
         canCreate: typeof token.canCreate === "boolean" ? token.canCreate : undefined,
         canEdit: typeof token.canEdit === "boolean" ? token.canEdit : undefined,
         canExclude: typeof token.canExclude === "boolean" ?  token.canExclude : undefined,
+        canManageUsers: typeof token.canManageUsers === "boolean" ? token.canManageUsers : undefined,
+        defaultPage: typeof token.defaultPage === "string" ? token.defaultPage : undefined,
       }
       return session
     }

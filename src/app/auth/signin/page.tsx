@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
+import Image from 'next/image';
 
 export default function SignIn() {
   const [cpf, setCpf] = useState('')
@@ -45,7 +46,7 @@ export default function SignIn() {
             return
           }
 
-          router.push('/dashboard')
+          router.push('/')
         }
       }
     } catch (error) {
@@ -56,34 +57,40 @@ export default function SignIn() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-1 px-4 sm:px-4 lg:px-6">
+      <div className="max-w-md w-full space-y-1">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Lance Fácil
+          <h2 className="text-center text-2xl font-extrabold text-gray-900">
+            Agilize
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          {/*<p className="mt-1 text-center text-sm text-gray-600">
             Entre com suas credenciais para acessar o sistema
-          </p>
+          </p> */}
         </div>
         
         <Card>
           <CardHeader>
-            <CardTitle>Login</CardTitle>
+            <Image
+              src="/images/Logo.png" // Caminho relativo a partir da pasta `public`
+              alt="Logo do Agilize"
+              width={400} // Largura da imagem
+              height={100} // Altura da imagem
+            />
+            {/* <CardTitle>Login</CardTitle>
             <CardDescription>
               Digite seu CPF e senha para entrar
-            </CardDescription>
+            </CardDescription> */}
           </CardHeader>
           <CardContent>
             {message && (
-              <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-md">
+              <div className="mb-2 p-3 bg-green-100 text-green-700 rounded-md">
                 {message}
               </div>
             )}
             
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-2">
               <div>
-                <Label htmlFor="cpf">CPF</Label>
+                <Label htmlFor="cpf">Login</Label>
                 <Input
                   id="cpf"
                   name="cpf"
@@ -91,7 +98,7 @@ export default function SignIn() {
                   required
                   value={cpf}
                   onChange={(e) => setCpf(e.target.value)}
-                  placeholder="000.000.000-00"
+                  // placeholder="000.000.000-00"
                 />
               </div>
               

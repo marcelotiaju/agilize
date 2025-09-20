@@ -30,23 +30,28 @@ console.log(body)
       return NextResponse.json({ error: "Acesso não autorizado a uma ou mais congregações" }, { status: 403 })
     }
 
+    const launchDateStart = new Date(`${body.startDate}T12:00:00Z`)
+    const launchDateEnd = new Date(`${body.endDate}T12:00:00Z`)
+    launchDateStart.setHours(0, 0, 0, 0)
+    launchDateEnd.setHours(0, 0, 0, 0)
+
     const workbook = XLSX.utils.book_new()
 
-      // if (type === "ENTRADA") {
-      // const launches = await prisma.launch.findMany({
-      //   where: {
-      //     congregationId: { in: congregationIds },
-      //     date: {
-      //       gte: new Date(startDate),
-      //       lte: new Date(endDate)
-      //     },
-      //     status: "NORMAL",
-      //     type: "ENTRADA"
-      //   },
-      //   include: {
-      //     congregation: true
-      //   }
-      // })}
+      // if (type === "ENTRADA" || type === "DIZIMO" || type === "SAIDA") {
+        const launches = await prisma.launch.findMany({
+        where: {
+          congregationId: { in: congregationIds },
+          date: {
+            gte: launchDateStart,
+            lte: launchDateEnd
+          },
+          status: "APPROVED",
+          type: { in: type }
+        },
+        include: {
+          congregation: true
+        }
+      })
 
       // if (type === "DIZIMO") {
       // const launches = await prisma.launch.findMany({
@@ -56,7 +61,7 @@ console.log(body)
       //       gte: new Date(startDate),
       //       lte: new Date(endDate)
       //     },
-      //     status: "NORMAL",
+      //     status: "APPROVED",
       //     type: "DIZIMO"
       //   },
       //   include: {
@@ -67,24 +72,24 @@ console.log(body)
       //   }
       // })}
 
-      // if (type === "SAIDA") {
-      const launches = await prisma.launch.findMany({
-        where: {
-          congregationId: { in: congregationIds },
-          date: {
-            gte: new Date(startDate),
-            lte: new Date(endDate)
-          },
-          status: "NORMAL",
-          type: type
-        },
-        include: {
-          congregation: true,
-          contributor: true,
-          supplier: true,
-          classification: true
-        }
-      })
+      // // if (type === "SAIDA") {
+      // const launches = await prisma.launch.findMany({
+      //   where: {
+      //     congregationId: { in: congregationIds },
+      //     date: {
+      //       gte: new Date(startDate),
+      //       lte: new Date(endDate)
+      //     },
+      //     status: "APPROVED",
+      //     type: type
+      //   },
+      //   include: {
+      //     congregation: true,
+      //     contributor: true,
+      //     supplier: true,
+      //     classification: true
+      //   }
+      // })
     // }
 
       const launchData = launches.map(launch => ({
@@ -100,10 +105,7 @@ console.log(body)
         "Código da Congregação": launch.congregation.code,
         "Codigo da Forma de Pagamento": launch.type === "ENTRADA" ? launch.congregation?.entradaPaymentMethod : launch.type === "DIZIMO" ? launch.congregation?.dizimoPaymentMethod : launch.type === "SAIDA" ? launch.congregation?.saidaPaymentMethod : "",
         "Nome da Congregação": launch.congregation.name,
-        "Valor Oferta": launch.type === "ENTRADA" ? launch.offerValue || 0 : "",
-        "Valor Votos": launch.type === "ENTRADA" ? launch.votesValue || 0 : "",
-        "Valor EBD": launch.type === "ENTRADA" ? launch.ebdValue || 0 : "",
-        "Valor": launch.type === "DIZIMO" || launch.type === "SAIDA" ? launch.value || 0 : "",
+        "Valor": launch.offerValue + launch.votesValue + launch.ebdValue + launch.campaignValue + launch.value ,
         "Codigo de Conta" : launch.classification?.code,
         "Tipo": launch.type === "SAIDA" ? "D" : "C",
         "Historico": launch.classification?.description || "",
@@ -118,7 +120,7 @@ console.log(body)
         where: {
           id: { in: launches.map(l => l.id) }
         },
-        data: { exported: true }
+        data: { status: 'EXPORTED' }
       })
   
 

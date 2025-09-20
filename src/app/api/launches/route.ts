@@ -5,6 +5,8 @@ import { getServerSession } from "next-auth";
 import { ta } from "date-fns/locale";
 import { Description } from "@radix-ui/react-dialog";
 import Congregations from "@/app/congregations/page";
+import { format } from "path";
+import { parseISO } from "date-fns";
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(nextAuthOptions);
@@ -18,6 +20,10 @@ export async function GET(request: NextRequest) {
     const congregationId = searchParams.get('congregationId')
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '10')
+
+    const skip = (page - 1) * limit
 
     let where: any = {}
     
@@ -32,11 +38,10 @@ export async function GET(request: NextRequest) {
     where.congregationId = {
       in: userCongregations.map(uc => uc.congregationId)
     }
-    console.log(congregationId)
+
     if (congregationId) {
       where.congregationId = congregationId
     }
-
 
     if (startDate && endDate) {
       where.date = {
@@ -45,21 +50,39 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const launches = await prisma.launch.findMany({
-      where,
-      include: {
-        congregation: true,
-        contributor: true,
-        supplier: true
-      },
-      orderBy: {
-        date: 'desc'
+
+    // Buscar lançamentos com paginação
+    const [launches, totalCount] = await Promise.all([
+      prisma.launch.findMany({
+        where,
+        include: {
+          congregation: true,
+          contributor: true,
+          supplier: true,
+          classification: true
+        },
+        orderBy: {
+          date: 'desc'
+        },
+        skip,
+        take: limit
+      }),
+      prisma.launch.count({ where })
+    ])
+
+    const totalPages = Math.ceil(totalCount / limit)
+
+    return NextResponse.json({
+      launches,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalCount,
+        limit
       }
     })
-    console.log(launches)
-
-    return NextResponse.json(launches)
   } catch (error) {
+    console.error("Erro ao buscar lançamentos:", error)
     return NextResponse.json({ error: "Erro ao buscar lançamentos" }, { status: 500 })
   }
 }
@@ -81,6 +104,7 @@ export async function POST(request: NextRequest) {
       offerValue,
       votesValue,
       ebdValue,
+      campaignValue, // Novo campo  ebdValue,
       value,
       description,
       contributorId,
@@ -102,7 +126,7 @@ export async function POST(request: NextRequest) {
     if (type === "SAIDA" && !session.user.canLaunchExpense) {
       return NextResponse.json({ error: "Sem permissão para lançar saídas" }, { status: 403 })
     }
-console.log(body)
+
     const userCongregation = await prisma.userCongregation.findFirst({
       where: {
         userId: session.user.id,
@@ -115,13 +139,25 @@ console.log(body)
       return NextResponse.json({ error: "Acesso não autorizado a esta congregação" }, { status: 403 })
     }
 
-    const launchDate = new Date(date)
+    const launchDate = new Date(`${date}T12:00:00Z`)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
+    launchDate.setHours(0, 0, 0, 0)
 
     if (launchDate > today) {
       return NextResponse.json({ error: "Não é permitido lançar com data futura" }, { status: 400 })
     }
+
+        // Validação para classificação obrigatória em saídas
+    if (type === "SAIDA" && !classificationId) {
+      return NextResponse.json({ error: "Classificação é obrigatória para lançamentos do tipo Saída" }, { status: 400 })
+    }
+
+    // Validação para contribuinte obrigatório em dízimos
+    if (type === "DIZIMO" && !contributorId && !contributorName) {
+      return NextResponse.json({ error: "Nome do contribuinte é obrigatório para lançamentos do tipo Dízimo" }, { status: 400 })
+    }
+
 
     // const existingLaunch = await prisma.launch.findFirst({
     //   where: {
@@ -172,21 +208,23 @@ console.log(body)
         offerValue: type === "ENTRADA" ? parseFloat(offerValue) : null,
         votesValue: type === "ENTRADA" ? parseFloat(votesValue) : null,
         ebdValue: type === "ENTRADA" ? parseFloat(ebdValue) : null,
+        campaignValue: type === "ENTRADA" ? parseFloat(campaignValue) || 0 : null, 
         value: type === "DIZIMO" || type === "SAIDA" ? parseFloat(value) : null,
         description,
         status: "NORMAL",
         // Lógica ajustada para o Dízimo
-        contributorId: type === "DIZIMO" && isContributorRegistered ?  parseInt(contributorId) : null,
+        contributorId: type === "DIZIMO" && isContributorRegistered ?  contributorId : null,
         contributorName: type === "DIZIMO" && !isContributorRegistered ? contributorName : null,
         // Lógica ajustada para a Saída
         supplierName: type === "SAIDA" && !isSupplierRegistered ? supplierName : null,
-        supplierId: type === "SAIDA" && isSupplierRegistered ? parseInt(supplierId) : null,
+        supplierId: type === "SAIDA" && isSupplierRegistered ? supplierId : null,
         classificationId: type === "SAIDA" ? classificationId : null // Apenas para saída
       },
       include: {
         congregation: true,
         contributor: true,
-        supplier: true
+        supplier: true,
+        classification: true
       }
     })
 
@@ -235,7 +273,7 @@ export async function PUT(
       return NextResponse.json({ error: "Acesso não autorizado a esta congregação" }, { status: 403 })
     }
 
-    if (launch.exported) {
+    if (launch.status === "EXPORTED") {
       return NextResponse.json({ error: "Lançamento já exportado não pode ser alterado" }, { status: 400 })
     }
 
@@ -264,7 +302,7 @@ export async function PUT(
     //const updateData: any = {}
     if (status !== undefined) updateData.status = status
     if (approved !== undefined) updateData.approved = approved
-console.log(launch)
+
     const updatedLaunch = await prisma.launch.update({
       where: { id },
       data: { 
@@ -274,6 +312,7 @@ console.log(launch)
         offerValue: updateData.offerValue ? parseFloat(updateData.offerValue) : null,
         votesValue: updateData.votesValue ? parseFloat(updateData.votesValue) : null,
         ebdValue: updateData.ebdValue ? parseFloat(updateData.ebdValue) : null,
+        campaignValue: updateData.campaignValue ? parseFloat(updateData.campaignValue) : null,
         value: updateData.value ? parseFloat(updateData.value) : null,
         supplierId: updateData.supplierId ? parseInt(updateData.supplierId) : null,
         contributorId: updateData.contributorId ? parseInt(updateData.contributorId) : null,

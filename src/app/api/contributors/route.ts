@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import prisma from "@/lib/prisma"
 import { nextAuthOptions } from "../auth/[...nextauth]/route";
+import Congregations from "@/app/congregations/page";
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(nextAuthOptions);
@@ -12,7 +13,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url)
-    const congregationCode = searchParams.get('congregationCode')
+    const congregationId = searchParams.get('congregationId')
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
 
@@ -31,8 +32,8 @@ export async function GET(request: NextRequest) {
       in: userCongregations.map(uc => uc.congregationId)
     }
 
-    if (congregationCode) {
-      where.congregationCode = congregationCode
+    if (congregationId) {
+      where.congregationId = congregationId
     }
 
     // if (startDate && endDate) {
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const {
-      congregationCode,
+      congregationId,
       code,
       name,
       cpf,
@@ -83,7 +84,7 @@ export async function POST(request: NextRequest) {
     const userCongregation = await prisma.userCongregation.findFirst({
       where: {
         userId: session.user.id,
-        congregationId: congregationCode
+        congregationId
       }
     })
 
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
 
     const existingContributor = await prisma.contributor.findFirst({
       where: {
-        congregationCode,
+        congregationId,
         code,
         name,
         cpf,
@@ -116,7 +117,7 @@ export async function POST(request: NextRequest) {
 
     const contributor = await prisma.contributor.create({
       data: {
-        congregationCode,
+        congregationId: body.congregationCode,
         code,
         name,
         cpf,

@@ -22,10 +22,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Arquivo deve ser CSV" }, { status: 400 })
     }
 
-       // 1. Leia o arquivo como um ArrayBuffer
+    // 1. Leia o arquivo como um ArrayBuffer
     const buffer = await file.arrayBuffer();
     const decoder = new TextDecoder('iso-8859-1'); 
     const text = decoder.decode(buffer);
+
 
     //const text = await file.text()
     const lines = text.split('\n').filter(line => line.trim())
@@ -45,21 +46,21 @@ export async function POST(request: NextRequest) {
 
       const columns = line.split(',').map(col => col.trim())
       
-      if (columns.length < 6) {
-        errors.push(`Linha ${i + 2}: Formato inválido - esperado codigo,nome,cpf,cargoEclesiástico,CodCongregação, Tipo`)
+      if (columns.length < 3) {
+        errors.push(`Linha ${i + 2}: Formato inválido - esperado Codigo, Reduzido, Descrição`)
         continue
       }
 
-      const [Codigo, Nome, cpf, cargoEclesiástico, Codcongregacao, tipo] = columns
+      const [Codigo, Reduzido, Descricao] = columns
 
-      if (!Codcongregacao || !Codigo || !Nome ) {
-        errors.push(`Linha ${i + 2}: , codigo, nome e Congregação são obrigatórios`)
-        continue
-      }
+    //   if (!Codigo || !RazãoSocial ) {
+    //     errors.push(`Linha ${i + 2}: , Codigo, Razão Social são obrigatórios`)
+    //     continue
+    //   }
 
       try {
-        // Busca a congribuinte pelo código
-        const existing = await prisma.contributor.findUnique({
+        // Busca a classificão pelo código
+        const existing = await prisma.classification.findUnique({
           where: { code: Codigo }
         })
 
@@ -68,26 +69,18 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        const congregacaoId = await prisma.congregation.findUnique({
-          where: { code: Codcongregacao },
-          select: { id: true }
-        })
-
-       // Cria o novo contribuinte
-        await prisma.contributor.create({
+       // Cria o novo classificação
+        await prisma.classification.create({
           data: {
-            congregationId: congregacaoId?.id,
             code: Codigo,
-            name: Nome,
-            cpf: cpf,
-            ecclesiasticalPosition: cargoEclesiástico,
-            tipo: tipo.toUpperCase() === 'CONGREGADO' ? 'CONGREGADO' : 'MEMBRO'
+            shortCode: Reduzido,
+            description: Descricao,
           }
         })
 
         imported++
       } catch (error) {
-        errors.push(`Linha ${i + 2}: Erro ao criar contribuinte - ${error.message}`)
+        errors.push(`Linha ${i + 2}: Erro ao criar Classificação - ${error.message}`)
       }
     }
 

@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import prisma from "@/lib/prisma"
+import { nextAuthOptions } from "../../auth/[...nextauth]/route";
 
 export async function POST(request: NextRequest) {
+
+  const session = await getServerSession(nextAuthOptions);
+  
+  if (!session) {
+    return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+  }
+  
   try {
     const formData = await request.formData()
     const file = formData.get('file') as File
@@ -15,7 +23,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Arquivo deve ser CSV" }, { status: 400 })
     }
 
-    const text = await file.text()
+       // 1. Leia o arquivo como um ArrayBuffer
+    const buffer = await file.arrayBuffer();
+    const decoder = new TextDecoder('iso-8859-1'); 
+    const text = decoder.decode(buffer);
+
+    //const text = await file.text()
     const lines = text.split('\n').filter(line => line.trim())
     
     if (lines.length < 2) {

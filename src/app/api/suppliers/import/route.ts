@@ -45,21 +45,21 @@ export async function POST(request: NextRequest) {
 
       const columns = line.split(',').map(col => col.trim())
       
-      if (columns.length < 6) {
-        errors.push(`Linha ${i + 2}: Formato inválido - esperado codigo,nome,cpf,cargoEclesiástico,CodCongregação, Tipo`)
+      if (columns.length < 4) {
+        errors.push(`Linha ${i + 2}: Formato inválido - esperado Codigo, Razão Social, Tipo Pessoa, CpfCnpj`)
         continue
       }
 
-      const [Codigo, Nome, cpf, cargoEclesiástico, Codcongregacao, tipo] = columns
+      const [Codigo, RazãoSocial, TipoPessoa, CpfCnpj] = columns
 
-      if (!Codcongregacao || !Codigo || !Nome ) {
-        errors.push(`Linha ${i + 2}: , codigo, nome e Congregação são obrigatórios`)
+      if (!Codigo || !RazãoSocial ) {
+        errors.push(`Linha ${i + 2}: , Codigo, Razão Social são obrigatórios`)
         continue
       }
 
       try {
-        // Busca a congribuinte pelo código
-        const existing = await prisma.contributor.findUnique({
+        // Busca a fornecedor pelo código
+        const existing = await prisma.supplier.findUnique({
           where: { code: Codigo }
         })
 
@@ -68,26 +68,19 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        const congregacaoId = await prisma.congregation.findUnique({
-          where: { code: Codcongregacao },
-          select: { id: true }
-        })
-
-       // Cria o novo contribuinte
-        await prisma.contributor.create({
+       // Cria o novo fornecedor
+        await prisma.supplier.create({
           data: {
-            congregationId: congregacaoId?.id,
             code: Codigo,
-            name: Nome,
-            cpf: cpf,
-            ecclesiasticalPosition: cargoEclesiástico,
-            tipo: tipo.toUpperCase() === 'CONGREGADO' ? 'CONGREGADO' : 'MEMBRO'
+            razaoSocial: RazãoSocial,
+            tipoPessoa: TipoPessoa,
+            cpfCnpj: CpfCnpj,
           }
         })
 
         imported++
       } catch (error) {
-        errors.push(`Linha ${i + 2}: Erro ao criar contribuinte - ${error.message}`)
+        errors.push(`Linha ${i + 2}: Erro ao criar fornecedor - ${error.message}`)
       }
     }
 

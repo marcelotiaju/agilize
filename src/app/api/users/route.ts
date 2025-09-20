@@ -59,7 +59,8 @@ export async function POST(request: NextRequest) {
       canApproveExpense,
       canCreate,
       canEdit,
-      canExclude
+      canExclude,
+      defaultPage
      } = await request.json()
 
     // Validações básicas
@@ -106,7 +107,8 @@ export async function POST(request: NextRequest) {
         canApproveExpense: canApproveExpense || false,
         canCreate: canCreate || false,
         canEdit: canEdit || false,
-        canExclude: canExclude || false
+        canExclude: canExclude || false,
+        defaultPage: defaultPage || '/dashboard'
       }
     })
 
@@ -128,7 +130,8 @@ export async function PUT(request: NextRequest) {
       canApproveExpense,
       canCreate,
       canEdit,
-      canExclude
+      canExclude,
+      defaultPage
      } = await request.json()
 
     if (!id) {
@@ -184,7 +187,8 @@ export async function PUT(request: NextRequest) {
         canApproveExpense: canApproveExpense || false,
         canCreate: canCreate || false,
         canEdit: canEdit || false,
-        canExclude: canExclude || false
+        canExclude: canExclude || false,
+        defaultPage: defaultPage || '/dashboard'
       }
     })
 

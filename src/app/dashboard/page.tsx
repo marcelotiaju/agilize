@@ -11,10 +11,13 @@ import {
   Trash2,
   Building2,
   Church,
-  List
+  List,
+  User,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { PermissionGuard } from '@/components/auth/PermissionGuard'
+import { permission } from 'process'
 
 export default function Dashboard() {
   const { data: session } = useSession()
@@ -26,14 +29,8 @@ export default function Dashboard() {
       description: "Registre entradas e saídas",
       icon: FileText,
       href: "/launches",
-      color: "bg-blue-500 hover:bg-blue-600"
-    },
-    {
-      title: "Contribuintes",
-      description: "Gerencie registros",
-      icon: Users,
-      href: "/contributors",
-      color: "bg-green-500 hover:bg-green-600"
+      color: "bg-blue-500 hover:bg-blue-600",
+      permission
     },
     {
       title: "Exportar Dados",
@@ -52,26 +49,44 @@ export default function Dashboard() {
       permission: "canDelete"
     },
     {
-      title: "Fornecedores",
-      description: "Gerencie Fornecedores",
-      icon: Building2,
-      href: "/suppliers",
-      color: "bg-yellow-500 hover:bg-yellow-600"
-    },
-    {
       title: "Congregações",
       description: "Gerencie congregações",
       icon: Church,
       href: "/congregations",
-      color: "bg-indigo-500 hover:bg-indigo-600"
+      color: "bg-indigo-500 hover:bg-indigo-600",
+      permission: "canCreate"
+    },
+    {
+      title: "Contribuintes",
+      description: "Gerencie registros",
+      icon: Users,
+      href: "/contributors",
+      color: "bg-green-500 hover:bg-green-600",
+      permission: "canCreate"
+    },
+    {
+      title: "Fornecedores",
+      description: "Gerencie Fornecedores",
+      icon: Building2,
+      href: "/suppliers",
+      color: "bg-yellow-500 hover:bg-yellow-600",
+      permission: "canCreate"
     },
     {
       title: "Classificações",
       description: "Gerencie classificações",
       icon: List,
       href: "/classifications",
-      color: "bg-teal-500 hover:bg-teal-600"
+      color: "bg-teal-500 hover:bg-teal-600",
+      permission: "canCreate"
     },
+    {
+    title: "Perfil",
+    description: "Meus dados",
+    icon: User,
+    href: "/profile",
+    color: "bg-indigo-500 hover:bg-indigo-600"
+  },
   ]
 
   const handleNavigation = (href :any) => {
@@ -79,6 +94,8 @@ export default function Dashboard() {
   }
 
   return (
+    <PermissionGuard 
+    >
     <div className="min-h-screen bg-gray-50">
       <Sidebar />
       
@@ -286,5 +303,6 @@ export default function Dashboard() {
         </div>
       </div>
   </div>
+  </PermissionGuard>
   )
 }

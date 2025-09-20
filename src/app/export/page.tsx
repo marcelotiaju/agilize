@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectLabel, SelectTrigger, SelectVa
 import { Checkbox } from '@/components/ui/checkbox'
 import { Download, FileSpreadsheet, AlertTriangle } from 'lucide-react'
 import { format } from 'date-fns'
+import { PermissionGuard } from '@/components/auth/PermissionGuard'
 
 interface Congregation {
   id: string
@@ -25,9 +26,9 @@ export default function Export() {
   const [formData, setFormData] = useState({
     startDate: format(new Date(new Date().setDate(new Date().getDate() - 30)), 'yyyy-MM-dd'),
     endDate: format(new Date(), 'yyyy-MM-dd'),
-    type: 'ENTRADA',
+    type: ['ENTRADA', 'DIZIMO', 'SAIDA'], // Defina todas as opções como padrão
     congregationIds: [] as string[]
-  })
+})
   const [isExporting, setIsExporting] = useState(false)
 
   useEffect(() => {
@@ -78,14 +79,29 @@ export default function Export() {
     }))
   }
 
+  const handleTypeChange = (type: string, checked: boolean) => {
+    setFormData(prev => {
+      const types = checked
+        ? [...prev.type, type]
+        : prev.type.filter(t => t !== type)
+      
+      return { ...prev, type: types }
+     })
+  }
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+
+    if (formData.type.length === 0) {
+      alert('Selecione pelo menos um tipo de lançamento')
+      return
+    }
     
     if (formData.congregationIds.length === 0) {
       alert('Selecione pelo menos uma congregação')
       return
     }
-    
+
     setIsExporting(true)
     
     try {
@@ -123,6 +139,11 @@ export default function Export() {
   const allSelected = congregations.length > 0 && formData.congregationIds.length === congregations.length
 
   return (
+    <PermissionGuard 
+      requiredPermissions={{
+        canExport: true
+      }}
+    >
     <div className="min-h-screen bg-gray-50">
       <Sidebar />
       
@@ -173,21 +194,33 @@ export default function Export() {
                     </div>
 
                     <div>
-                      <Label htmlFor="type">Tipo de Dados</Label>
-                      <Select
-                        value={formData.type}
-                        onValueChange={(value) => handleSelectChange('type', value)}
-                        defaultValue="ENTRADA"
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="ENTRADA">ENTRADA</SelectItem>
-                          <SelectItem value="DIZIMO">DIZIMO</SelectItem>
-                          <SelectItem value="SAIDA">SAIDA</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Label>Tipo de Dados</Label>
+                      <div className="space-y-2 mt-2">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="type-entrada"
+                            checked={formData.type.includes('ENTRADA')}
+                            onCheckedChange={(checked) => handleTypeChange('ENTRADA', checked as boolean)}
+                          />
+                          <Label htmlFor="type-entrada">ENTRADA</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="type-dizimo"
+                            checked={formData.type.includes('DIZIMO')}
+                            onCheckedChange={(checked) => handleTypeChange('DIZIMO', checked as boolean)}
+                          />
+                          <Label htmlFor="type-dizimo">DIZIMO</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="type-saida"
+                            checked={formData.type.includes('SAIDA')}
+                            onCheckedChange={(checked) => handleTypeChange('SAIDA', checked as boolean)}
+                          />
+                          <Label htmlFor="type-saida">SAIDA</Label>
+                        </div>
+                      </div>
                     </div>
 
                     <div>
@@ -269,5 +302,6 @@ export default function Export() {
         </div>
       </div>
     </div>
+  </PermissionGuard>
   )
 }

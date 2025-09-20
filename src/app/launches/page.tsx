@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Button } from '@/components/ui/button'
@@ -12,10 +12,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, Search, Check, X } from 'lucide-react'
+import { Plus, Edit, Trash2, Search, Check, X, AlertCircle, MoreVertical, Calendar, DollarSign, User } from 'lucide-react'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Checkbox } from '@/components/ui/checkbox'
+import { PermissionGuard } from '@/components/auth/PermissionGuard'
+import { SearchableSelect } from '@/components/ui/searchable-select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+
 
 export default function Launches() {
   const { data: session } = useSession()
@@ -26,11 +35,15 @@ export default function Launches() {
   const [classifications, setClassifications] = useState<Classification[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedCongregation, setSelectedCongregation] = useState('all')
+  const [expandedCard, setExpandedCard] = useState(null)
+  
 
   // Tipos
   type Congregation = { id: string; name: string }
-  type Contributor = { id: string; name: string; }
-  type Supplier = { id: string; razaoSocial: string }
+  type Contributor = { id: string; name: string; cpf: string; congregationId: string }
+  type Supplier = { id: string; razaoSocial: string; cpfcnpj: string }
   type Classification = { id: string; description: string }
 
   type Launch = {
@@ -42,16 +55,17 @@ export default function Launches() {
     offerValue?: number
     votesValue?: number
     ebdValue?: number
+    campaignValue: number,
     value?: number
     description?: string
     status?: string
     exported?: boolean
     congregation?: { id: string; name: string }
-    contributorId?: number
-    contributor?: { id: string; name: string }
+    contributorId?: string
+    contributor?: { id: string; name: string; congregationId: string  }
     contributorName?: string
-    supplierId?: number
-    supplier?: { id: string; razaoSocial: string }
+    supplierId?: string
+    supplier?: { id: string; razaoSocial: string; cpfcnpj: string }
     supplierName?: string
     classificationId?: string
     classification?: { id: string; name: string }
@@ -76,15 +90,16 @@ export default function Launches() {
     offerValue: '',
     votesValue: '',
     ebdValue: '',
+    campaignValue: '',
     value: '',
     description: '',
-    contributorId: null,
+    contributorId: '',
     contributorName: '',
     isContributorRegistered: true,
     supplierId: '',
     supplierName: '',
     isSupplierRegistered: true,
-    classificationId: '' // Novo campo
+    classificationId: '',
   })
 
   useEffect(() => {
@@ -110,7 +125,7 @@ export default function Launches() {
       const response = await fetch('/api/launches')
       if (response.ok) {
         const data = await response.json()
-        setLaunches(data)
+        setLaunches(data.launches)
       }
     } catch (error) {
       console.error('Erro ao carregar lançamentos:', error)
@@ -171,6 +186,28 @@ export default function Launches() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type, checked } = e.target
+
+        // Validações para campos específicos
+    if (name === 'talonNumber') {
+      // Permitir apenas números
+      const numericValue = value.replace(/\D/g, '')
+      setFormData(prev => ({ ...prev, [name]: numericValue }))
+      return
+    }
+
+    // if (name.includes('value') || name === 'campaignValue' || name === 'offerValue' || name === 'votesValue' || name === 'ebdValue') {
+    //   // Permitir apenas números e vírgula/ponto
+    //   const numericValue = value.replace(/[^\d.,]/g, '')
+    //   setFormData(prev => ({ ...prev, [name]: numericValue }))
+    //   return
+    if (name.includes('value') || name === 'campaignValue' || name === 'offerValue' || name === 'votesValue' || name === 'ebdValue') {
+        // 1. Permite apenas números, vírgulas e pontos
+        const numericValue = value.replace(/[^\d.,]/g, '');
+        // 2. Substitui a vírgula por ponto para padronização
+        const formattedValue = numericValue.replace(/,/g, '.');
+        setFormData(prev => ({ ...prev, [name]: formattedValue }));
+        return;    
+    }
     setFormData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
 
   }
@@ -183,11 +220,23 @@ export default function Launches() {
     e.preventDefault()
     setError(null)
 
+          // Validações específicas
+      if (formData.type === 'DIZIMO' && !formData.contributorName && !formData.contributorId) {
+        setError('Nome do contribuinte é obrigatório para lançamentos do tipo Dízimo')
+        return
+      }
+      
+      if (formData.type === 'SAIDA' && !formData.classificationId) {
+        setError('Classificação é obrigatória para lançamentos do tipo Saída')
+        return
+      }
+
         // --- Início da validação de valor ---
         const values = {
           offerValue: parseFloat(formData.offerValue),
           votesValue: parseFloat(formData.votesValue),
           ebdValue: parseFloat(formData.ebdValue),
+          campaignValue: parseFloat(formData.campaignValue),
           value: parseFloat(formData.value),
         }
     
@@ -215,8 +264,6 @@ export default function Launches() {
             body: JSON.stringify(formData)
           })
 
-          console.log(response)
-    
           if (response.ok) {
             fetchLaunches()
             setIsDialogOpen(false)
@@ -241,6 +288,7 @@ export default function Launches() {
       offerValue: launch.offerValue?.toString() || '',
       votesValue: launch.votesValue?.toString() || '',
       ebdValue: launch.ebdValue?.toString() || '',
+      campaignValue: launch.campaignValue?.toString() || '', // Novo campo
       value: launch.value?.toString() || '',
       description: launch.description || '',
       contributorId: launch.contributorId?.toString() || '',
@@ -249,7 +297,7 @@ export default function Launches() {
       supplierId: launch.supplierId?.toString() || '',
       supplierName: launch.supplierName || '',
       isSupplierRegistered: !!launch.supplierId,
-      classificationId: launch.classificationId || ''
+      classificationId: launch.classificationId || '',
     })
     setIsDialogOpen(true)
   }
@@ -257,6 +305,13 @@ export default function Launches() {
   const handleCancel = async (id: string) => {
     setError(null)
     try {
+      const launch = launches.find(l => l.id === id)
+      
+      if (launch?.status !== 'NORMAL') {
+        setError(`Apenas lançamentos com status Normal podem ser cancelados. Status atual: ${launch?.status}`)
+        return
+      }
+      
       const response = await fetch(`api/launches/status/${id}`, {
         method: 'PUT',
         headers: {
@@ -280,12 +335,18 @@ export default function Launches() {
   const handleApprove = async (id: string) => {
     setError(null)
     try {
+      const launch = launches.find(l => l.id === id)
+      
+      if (launch?.status !== 'NORMAL') {
+        setError(`Apenas lançamentos com status Normal podem ser aprovados. Status atual: ${launch?.status}`)
+        return
+      }
       const response = await fetch(`/api/launches/status/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ id, approved: true }),
+        body: JSON.stringify({ id, status: 'APPROVED' }),
       })
 
       if (response.ok) {
@@ -303,84 +364,330 @@ export default function Launches() {
   const handleReprove = async (id: string) => {
     setError(null)
     try {
+
+      const launch = launches.find(l => l.id === id)
+      
+      if (launch?.status !== 'APPROVED') {
+        setError(`Apenas lançamentos com status Aprovado podem ser reprovados. Status atual: ${launch?.status}`)
+        return
+      }
+      
       const response = await fetch(`/api/launches/status/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ id, approved: false }),
+        body: JSON.stringify({ id, status: 'NORMAL' }),
       })
 
       if (response.ok) {
         fetchLaunches()
       } else {
         const errorData = await response.json()
-        setError(errorData.error || 'Erro ao reprovar lançamento.')
+        setError(errorData.error || 'Erro ao desaprovar lançamento.')
       }
     } catch (error) {
-      console.error('Erro ao reprovar lançamento:', error)
-      setError('Erro ao reprovar lançamento. Tente novamente.')
+      console.error('Erro ao desaprovar lançamento:', error)
+      setError('Erro ao desaprovar lançamento. Tente novamente.')
     }
   }
 
   const resetForm = () => {
     setEditingLaunch(null)
     setFormData({
-      congregationId: '',
+     congregationId: congregations.length === 1 ? congregations[0].id : '',
       type: 'ENTRADA',
       date: format(new Date(), 'yyyy-MM-dd'),
       talonNumber: '',
       offerValue: '',
       votesValue: '',
       ebdValue: '',
+      campaignValue: '',
       value: '',
       description: '',
-      contributorId: null,
+      contributorId: '',
       contributorName: '',
       isContributorRegistered: true,
       supplierId: '',
       supplierName: '',
       isSupplierRegistered: true,
-      classificationId: ''
+      classificationId: '',
     })
     setError(null)
   }
 
-  return (
+
+// Filtrar lançamentos com base no termo de pesquisa e congregação selecionada
+const filteredLaunches = useMemo(() => {
+  return launches.filter(launch => {
+    const matchesSearch = searchTerm === '' || 
+      Object.values(launch).some(value => 
+        value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    
+    const matchesCongregation = selectedCongregation === 'all' || 
+      launch.congregationId === selectedCongregation
+    
+    return matchesSearch && matchesCongregation
+  })
+}, [launches, searchTerm, selectedCongregation])
+
+  // Formatar valor com separador de milhar
+  const formatCurrency = (value) => {
+    if (!value) return 'R$ 0,00'
+    
+    const numValue = parseFloat(value)
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(numValue)
+  }
+
+  // Filtrar contribuintes e fornecedores baseado na congregação selecionada
+  const filteredContributors = contributors.filter(c => 
+    !formData.congregationId || c.congregationId === formData.congregationId
+  )
+
+  // const filteredSuppliers = suppliers.filter(s =>
+  //   !formData.congregationId || s.congregationId === formData.congregationId
+  // )
+
+    // Componente para cards em dispositivos móveis
+  const LaunchCard = ({ launch }) => (
+    <Card key={launch.id} className="mb-3">
+      <CardContent className="p-4 pt-0.5">
+        <div className="flex justify-between items-start mb-1">
+          <div className={`px-3 py-1 rounded text-white text-sm font-medium ${
+            launch.type === 'ENTRADA' ? 'bg-green-500' : 
+            launch.type === 'DIZIMO' ? 'bg-blue-500' : 'bg-red-500'
+          }`}>
+            {launch.type === 'ENTRADA' ? 'Entrada' : 
+             launch.type === 'DIZIMO' ? 'Dízimo' : 'Saída'}
+          </div>
+          <Badge variant={
+            launch.status === 'NORMAL' ? 'default' :
+            launch.status === 'APPROVED' ? 'default' :
+            launch.status === 'EXPORTED' ? 'secondary' : 'destructive'
+          }>
+            {launch.status === 'NORMAL' ? 'Normal' : 
+             launch.status === 'APPROVED' ? 'Aprovado' :
+             launch.status === 'EXPORTED' ? 'Exportado' : 'Cancelado'}
+          </Badge>
+        </div>
+        
+        <div className="space-y-1 mb-1">
+          <div className="flex items-center text-sm font-normal">
+            <Calendar className="h-4 w-4 mr-1" />
+            {format(new Date(launch.date), 'dd/MM/yyyy', { locale: ptBR })}
+          </div>
+          
+          <div className="text-sm font-normal">
+            {launch.type === 'ENTRADA' ? (
+              <div className="space-y-1 grid grid-cols-2 gap-0">
+                {launch.offerValue ? <div>Oferta: {formatCurrency(launch.offerValue)}</div> : null}
+                {launch.votesValue ? <div>Votos: {formatCurrency(launch.votesValue)}</div> : null}
+                {launch.ebdValue > 0 ? <div>EBD: {formatCurrency(launch.ebdValue)}</div> : null}
+                {launch.campaignValue > 0 ? <div>Campanha: {formatCurrency(launch.campaignValue)}</div> : null}
+              </div>
+            ) : (
+              <div>{formatCurrency(launch.value)}</div>
+            )}
+          </div>
+          
+          {(launch.contributor?.name || launch.contributorName || launch.supplier?.name || launch.supplierName) && (
+            <div className="flex items-center text-sm font-normal">
+              <User className="h-4 w-4 mr-1" />
+              {launch.contributor?.name || launch.contributorName || launch.supplier?.name || launch.supplierName}
+            </div>
+          )}
+        </div>
+        
+        {/* <Collapsible open={expandedCard === launch.id} onOpenChange={() => setExpandedCard(expandedCard === launch.id ? null : launch.id)}>
+          <CollapsibleTrigger asChild>
+            <Button variant="outline" size="sm" className="w-full">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-3 space-y-2"> */}
+            {/* <div className="flex justify-between">
+              <span className="text-sm text-gray-500">Congregação:</span>
+              <span className="text-sm font-medium">{launch.congregation.name}</span>
+            </div> */}
+            {launch.talonNumber && (
+              <div className="flex justify-start">
+                <span className="text-sm font-normal">Talão:</span>
+                <span className="text-sm font-medium">{launch.talonNumber}</span>
+              </div>
+            )}
+            {launch.description && (
+              <div className="flex justify-start">
+                <span className="text-sm font-normal">Descrição:</span>
+                <span className="text-sm font-medium">{launch.description}</span>
+              </div>
+            )}
+            {launch.classification && (
+              <div className="flex justify-between">
+                <span className="text-sm font-normal">Classificação:</span>
+                <span className="text-sm font-medium">{launch.classification.description}</span>
+              </div>
+            )}
+            
+            <div className="flex space-x-2 pt-0">
+              <Tooltip>
+                <TooltipTrigger>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleEdit(launch)}
+                    disabled={!canEdit}
+                    className="flex-1"
+                  >
+                    <Edit className="h-4 w-4 mr-1" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Editar</p>
+                </TooltipContent>
+              </Tooltip>              
+
+              {launch.status === 'NORMAL' && (
+                <>
+                  {(launch.type === 'ENTRADA' && canApproveEntry) ||
+                   (launch.type === 'DIZIMO' && canApproveTithe) ||
+                   (launch.type === 'SAIDA' && canApproveExpense) ? (
+                    <>
+                    <Tooltip>
+                      <TooltipTrigger>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleApprove(launch.id)}
+                        className="flex-1"
+                      >
+                        <Check className="h-4 w-4 mr-1" />
+                        {/* Aprovar */}
+                      </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Aprovar</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    </>
+                  ) : null}
+                </>
+              )}
+
+              {launch.status === 'APPROVED' && (
+                <>
+                  {(launch.type === 'ENTRADA' && canApproveEntry) ||
+                   (launch.type === 'DIZIMO' && canApproveTithe) ||
+                   (launch.type === 'SAIDA' && canApproveExpense) ? (
+                    <>
+                    <Tooltip>
+                      <TooltipTrigger>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleReprove(launch.id)}
+                        className="flex-1"
+                      >
+                        <X className="h-4 w-4 mr-1" />
+                        {/* Desaprovar */}
+                      </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Desaprovar</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    </>
+                  ) : null}
+                </>
+              )}
+              
+              <Tooltip>
+                <TooltipTrigger>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleCancel(launch.id)}
+                disabled={launch.status !== 'NORMAL'}
+                className="flex-1"
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                {/* Cancelar */}
+              </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Cancelar</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          {/* </CollapsibleContent>
+        </Collapsible> */}
+      </CardContent>
+    </Card>
+  )
+
+   return (
+    <PermissionGuard 
+      requiredPermissions={{
+        canLaunchEntry: true,
+        canLaunchTithe: true,
+        canLaunchExpense: true
+      }}
+    >
+
     <div className="min-h-screen bg-gray-50">
       <Sidebar />
-
+      
       <div className="lg:pl-64">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Lançamentos Financeiros</h1>
-              <p className="text-gray-600">Gerencie os lançamentos de entradas, dízimos e saídas</p>
-            </div>
-
+        <div className="p-2">
+          <div className="flex justify-end mb-2">
+            {/* <div>
+              <h1 className="text-1xl font-bold text-gray-900">Lançamentos Financeiros</h1>
+               <p className="text-gray-600">Gerencie os lançamentos de entradas, dízimos e saídas</p> 
+            </div> */}
+            
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
                 <Button onClick={resetForm} disabled={!canLaunchEntry && !canLaunchTithe && !canLaunchExpense}>
                   <Plus className="mr-2 h-4 w-4" />
-                  Novo Lançamento
+                  Novo
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
+              <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>{editingLaunch ? 'Editar Lançamento' : 'Novo Lançamento'}</DialogTitle>
-                  <DialogDescription>Preencha os dados do lançamento financeiro</DialogDescription>
+                  <DialogTitle>
+                    {editingLaunch ? 'Editar' : 'Novo'}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {/* Preencha os dados do lançamento financeiro */}
+                    {editingLaunch && editingLaunch.status !== 'NORMAL' && (
+                      <div className="mt-2 p-2 bg-yellow-50 text-red-800 rounded-md flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-2" />
+                        Este lançamento não pode ser editado porque está com status "{editingLaunch.status === 'CANCELED' ? 'CANCELADO' : editingLaunch.status === 'APPROVED' ? 'APROVADO': ''  }"
+                      </div>
+                    )}
+                  </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit}>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="congregationId" className="text-right">
-                        Congregação
-                      </Label>
+                
+                {error && (
+                  <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-2" />
+                    {error}
+                  </div>
+                )}
+                
+                <form onSubmit={handleSubmit} className="space-y-2">
+                  <div className="space-y-2">
+                    <div>
+                      <Label htmlFor="congregationId">Congregação</Label>
                       <Select
                         value={formData.congregationId}
                         onValueChange={(value) => handleSelectChange('congregationId', value)}
+                        disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}   
                       >
-                        <SelectTrigger className="col-span-3">
+                        <SelectTrigger>
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                         <SelectContent>
@@ -392,372 +699,484 @@ export default function Launches() {
                         </SelectContent>
                       </Select>
                     </div>
-
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="type">Tipo</Label>
-                      <Select
-                        value={formData.type}
-                        onValueChange={(value) => handleSelectChange('type', value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {canLaunchEntry && <SelectItem value="ENTRADA">Entrada</SelectItem>}
-                          {canLaunchTithe && <SelectItem value="DIZIMO">Dízimo</SelectItem>}
-                          {canLaunchExpense && <SelectItem value="SAIDA">Saída</SelectItem>}
-                        </SelectContent>
-                      </Select>
+                    
+                    <div className="grid grid-cols-3 gap-1">
+                      <div>
+                        <Label htmlFor="type">Tipo</Label>
+                        <Select
+                          value={formData.type}
+                          onValueChange={(value) => handleSelectChange('type', value)}
+                          disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}   
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {canLaunchEntry && <SelectItem value="ENTRADA">Entrada</SelectItem>}
+                            {canLaunchTithe && <SelectItem value="DIZIMO">Dízimo</SelectItem>}
+                            {canLaunchExpense && <SelectItem value="SAIDA">Saída</SelectItem>}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {/* Campo de Classificação (apenas para Saída) */}
+                      {formData.type === 'SAIDA' && (
+                        <div>
+                          <Label htmlFor="classificationId">Classificação</Label>
+                          <Select
+                            value={formData.classificationId}
+                            onValueChange={(value) => handleSelectChange('classificationId', value)}
+                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}   
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione uma classificação" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {classifications.map((classification) => (
+                                <SelectItem key={classification.id} value={classification.id}>
+                                  {classification.description}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                         )}
+                      </div>
                     </div>
-
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="date" className="text-right">
-                        Data
-                      </Label>
-                      <Input
-                        id="date"
-                        name="date"
-                        type="date"
-                        value={formData.date}
-                        onChange={handleInputChange}
-                        className="col-span-3"
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="date">Data</Label>
+                        <Input
+                          id="date"
+                          name="date"
+                          type="date"
+                          value={formData.date}
+                          onChange={handleInputChange}
+                          disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}   
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="talonNumber">Nr. Talão</Label>
+                        <Input
+                          id="talonNumber"
+                          name="talonNumber"
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={formData.talonNumber}
+                          onChange={handleInputChange}
+                          disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                        
+                        />
+                      </div>
                     </div>
-
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="talonNumber" className="text-right">
-                        Nº Talão
-                      </Label>
-                      <Input
-                        id="talonNumber"
-                        name="talonNumber"
-                        value={formData.talonNumber}
-                        onChange={handleInputChange}
-                        className="col-span-3"
-                      />
-                    </div>
-
-                    {/* Campos específicos para Entrada */}
-                    {formData.type === 'ENTRADA' && (
-                      <div className="grid grid-cols-3 gap-4">
+                  
+                  {/* Campos específicos para Entrada */}
+                  {formData.type === 'ENTRADA' && (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
                         <div>
                           <Label htmlFor="offerValue">Valor Oferta</Label>
                           <Input
                             id="offerValue"
                             name="offerValue"
-                            type="number"
-                            step="0.01"
+                            type="text"
+                            inputMode="decimal"
                             value={formData.offerValue}
                             onChange={handleInputChange}
+                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                           
                           />
                         </div>
-
+                        
                         <div>
                           <Label htmlFor="votesValue">Valor Voto</Label>
                           <Input
                             id="votesValue"
                             name="votesValue"
-                            type="number"
-                            step="0.01"
+                            type="text"
+                            inputMode="decimal"
                             value={formData.votesValue}
                             onChange={handleInputChange}
+                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                              
                           />
                         </div>
-
+                        
                         <div>
                           <Label htmlFor="ebdValue">Valor EBD</Label>
                           <Input
                             id="ebdValue"
                             name="ebdValue"
-                            type="number"
-                            step="0.01"
+                            type="text"
+                            inputMode="decimal"
                             value={formData.ebdValue}
                             onChange={handleInputChange}
+                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                              
                           />
                         </div>
-                      </div>
-                    )}
-
-                    {/* Campos específicos para Dízimo */}
-                    {formData.type === 'DIZIMO' && (
-                      <div className="space-y-4">
+                        
                         <div>
-                          <Label htmlFor="value">Valor</Label>
+                          <Label htmlFor="campaignValue">Valor Campanha</Label>
                           <Input
-                            id="value"
-                            name="value"
-                            type="number"
-                            step="0.01"
-                            value={formData.value}
+                            id="campaignValue"
+                            name="campaignValue"
+                            type="text"
+                            inputMode="decimal"
+                            value={formData.campaignValue}
                             onChange={handleInputChange}
+                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                           
                           />
                         </div>
-
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="isContributorRegistered"
-                            name="isContributorRegistered"
-                            checked={formData.isContributorRegistered}
-                            onCheckedChange={(checked) =>
-                              setFormData((prev) => ({ ...prev, isContributorRegistered: checked }))
-                            }
-                          />
-                          <Label htmlFor="isContributorRegistered">Contribuinte cadastrado</Label>
-                        </div>
-
-                        {formData.isContributorRegistered ? (
-                          <div>
-                            <Label htmlFor="contributorId">Contribuinte</Label>
-                            <Select
-                              value={formData.contributorId ? formData.contributorId : ''}
-                              onValueChange={(value) => handleSelectChange('contributorId', value)}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {contributors
-                                  .filter((c) => c.id === formData.contributorId )
-                                  .map((contributor) => (
-                                    <SelectItem key={contributor.id} value={contributor.id}>
-                                      {contributor.name}
-                                    </SelectItem>
-                                  ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        ) : (
-                          <div>
-                            <Label htmlFor="contributorName">Nome do Contribuinte</Label>
-                            <Input
-                              id="contributorName"
-                              name="contributorName"
-                              value={formData.contributorName}
-                              onChange={handleInputChange}
-                            />
-                          </div>
-                        )}
                       </div>
-                    )}
-
-                    {/* Campos específicos para Saída */}
-                    {formData.type === 'SAIDA' && (
-                      <div className="space-y-4">
-                        <div>
-                          <Label htmlFor="value">Valor</Label>
-                          <Input
-                            id="value"
-                            name="value"
-                            type="number"
-                            step="0.01"
-                            value={formData.value}
-                            onChange={handleInputChange}
-                          />
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="isSupplierRegistered"
-                            name="isSupplierRegistered"
-                            checked={formData.isSupplierRegistered}
-                            onCheckedChange={(checked) =>
-                              setFormData((prev) => ({ ...prev, isSupplierRegistered: checked }))
-                            }
-                          />
-                          <Label htmlFor="isSupplierRegistered">Fornecedor cadastrado</Label>
-                        </div>
-
-                        {formData.isSupplierRegistered ? (
-                          <div>
-                            <Label htmlFor="supplierId">Fornecedor</Label>
-                            <Select
-                              value={formData.supplierId}
-                              onValueChange={(value) => handleSelectChange('supplierId', value)}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {suppliers.map((supplier) => (
-                                  <SelectItem key={supplier.id} value={supplier.id}>
-                                    {supplier.razaoSocial}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        ) : (
-                          <div>
-                            <Label htmlFor="supplierName">Nome do Fornecedor</Label>
-                            <Input
-                              id="supplierName"
-                              name="supplierName"
-                              value={formData.supplierName}
-                              onChange={handleInputChange}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Campo de Classificação (apenas para Saída) */}
-                    {formData.type === 'SAIDA' && (
-                      <div>
-                        <Label htmlFor="classificationId">Classificação</Label>
-                        <Select
-                          value={formData.classificationId}
-                          onValueChange={(value) => handleSelectChange('classificationId', value)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione uma classificação" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {classifications.map((classification) => (
-                              <SelectItem key={classification.id} value={classification.id}>
-                                {classification.description}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                
-
-                    <div>
-                      <Label htmlFor="description">Descrição</Label>
-                      <Textarea
-                        id="description"
-                        name="description"
-                        value={formData.description}
-                        onChange={handleInputChange}
-                      />
                     </div>
+                  )}
+                  
+                  {/* Campos específicos para Dízimo */}
+                  {formData.type === 'DIZIMO' && (
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="value">Valor</Label>
+                        <Input
+                          id="value"
+                          name="value"
+                          type="text"
+                          inputMode="decimal"
+                          value={formData.value}
+                          onChange={handleInputChange}
+                          disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                         
+                        />
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="isContributorRegistered"
+                          name="isContributorRegistered"
+                          checked={formData.isContributorRegistered}
+                          disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                         
+                          onCheckedChange={(checked) => 
+                            setFormData(prev => ({ ...prev, isContributorRegistered: checked }))
+                          }
+                        />
+                        <Label htmlFor="isContributorRegistered">Contribuinte cadastrado</Label>
+                      </div>
+                      
+                      {formData.isContributorRegistered ? (
+                        <div>
+                          <Label htmlFor="contributorId">Contribuinte</Label>
+                          <SearchableSelect
+                            label="Buscar Contribuinte"
+                            placeholder="Selecione o contribuinte"
+                            value={formData.contributorId}
+                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}   
+                            onChange={(value) => handleSelectChange('contributorId', value)}
+                            name="contributorId"
+                            data={contributors.map(c => ({ id: c.id, name: c.name, document: c.cpf }))}
+                            searchKeys={['name', 'document']}
+                          />  
+                        </div>
+                      ) : (
+                        <div>
+                          <Label htmlFor="contributorName">Nome do Contribuinte</Label>
+                          <Input
+                            id="contributorName"
+                            name="contributorName"
+                            value={formData.contributorName}
+                            onChange={handleInputChange}
+                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}   
+                            required
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Campos específicos para Saída */}
+                  {formData.type === 'SAIDA' && (
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="value">Valor</Label>
+                        <Input
+                          id="value"
+                          name="value"
+                          type="text"
+                          inputMode="decimal"
+                          value={formData.value}
+                          onChange={handleInputChange}
+                          disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                          
+                        />
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="isSupplierRegistered"
+                          name="isSupplierRegistered"
+                          checked={formData.isSupplierRegistered}
+                          disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                          
+                          onCheckedChange={(checked) => 
+                            setFormData(prev => ({ ...prev, isSupplierRegistered: checked }))
+                          }
+                        />
+                        <Label htmlFor="isSupplierRegistered">Fornecedor cadastrado</Label>
+                      </div>
+                      
+                      {formData.isSupplierRegistered ? (
+                        <div>
+                          <Label htmlFor="supplierId">Fornecedor</Label>
+                          <SearchableSelect
+                            label="Buscar Fornecedor"
+                            placeholder="Selecione o fornecedor"
+                            value={formData.supplierId}
+                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}  
+                            onChange={(value) => handleSelectChange('supplierId', value)}
+                            name="supplierId"
+                            data={suppliers.map(s => ({ id: s.id, name: s.razaoSocial, document: s.cpfcnpj }))}
+                            searchKeys={['name', 'document']}
+                          />
+                        </div>
+                      ) : (
+                        <div>
+                          <Label htmlFor="supplierName">Nome do Fornecedor</Label>
+                          <Input
+                            id="supplierName"
+                            name="supplierName"
+                            value={formData.supplierName}
+                            onChange={handleInputChange}
+                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                        
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-                    <DialogFooter>
-                      {error && <p className="text-red-500 text-sm">{error}</p>}
-                      <Button type="submit">{editingLaunch ? 'Atualizar' : 'Salvar'}</Button>
-                    </DialogFooter>
+                  <div>
+                    <Label htmlFor="description">Descrição</Label>
+                    <Textarea
+                      id="description"
+                      name="description"
+                      value={formData.description}
+                      onChange={handleInputChange}
+                      disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                      
+                    />
                   </div>
+                  
+                  <DialogFooter>
+                    <Button type="submit" disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}>
+                      {editingLaunch ? 'Atualizar' : 'Salvar'}
+                    </Button>
+                  </DialogFooter>
                 </form>
               </DialogContent>
             </Dialog>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Lançamentos Recentes</CardTitle>
-              <CardDescription>Lista de lançamentos financeiros</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Congregação</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Valores</TableHead>
-                    <TableHead>Contribuinte/Fornecedor</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Aprovação</TableHead>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {launches.map((launch) => (
-                    <TableRow key={launch.id}>
-                      <TableCell>{format(new Date(launch.date), 'dd/MM/yyyy', { locale: ptBR })}</TableCell>
-                      <TableCell>{launch.congregation?.name}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            launch.type === 'ENTRADA'
-                              ? 'default'
-                              : launch.type === 'DIZIMO'
-                              ? 'secondary'
-                              : 'destructive'
-                          }
-                        >
-                          {launch.type === 'ENTRADA' ? 'Entrada' : launch.type === 'DIZIMO' ? 'Dízimo' : 'Saída'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {launch.type === 'ENTRADA' ? (
-                          <div>
-                            <div>Oferta: R$ {launch.offerValue?.toFixed(2) || '0,00'}</div>
-                            <div>Votos: R$ {launch.votesValue?.toFixed(2) || '0,00'}</div>
-                            <div>EBD: R$ {launch.ebdValue?.toFixed(2) || '0,00'}</div>
-                          </div>
-                        ) : (
-                          <div>R$ {launch.value?.toFixed(2) || '0,00'}</div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {launch.contributor?.name || launch.supplier?.razaoSocial || launch.contributorName || launch.supplierName || '-'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={launch.status === 'NORMAL' ? 'default' : 'destructive'}>
-                          {launch.status === 'NORMAL' ? 'Normal' : 'Cancelado'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={launch.approved ? 'default' : 'secondary'}>
-                          {launch.approved ? 'Aprovado' : 'Pendente'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(launch)}
-                            disabled={launch.exported || !canEdit}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-
-                          {/* Botões de aprovação */}
-                          {!launch.approved && launch.status === 'NORMAL' && (
-                            <>
-                              {(launch.type === 'ENTRADA' && canApproveEntry) ||
-                              (launch.type === 'DIZIMO' && canApproveTithe) ||
-                              (launch.type === 'SAIDA' && canApproveExpense) ? (
-                                <Button variant="outline" size="sm" onClick={() => handleApprove(launch.id)}>
-                                  <Check className="h-4 w-4" />
-                                </Button>
-                              ) : null}
-                            </>
-                          )}
-
-                          {launch.approved && launch.status === 'NORMAL' && (
-                            <>
-                              {(launch.type === 'ENTRADA' && canApproveEntry) ||
-                              (launch.type === 'DIZIMO' && canApproveTithe) ||
-                              (launch.type === 'SAIDA' && canApproveExpense) ? (
-                                <Button variant="outline" size="sm" onClick={() => handleReprove(launch.id)}>
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              ) : null}
-                            </>
-                          )}
-
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleCancel(launch.id)}
-                            disabled={launch.status === 'CANCELED' || launch.exported}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+          {/* Filtros */}
+          <div className="mb-6 flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Pesquisar em todos os campos..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            
+            <div className="w-full sm:w-64">
+              <Select
+                value={selectedCongregation}
+                onValueChange={setSelectedCongregation}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Filtrar por congregação" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as congregações</SelectItem>
+                  {congregations.map((congregation) => (
+                    <SelectItem key={congregation.id} value={congregation.id}>
+                      {congregation.name}
+                    </SelectItem>
                   ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md flex items-center">
+              <AlertCircle className="h-4 w-4 mr-2" />
+              {error}
+            </div>
+          )}
+
+          {/* Lista para Desktop */}
+          <div className="hidden lg:block">
+            <Card>
+              <CardHeader>
+                <CardTitle>Lançamentos Recentes</CardTitle>
+                {/* <CardDescription>Lista de lançamentos financeiros</CardDescription> */}
+              </CardHeader>
+            <CardContent>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Valores</TableHead>
+                        <TableHead>Contribuinte/Fornecedor</TableHead>
+                        <TableHead>Talão</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredLaunches.map((launch) => (
+                        <TableRow key={launch.id}>
+                          <TableCell>
+                            <div className={`w-full py-1 px-2 rounded text-center text-white font-medium ${
+                              launch.type === 'ENTRADA' ? 'bg-green-500' : 
+                              launch.type === 'DIZIMO' ? 'bg-blue-500' : 'bg-red-500'
+                            }`}>
+                              {launch.type === 'ENTRADA' ? 'Entrada' : 
+                               launch.type === 'DIZIMO' ? 'Dízimo' : 'Saída'}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {format(new Date(launch.date), 'dd/MM/yyyy', { locale: ptBR })}
+                          </TableCell>
+                          <TableCell>
+                            {launch.type === 'ENTRADA' ? (
+                              <div className="space-y-1">
+                                {launch.offerValue ? <div>Oferta: {formatCurrency(launch.offerValue)}</div> : null}
+                                {launch.votesValue ? <div>Votos: {formatCurrency(launch.votesValue)}</div> : null}
+                                {launch.ebdValue ? <div>EBD: {formatCurrency(launch.ebdValue)}</div> : null}
+                                {launch.campaignValue ? <div>Campanha: {formatCurrency(launch.campaignValue)}</div> : null}
+                              </div>
+                            ) : (
+                              <div>{formatCurrency(launch.value)}</div>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {launch.contributor?.name || launch.supplier?.razaoSocial|| 
+                             launch.contributorName || launch.supplierName || '-'}
+                          </TableCell>
+                          <TableCell>
+                            {launch.talonNumber}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className='w-full py-1.5 px-1 rounded text-center text-white font-medium' variant={
+                              launch.status === 'NORMAL' ? 'default' :
+                              launch.status === 'APPROVED' ? 'default' :
+                              launch.status === 'EXPORTED' ? 'secondary' : 'destructive'
+                            }>
+                              {launch.status === 'NORMAL' ? 'Normal' : 
+                               launch.status === 'APPROVED' ? 'Aprovado' :
+                               launch.status === 'EXPORTED' ? 'Exportado' : 'Cancelado'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex space-x-2">
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleEdit(launch)}
+                                    //disabled={launch.status !== 'NORMAL' || !canEdit}
+                                    disabled={!canEdit}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Editar</p>
+                                </TooltipContent>
+                              </Tooltip>
+
+                              
+                              {launch.status === 'NORMAL' && (
+                                <>
+                                  {(launch.type === 'ENTRADA' && canApproveEntry) ||
+                                   (launch.type === 'DIZIMO' && canApproveTithe) ||
+                                   (launch.type === 'SAIDA' && canApproveExpense) ? (
+                                    <>
+                                      <Tooltip>
+                                        <TooltipTrigger>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleApprove(launch.id)}
+                                          >
+                                            <Check className="h-4 w-4" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Aprovar</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </>
+                                  ) : null}
+                                </>
+                              )}
+
+                              {launch.status === 'APPROVED' && (
+                                <>
+                                  {(launch.type === 'ENTRADA' && canApproveEntry) ||
+                                   (launch.type === 'DIZIMO' && canApproveTithe) ||
+                                   (launch.type === 'SAIDA' && canApproveExpense) ? (
+                                    <>
+                                      <Tooltip>
+                                        <TooltipTrigger>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleReprove(launch.id)}
+                                          >
+                                            <X className="h-4 w-4" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Desaprovar</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </>
+                                  ) : null}
+                                </>
+                              )}
+
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleCancel(launch.id)}
+                                    disabled={launch.status !== 'NORMAL'}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Cancelar</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Lista para Mobile */}
+          <div className="lg:hidden">
+            {filteredLaunches.map((launch) => (
+              <LaunchCard key={launch.id} launch={launch} />
+            ))}
+          </div>
         </div>
       </div>
     </div>
+  </PermissionGuard>
   )
 }

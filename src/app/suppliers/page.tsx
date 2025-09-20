@@ -11,9 +11,10 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, Building2 } from 'lucide-react'
+import { Plus, Edit, Trash2, Building2, Upload } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { PermissionGuard } from '@/components/auth/PermissionGuard'
 
 interface Supplier {
   id: string
@@ -29,6 +30,9 @@ export default function Suppliers() {
   const { data: session } = useSession()
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
+  const [csvFile, setCsvFile] = useState<File | null>(null)
+  const [importing, setImporting] = useState(false)
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null)
   const [formData, setFormData] = useState({
     code: '',
@@ -139,7 +143,63 @@ export default function Suppliers() {
     })
   }
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file && file.type === 'text/csv') {
+      setCsvFile(file)
+    } else {
+      alert('Por favor, selecione um arquivo CSV válido')
+      e.target.value = ''
+    }
+  }
+
+    const handleImportCSV = async () => {
+    if (!csvFile) {
+      alert('Por favor, selecione um arquivo CSV')
+      return
+    }
+
+    setImporting(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', csvFile)
+
+      const response = await fetch('/api/suppliers/import', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        alert(`Importação concluída! ${result.imported} fornecedores importados com sucesso.`)
+        fetchSuppliers()
+        setIsImportDialogOpen(false)
+        setCsvFile(null)
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Erro ao importar arquivo CSV')
+      }
+    } catch (error) {
+      console.error('Erro ao importar CSV:', error)
+      alert('Erro ao importar arquivo CSV')
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  const resetImportForm = () => {
+    setCsvFile(null)
+    setImporting(false)
+  }
+
   return (
+    <PermissionGuard 
+      requiredPermissions={{
+        canCreate: true,
+        canEdit: true,
+        canExclude: true
+      }}
+    >
     <div className="min-h-screen bg-gray-50">
       <Sidebar />
       
@@ -242,6 +302,63 @@ export default function Suppliers() {
                   </form>
                 </DialogContent>
               </Dialog>
+
+              <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" onClick={resetImportForm}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Importar CSV
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                  <DialogTitle>Importar Fornecedores via CSV</DialogTitle>
+                  <DialogDescription>
+                    Faça upload de um arquivo CSV com os fornecedores. O arquivo deve ter as colunas: Codigo, Razão Social, Tipo Pessoa, CpfCnpj.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="csvFile" className="text-right">
+                      Arquivo CSV
+                    </Label>
+                    <Input
+                      id="csvFile"
+                      type="file"
+                      accept=".csv"
+                      onChange={handleFileChange}
+                      className="col-span-3"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
+                    <p className="font-medium mb-2">Formato esperado do CSV:</p>
+                    <p className="text-xs font-mono">Codigo, Razão Social, Tipo Pessoa, CpfCnpj</p>
+                    <p className="text-xs font-mono">1,EMPRESA TESTE,J</p>
+                    <p className="text-xs font-mono">2,MARIA SANTOS,F,98765432100</p>
+                    <div className="mt-3 pt-3 border-t border-gray-200">
+                      <a 
+                        href="/exemplo-fornecedores.csv" 
+                        download
+                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      >
+                        📥 Baixar arquivo de exemplo
+                      </a>
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button 
+                    type="button" 
+                    onClick={handleImportCSV}
+                    disabled={!csvFile || importing}
+                  >
+                    {importing ? 'Importando...' : 'Importar'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
             </div>
           </div>
 
@@ -307,5 +424,6 @@ export default function Suppliers() {
         </div>
       </div>
     </div>
+    </PermissionGuard>
   )
 }

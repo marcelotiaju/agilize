@@ -15,12 +15,12 @@ export async function PUT(request: NextRequest, props: any) {
       const id = params.id;
       const body = await request.json();
       
-      if (body.status !== undefined) {
-        body.status = body.status;
-      }
-      if (body.approved !== undefined) {
-        body.approved = body.approved;
-      }
+      // if (body.status !== undefined) {
+      //   body.status = body.status;
+      // }
+      // if (body.approved !== undefined) {
+      //   body.approved = body.approved;
+      // }
 
       // Se não houver dados para atualizar, retorne um erro
       // if (Object.keys(updateData).length === 0) {
@@ -30,12 +30,17 @@ export async function PUT(request: NextRequest, props: any) {
       // Verifique se o lançamento já foi exportado
       const existingLaunch = await prisma.launch.findUnique({
           where: { id },
-          select: { exported: true, type: true, status: true }
+          select: { type: true, status: true }
       });
 
       if (!existingLaunch) {
           return NextResponse.json({ error: "Lançamento não encontrado" }, { status: 404 });
       }
+
+      const launchDate = new Date(`${body.date}T12:00:00Z`)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      launchDate.setHours(0, 0, 0, 0)
 
       // const launch = await prisma.launch.findUnique({
       //   where: { id },
@@ -61,7 +66,7 @@ export async function PUT(request: NextRequest, props: any) {
       //   return NextResponse.json({ error: "Acesso não autorizado a esta congregação" }, { status: 403 })
       // }
   
-      if (body.exported) {
+      if (body.status !== undefined && existingLaunch.status === "EXPORTED") {
         return NextResponse.json({ error: "Lançamento já exportado não pode ser alterado" }, { status: 400 })
       }
   
@@ -72,17 +77,17 @@ export async function PUT(request: NextRequest, props: any) {
 
   
       // Verificar permissões de aprovação
-      if (body.approved !== undefined) {
-          if (body.type === "ENTRADA" && !session.user.canApproveEntry) {
-              return NextResponse.json({ error: "Sem permissão para aprovar entradas" }, { status: 403 });
-          }
-          if (body.type === "DIZIMO" && !session.user.canApproveTithe) {
-              return NextResponse.json({ error: "Sem permissão para aprovar dízimos" }, { status: 403 });
-          }
-          if (body.type === "SAIDA" && !session.user.canApproveExpense) {
-              return NextResponse.json({ error: "Sem permissão para aprovar saídas" }, { status: 403 });
-          }
-      }
+      // if (body.approved !== undefined) {
+      //     if (body.type === "ENTRADA" && !session.user.canApproveEntry) {
+      //         return NextResponse.json({ error: "Sem permissão para aprovar entradas" }, { status: 403 });
+      //     }
+      //     if (body.type === "DIZIMO" && !session.user.canApproveTithe) {
+      //         return NextResponse.json({ error: "Sem permissão para aprovar dízimos" }, { status: 403 });
+      //     }
+      //     if (body.type === "SAIDA" && !session.user.canApproveExpense) {
+      //         return NextResponse.json({ error: "Sem permissão para aprovar saídas" }, { status: 403 });
+      //     }
+      // }
   
       // const updatedLaunch = await prisma.launch.update({
       //   where: { id },
@@ -100,11 +105,14 @@ export async function PUT(request: NextRequest, props: any) {
           votesValue: body.votesValue ? parseFloat(body.votesValue) : null,
           ebdValue: body.ebdValue ? parseFloat(body.ebdValue) : null,
           value: body.value ? parseFloat(body.value) : null,
-          supplierId: body.supplierId ? parseInt(body.supplierId) : null,
-          contributorId: body.contributorId ? parseInt(body.contributorId) : null,
+          campaignValue: body.campaignValue ? parseFloat(body.campaignValue) : null,
+          // status: body.status ? body.status : undefined,
+          congregationId: body.congregationId ? body.congregationId : null,
+          supplierId: body.supplierId ? body.supplierId : null,
+          contributorId: body.contributorId ? body.contributorId : null,
           talonNumber: body.talonNumber ? body.talonNumber : null,
           classificationId: body.classificationId ? body.classificationId : null,
-          date: body.date ? new Date(body.date) : undefined,
+          date: body.date ? launchDate : undefined,
           type: body.type ? body.type : undefined,
           description: body.description ? body.description : undefined
         },
