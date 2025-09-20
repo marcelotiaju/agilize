@@ -665,7 +665,7 @@ const filteredLaunches = useMemo(() => {
                     {editingLaunch && editingLaunch.status !== 'NORMAL' && (
                       <div className="mt-2 p-2 bg-yellow-50 text-red-800 rounded-md flex items-center">
                         <AlertCircle className="h-4 w-4 mr-2" />
-                        Este lançamento não pode ser editado porque está com status "{editingLaunch.status === 'CANCELED' ? 'CANCELADO' : editingLaunch.status === 'APPROVED' ? 'APROVADO': ''  }"
+                        Este lançamento não pode ser editado porque está com status "{editingLaunch.status === 'CANCELED' ? 'CANCELADO' : editingLaunch.status === 'APPROVED' ? 'APROVADO': editingLaunch.status === 'EXPORTED' ? 'EXPORTADO' : ''  }"
                       </div>
                     )}
                   </DialogDescription>
@@ -1062,7 +1062,7 @@ const filteredLaunches = useMemo(() => {
                             {launch.talonNumber}
                           </TableCell>
                           <TableCell>
-                            <Badge className='w-full py-1.5 px-1 rounded text-center text-white font-medium' variant={
+                            <Badge className={`w-full py-1.5 px-1 rounded text-center ${launch.status === 'EXPORTED' ? 'text-black' : 'text-white'} font-medium`} variant={
                               launch.status === 'NORMAL' ? 'default' :
                               launch.status === 'APPROVED' ? 'default' :
                               launch.status === 'EXPORTED' ? 'secondary' : 'destructive'

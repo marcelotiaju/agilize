@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import prisma from "@/lib/prisma"
-import { nextAuthOptions } from "../auth/[...nextauth]/route";
+import{ authOptions }from "../auth/[...nextauth]/route";
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(nextAuthOptions);
+  const session = await getServerSession(authOptions);
 
   if (!session) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
@@ -17,6 +17,11 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { startDate, endDate, type, congregationIds } = body
+
+    const launchDateStart = new Date(`${body.startDate}T12:00:00Z`)
+    const launchDateEnd = new Date(`${body.endDate}T12:00:00Z`)
+    launchDateStart.setHours(0, 0, 0, 0)
+    launchDateEnd.setHours(0, 0, 0, 0)
 
     const userCongregations = await prisma.userCongregation.findMany({
       where: {
@@ -50,18 +55,14 @@ export async function POST(request: NextRequest) {
         where: {
           congregationId: { in: congregationIds },
           date: {
-            gte: new Date(startDate),
-            lte: new Date(endDate)
+            gte: launchDateStart,
+            lte: launchDateEnd
           },
-          type: type,
+          type: { in: type },
           OR: [
             {
               status: "CANCELED"
             },
-            {
-              approved: true,
-              exported: true
-            }
           ]
         }
       })

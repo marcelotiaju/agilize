@@ -33,7 +33,7 @@ export default function DeleteHistory() {
   const [formData, setFormData] = useState({
     startDate: format(new Date(new Date().setDate(new Date().getDate() - 30)), 'yyyy-MM-dd'),
     endDate: format(new Date(), 'yyyy-MM-dd'),
-    type: 'ENTRADA',
+    type: ['ENTRADA', 'DIZIMO', 'SAIDA'], 
     congregationIds: [] as string[]
   })
   const [isDeleting, setIsDeleting] = useState(false)
@@ -69,6 +69,16 @@ export default function DeleteHistory() {
 
   const handleSelectChange = (name: string, value: string) => {
     setFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleTypeChange = (type: string, checked: boolean) => {
+    setFormData(prev => {
+      const types = checked
+        ? [...prev.type, type]
+        : prev.type.filter(t => t !== type)
+      
+      return { ...prev, type: types }
+     })
   }
 
   const handleCongregationChange = (congregationId: string, checked: boolean) => {
@@ -208,20 +218,33 @@ export default function DeleteHistory() {
                     </div>
 
                     <div>
-                      <Label htmlFor="type">Tipo de Dados</Label>
-                      <Select
-                        value={formData.type}
-                        onValueChange={(value) => handleSelectChange('type', value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="ENTRADA">ENTRADA</SelectItem>
-                          <SelectItem value="DIZIMO">DIZIMO</SelectItem>
-                          <SelectItem value="SAIDA">SAIDA</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Label>Tipo de Dados</Label>
+                      <div className="space-y-2 mt-2">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="type-entrada"
+                            checked={formData.type.includes('ENTRADA')}
+                            onCheckedChange={(checked) => handleTypeChange('ENTRADA', checked as boolean)}
+                          />
+                          <Label htmlFor="type-entrada">ENTRADA</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="type-dizimo"
+                            checked={formData.type.includes('DIZIMO')}
+                            onCheckedChange={(checked) => handleTypeChange('DIZIMO', checked as boolean)}
+                          />
+                          <Label htmlFor="type-dizimo">DIZIMO</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="type-saida"
+                            checked={formData.type.includes('SAIDA')}
+                            onCheckedChange={(checked) => handleTypeChange('SAIDA', checked as boolean)}
+                          />
+                          <Label htmlFor="type-saida">SAIDA</Label>
+                        </div>
+                      </div>
                     </div>
 
                     <div>

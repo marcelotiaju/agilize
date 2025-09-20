@@ -1,13 +1,13 @@
 // app/api/user/change-password/route.ts
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { nextAuthOptions } from "@/app/api/auth/[...nextauth]/route"
+import{ authOptions }from "@/app/api/auth/[...nextauth]/route"
 import prisma from "@/lib/prisma"
 import bcrypt from "bcrypt"
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(nextAuthOptions)
+    const session = await getServerSession(authOptions)
 
     if (!session) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })

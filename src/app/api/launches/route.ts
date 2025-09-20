@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
-import { nextAuthOptions } from "../auth/[...nextauth]/route";
+import{ authOptions }from "../auth/[...nextauth]/route";
 import { getServerSession } from "next-auth";
 import { ta } from "date-fns/locale";
 import { Description } from "@radix-ui/react-dialog";
@@ -9,7 +9,7 @@ import { format } from "path";
 import { parseISO } from "date-fns";
 
 export async function GET(request: NextRequest) {
-  const session = await getServerSession(nextAuthOptions);
+  const session = await getServerSession(authOptions);
 
   if (!session) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(nextAuthOptions);
+  const session = await getServerSession(authOptions);
 
   if (!session) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
@@ -238,7 +238,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(
   request: NextRequest
 ) {
-  const session = await getServerSession(nextAuthOptions);
+  const session = await getServerSession(authOptions);
 
   if (!session) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
