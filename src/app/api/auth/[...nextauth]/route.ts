@@ -61,6 +61,7 @@
       }
     })
   ],
+  secret: process.env.SECRET,
   session: {
     strategy: "jwt"
   },
