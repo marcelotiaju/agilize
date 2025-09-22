@@ -127,7 +127,7 @@
     }
   },
   pages: {
-    signIn: "/auth/signin",
+    signIn: "/",
   },
 }
 
