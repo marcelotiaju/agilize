@@ -15,6 +15,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Plus, Edit, Trash2, Church, ChevronDown, ChevronUp, Upload } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+
 
 interface Congregation {
   id: string
@@ -327,152 +329,117 @@ export default function Congregations() {
                       </div>
                     </div>
 
-                   {/* Collapse para Entrada */}
-                  <Collapsible open={openCollapsibles.entrada} onOpenChange={() => toggleCollapsible('entrada')}>
-                    <CollapsibleTrigger asChild>
-                      <Button variant="outline" type="button" className="w-full justify-between">
-                        <span className="font-medium">Configurações de Entrada</span>
-                        {openCollapsibles.entrada ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="space-y-4 mt-4">
-                      <div className="grid grid-cols-1 gap-4">
-                        <div>
-                          <Label htmlFor="entradaAccountPlan">Plano de Contas</Label>
-                          <Input
-                            id="entradaAccountPlan"
-                            name="entradaAccountPlan"
-                            value={formData.entradaAccountPlan}
-                            onChange={handleInputChange}
-                            placeholder="Ex: 4.1.01 - Ofertas"
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="entradaFinancialEntity">Entidade Financeira</Label>
-                          <Input
-                            id="entradaFinancialEntity"
-                            name="entradaFinancialEntity"
-                            value={formData.entradaFinancialEntity}
-                            onChange={handleInputChange}
-                            placeholder="Ex: Banco do Brasil S/A"
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="entradaPaymentMethod">Forma de Pagamento</Label>
-                          <Input
-                            id="entradaPaymentMethod"
-                            name="entradaPaymentMethod"
-                            value={formData.entradaPaymentMethod}
-                            onChange={handleInputChange}
-                            placeholder="Ex: Dinheiro, Transferência, etc."
-                          />
-                        </div>
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-
-                  {/* Collapse para Dízimo */}
-                  <Collapsible open={openCollapsibles.dizimo} onOpenChange={() => toggleCollapsible('dizimo')}>
-                    <CollapsibleTrigger asChild>
-                      <Button variant="outline" type="button" className="w-full justify-between">
-                        <span className="font-medium">Configurações de Dízimo</span>
-                        {openCollapsibles.dizimo ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="space-y-4 mt-4">
-                      <div className="grid grid-cols-1 gap-4">
-                        <div>
-                          <Label htmlFor="dizimoAccountPlan">Plano de Contas</Label>
-                          <Input
-                            id="dizimoAccountPlan"
-                            name="dizimoAccountPlan"
-                            value={formData.dizimoAccountPlan}
-                            onChange={handleInputChange}
-                            placeholder="Ex: 4.2.01 - Dízimos"
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="dizimoFinancialEntity">Entidade Financeira</Label>
-                          <Input
-                            id="dizimoFinancialEntity"
-                            name="dizimoFinancialEntity"
-                            value={formData.dizimoFinancialEntity}
-                            onChange={handleInputChange}
-                            placeholder="Ex: Caixa Econômica Federal"
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="dizimoPaymentMethod">Forma de Pagamento</Label>
-                          <Input
-                            id="dizimoPaymentMethod"
-                            name="dizimoPaymentMethod"
-                            value={formData.dizimoPaymentMethod}
-                            onChange={handleInputChange}
-                            placeholder="Ex: Dinheiro, TED, etc."
-                          />
-                        </div>
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-
-                  {/* Collapse para Saída */}
-                  <Collapsible open={openCollapsibles.saida} onOpenChange={() => toggleCollapsible('saida')}>
-                    <CollapsibleTrigger asChild>
-                      <Button variant="outline" type="button" className="w-full justify-between">
-                        <span className="font-medium">Configurações de Saída</span>
-                        {openCollapsibles.saida ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="space-y-4 mt-4">
-                      <div className="grid grid-cols-1 gap-4">
-                        <div>
-                          <Label htmlFor="saidaAccountPlan">Plano de Contas</Label>
-                          <Input
-                            id="saidaAccountPlan"
-                            name="saidaAccountPlan"
-                            value={formData.saidaAccountPlan}
-                            onChange={handleInputChange}
-                            placeholder="Ex: 5.1.01 - Material de Escritório"
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="saidaFinancialEntity">Entidade Financeira</Label>
-                          <Input
-                            id="saidaFinancialEntity"
-                            name="saidaFinancialEntity"
-                            value={formData.saidaFinancialEntity}
-                            onChange={handleInputChange}
-                            placeholder="Ex: Itaú Unibanco S/A"
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="saidaPaymentMethod">Forma de Pagamento</Label>
-                          <Input
-                            id="saidaPaymentMethod"
-                            name="saidaPaymentMethod"
-                            value={formData.saidaPaymentMethod}
-                            onChange={handleInputChange}
-                            placeholder="Ex: Cartão de Crédito, Boleto, etc."
-                          />
-                        </div>
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                  
-                  <DialogFooter>
-                    <Button type="submit">
-                      {editingCongregation ? 'Atualizar' : 'Salvar'}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
+                    <Tabs defaultValue="entrada" className="w-full mt-4">
+                      <TabsList className="grid w-full grid-cols-3">
+                          <TabsTrigger value="entrada">Entrada</TabsTrigger>
+                          <TabsTrigger value="dizimo">Dízimo</TabsTrigger>
+                          <TabsTrigger value="saida">Saída</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="entrada" className="space-y-4 mt-4">
+                          <div>
+                              <Label htmlFor="entradaAccountPlan">Plano de Contas</Label>
+                              <Input
+                                  id="entradaAccountPlan"
+                                  name="entradaAccountPlan"
+                                  value={formData.entradaAccountPlan}
+                                  onChange={handleInputChange}
+                                  placeholder=""
+                              />
+                          </div>
+                          <div>
+                              <Label htmlFor="entradaFinancialEntity">Entidade Financeira</Label>
+                              <Input
+                                  id="entradaFinancialEntity"
+                                  name="entradaFinancialEntity"
+                                  value={formData.entradaFinancialEntity}
+                                  onChange={handleInputChange}
+                                  placeholder=""
+                              />
+                          </div>
+                          <div>
+                              <Label htmlFor="entradaPaymentMethod">Método de Pagamento</Label>
+                              <Input
+                                  id="entradaPaymentMethod"
+                                  name="entradaPaymentMethod"
+                                  value={formData.entradaPaymentMethod}
+                                  onChange={handleInputChange}
+                                  placeholder=""
+                              />
+                          </div>                          
+                      </TabsContent>
+                      <TabsContent value="dizimo" className="space-y-4 mt-4">
+                          <div>
+                              <Label htmlFor="dizimoAccountPlan">Plano de Contas</Label>
+                              <Input
+                                  id="dizimoAccountPlan"
+                                  name="dizimoAccountPlan"
+                                  value={formData.dizimoAccountPlan}
+                                  onChange={handleInputChange}
+                                  placeholder=""
+                              />
+                          </div>
+                          <div>
+                              <Label htmlFor="dizimoFinancialEntity">Entidade Financeira</Label>
+                              <Input
+                                  id="dizimoFinancialEntity"
+                                  name="dizimoFinancialEntity"
+                                  value={formData.dizimoFinancialEntity}
+                                  onChange={handleInputChange}
+                                  placeholder=""
+                              />
+                          </div>                          
+                          <div>
+                              <Label htmlFor="dizimoPaymentMethod">Método de Pagamento</Label>
+                              <Input
+                                  id="dizimoPaymentMethod"
+                                  name="dizimoPaymentMethod"
+                                  value={formData.dizimoPaymentMethod}
+                                  onChange={handleInputChange}
+                                  placeholder=""
+                              />
+                          </div>
+                      </TabsContent>
+                      <TabsContent value="saida" className="space-y-4 mt-4">
+                          <div>
+                              <Label htmlFor="saidaAccountPlan">Plano de Contas</Label>
+                              <Input
+                                  id="saidaAccountPlan"
+                                  name="saidaAccountPlan"
+                                  value={formData.saidaAccountPlan}
+                                  onChange={handleInputChange}
+                                  placeholder=""
+                              />
+                          </div>
+                          <div>
+                              <Label htmlFor="saidaFinancialEntity">Entidade Financeira</Label>
+                              <Input
+                                  id="saidaFinancialEntity"
+                                  name="saidaFinancialEntity"
+                                  value={formData.saidaFinancialEntity}
+                                  onChange={handleInputChange}
+                                  placeholder=""
+                              />
+                          </div>                                
+                          <div>
+                              <Label htmlFor="saidaPaymentMethod">Método de Pagamento</Label>
+                              <Input
+                                  id="saidaPaymentMethod"
+                                  name="saidaPaymentMethod"
+                                  value={formData.saidaPaymentMethod}
+                                  onChange={handleInputChange}
+                                  placeholder=""
+                              />
+                          </div>
+                      </TabsContent>
+                      </Tabs>
+                      <DialogFooter>
+                        <Button type="submit">
+                        {editingCongregation ? 'Atualizar' : 'Salvar'}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
               
               <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
                 <DialogTrigger asChild>

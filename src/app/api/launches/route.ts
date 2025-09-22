@@ -17,11 +17,13 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url)
-    const congregationId = searchParams.get('congregationId')
-    const startDate = searchParams.get('startDate')
-    const endDate = searchParams.get('endDate')
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
+    const congregationId = searchParams.get('congregationId')
+    const searchTerm = searchParams.get('searchTerm') || ''
+    const startDate = searchParams.get('startDate')
+    const endDate = searchParams.get('endDate')
+
 
     const skip = (page - 1) * limit
 
@@ -39,7 +41,7 @@ export async function GET(request: NextRequest) {
       in: userCongregations.map(uc => uc.congregationId)
     }
 
-    if (congregationId) {
+    if (congregationId && congregationId !== 'all') {
       where.congregationId = congregationId
     }
 
@@ -50,6 +52,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
+        // Adicionar filtro de pesquisa
+    if (searchTerm) {
+      where.OR = [
+        { description: { contains: searchTerm, mode: 'insensitive' } },
+        { talonNumber: { contains: searchTerm, mode: 'insensitive' } },
+        { contributor: { name: { contains: searchTerm, mode: 'insensitive' } } },
+        { supplier: { name: { contains: searchTerm, mode: 'insensitive' } } }
+      ]
+    }
 
     // Buscar lançamentos com paginação
     const [launches, totalCount] = await Promise.all([

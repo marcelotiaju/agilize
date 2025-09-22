@@ -19,6 +19,7 @@ import { ptBR } from 'date-fns/locale'
 import { Checkbox } from '@/components/ui/checkbox'
 import { PermissionGuard } from '@/components/auth/PermissionGuard'
 import { SearchableSelect } from '@/components/ui/searchable-select';
+import { Pagination } from '@/components/ui/pagination'
 import {
   Tooltip,
   TooltipContent,
@@ -38,6 +39,11 @@ export default function Launches() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCongregation, setSelectedCongregation] = useState('all')
   const [expandedCard, setExpandedCard] = useState(null)
+    // Estados para paginação e filtros
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [totalPages, setTotalPages] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
   
 
   // Tipos
@@ -108,7 +114,7 @@ export default function Launches() {
     fetchContributors()
     fetchSuppliers()
     fetchClassifications()
-  }, [])
+  }, [currentPage, itemsPerPage, searchTerm, selectedCongregation])
 
   useEffect(() => {
     // Se houver apenas uma congregação, definir como default
@@ -120,12 +126,43 @@ export default function Launches() {
     }
   }, [congregations])
 
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+  }
+
+  const handleItemsPerPageChange = (newItemsPerPage: number) => {
+    setItemsPerPage(newItemsPerPage)
+    setCurrentPage(1) // Resetar para a primeira página
+  }
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    setCurrentPage(1) // Resetar para a primeira página ao pesquisar
+    fetchLaunches()
+  }
+
+  const clearFilters = () => {
+    setSearchTerm('')
+    setSelectedCongregation('all')
+    setCurrentPage(1)
+  }
+
   const fetchLaunches = async () => {
     try {
-      const response = await fetch('/api/launches')
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: itemsPerPage.toString()
+      })
+
+      if (searchTerm) params.append('searchTerm', searchTerm)
+      if (selectedCongregation !== 'all') params.append('congregationId', selectedCongregation)
+
+      const response = await fetch(`/api/launches?${params.toString()}`)
       if (response.ok) {
         const data = await response.json()
         setLaunches(data.launches)
+        setTotalPages(data.pagination.totalPages)
+        setTotalCount(data.pagination.totalCount)
       }
     } catch (error) {
       console.error('Erro ao carregar lançamentos:', error)
@@ -534,7 +571,7 @@ const filteredLaunches = useMemo(() => {
             
             <div className="flex space-x-2 pt-0">
               <Tooltip>
-                <TooltipTrigger>
+                <TooltipTrigger asChild>
                   <Button
                     variant="outline"
                     size="sm"
@@ -557,7 +594,7 @@ const filteredLaunches = useMemo(() => {
                    (launch.type === 'SAIDA' && canApproveExpense) ? (
                     <>
                     <Tooltip>
-                      <TooltipTrigger>
+                      <TooltipTrigger asChild>
                       <Button
                         variant="outline"
                         size="sm"
@@ -584,7 +621,7 @@ const filteredLaunches = useMemo(() => {
                    (launch.type === 'SAIDA' && canApproveExpense) ? (
                     <>
                     <Tooltip>
-                      <TooltipTrigger>
+                      <TooltipTrigger asChild>
                       <Button
                         variant="outline"
                         size="sm"
@@ -604,23 +641,27 @@ const filteredLaunches = useMemo(() => {
                 </>
               )}
               
-              <Tooltip>
-                <TooltipTrigger>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleCancel(launch.id)}
-                disabled={launch.status !== 'NORMAL'}
-                className="flex-1"
-              >
-                <Trash2 className="h-4 w-4 mr-1" />
-                {/* Cancelar */}
-              </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Cancelar</p>
-                </TooltipContent>
-              </Tooltip>
+
+              {launch.status !== 'CANCELED' ? (
+              <>           
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleCancel(launch.id)}
+                    disabled={launch.status !== 'NORMAL' || !canEdit}
+                    className="flex-1"
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    {/* Cancelar */}
+                  </Button>
+                    </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Cancelar</p>
+                  </TooltipContent>
+                </Tooltip>
+              </> ) : null}
             </div>
           {/* </CollapsibleContent>
         </Collapsible> */}
@@ -628,12 +669,19 @@ const filteredLaunches = useMemo(() => {
     </Card>
   )
 
+    // const canAccessLaunches = ['canLaunchEntry', 'canLaunchTithe', 'canLaunchExpense', 'canApproveEntry', 'canApproveTithe', 'canApproveExpense'];
+
+    // const hasLaunchPermission = canAccessLaunches.find(perm => canAccessLaunches);
+
    return (
     <PermissionGuard 
       requiredPermissions={{
-        canLaunchEntry: true,
-        canLaunchTithe: true,
-        canLaunchExpense: true
+        canLaunchEntry: canLaunchEntry,
+        canLaunchTithe: canLaunchTithe,
+        canLaunchExpense: canLaunchExpense,
+        canApproveEntry: canApproveEntry,
+        canApproveTithe: canApproveTithe,
+        canApproveExpense: canApproveExpense,
       }}
     >
 
@@ -756,7 +804,7 @@ const filteredLaunches = useMemo(() => {
                       </div>
                       
                       <div>
-                        <Label htmlFor="talonNumber">Nr. Talão</Label>
+                        {formData.type === 'SAIDA' ? <Label htmlFor="talonNumber">Nr Doc</Label> : <Label htmlFor="talonNumber">Nr. Talão</Label>}
                         <Input
                           id="talonNumber"
                           name="talonNumber"
@@ -832,19 +880,20 @@ const filteredLaunches = useMemo(() => {
                   {/* Campos específicos para Dízimo */}
                   {formData.type === 'DIZIMO' && (
                     <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="value">Valor</Label>
-                        <Input
-                          id="value"
-                          name="value"
-                          type="text"
-                          inputMode="decimal"
-                          value={formData.value}
-                          onChange={handleInputChange}
-                          disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                         
-                        />
+                      <div  className='grid grid-cols-2'>
+                        <div>
+                          <Label htmlFor="value">Valor</Label>
+                          <Input
+                            id="value"
+                            name="value"
+                            type="text"
+                            inputMode="decimal"
+                            value={formData.value}
+                            onChange={handleInputChange}
+                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                         
+                          />
+                        </div>
                       </div>
-                      
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           id="isContributorRegistered"
@@ -891,19 +940,20 @@ const filteredLaunches = useMemo(() => {
                   {/* Campos específicos para Saída */}
                   {formData.type === 'SAIDA' && (
                     <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="value">Valor</Label>
-                        <Input
-                          id="value"
-                          name="value"
-                          type="text"
-                          inputMode="decimal"
-                          value={formData.value}
-                          onChange={handleInputChange}
-                          disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                          
-                        />
+                      <div  className='grid grid-cols-2'>
+                        <div>
+                          <Label htmlFor="value">Valor</Label>
+                          <Input
+                            id="value"
+                            name="value"
+                            type="text"
+                            inputMode="decimal"
+                            value={formData.value}
+                            onChange={handleInputChange}
+                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                          
+                          />
+                        </div>
                       </div>
-                      
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           id="isSupplierRegistered"
@@ -1022,8 +1072,8 @@ const filteredLaunches = useMemo(() => {
                         <TableHead>Data</TableHead>
                         <TableHead>Valores</TableHead>
                         <TableHead>Contribuinte/Fornecedor</TableHead>
-                        <TableHead>Talão</TableHead>
-                        <TableHead>Status</TableHead>
+                        <TableHead>Nr Doc</TableHead>
+                        <TableHead>Status</TableHead> 
                         <TableHead>Ações</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1074,14 +1124,17 @@ const filteredLaunches = useMemo(() => {
                           </TableCell>
                           <TableCell>
                             <div className="flex space-x-2">
+                              {(launch.type === 'ENTRADA' && canLaunchEntry) ||
+                                   (launch.type === 'DIZIMO' && canLaunchTithe) ||
+                                   (launch.type === 'SAIDA' && canLaunchExpense) ? (
                               <Tooltip>
-                                <TooltipTrigger>
+                                <TooltipTrigger asChild>
                                   <Button
                                     variant="outline"
                                     size="sm"
                                     onClick={() => handleEdit(launch)}
                                     //disabled={launch.status !== 'NORMAL' || !canEdit}
-                                    disabled={!canEdit}
+                                    disabled={!canLaunchEntry || !canLaunchTithe || !canLaunchExpense}
                                   >
                                     <Edit className="h-4 w-4" />
                                   </Button>
@@ -1090,8 +1143,8 @@ const filteredLaunches = useMemo(() => {
                                   <p>Editar</p>
                                 </TooltipContent>
                               </Tooltip>
+                              ) : null}
 
-                              
                               {launch.status === 'NORMAL' && (
                                 <>
                                   {(launch.type === 'ENTRADA' && canApproveEntry) ||
@@ -1142,13 +1195,15 @@ const filteredLaunches = useMemo(() => {
                                 </>
                               )}
 
+                              {launch.status =='NORMAL' && (!canApproveEntry || !canApproveExpense || !canApproveTithe) ? (
+                              <>           
                               <Tooltip>
                                 <TooltipTrigger>
                                   <Button
                                     variant="outline"
                                     size="sm"
                                     onClick={() => handleCancel(launch.id)}
-                                    disabled={launch.status !== 'NORMAL'}
+                                    // disabled={launch.status !== 'NORMAL' ? null : null}
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
@@ -1157,12 +1212,25 @@ const filteredLaunches = useMemo(() => {
                                   <p>Cancelar</p>
                                 </TooltipContent>
                               </Tooltip>
+                             </>) : null}
                             </div>
                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
+                </div>
+                              
+                {/* Componente de paginação */}
+                <div className="mt-4">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                    itemsPerPage={itemsPerPage}
+                    onItemsPerPageChange={handleItemsPerPageChange}
+                    totalItems={totalCount}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -1173,6 +1241,16 @@ const filteredLaunches = useMemo(() => {
             {filteredLaunches.map((launch) => (
               <LaunchCard key={launch.id} launch={launch} />
             ))}
+            <div className="mt-4">
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={handlePageChange}
+                      itemsPerPage={itemsPerPage}
+                      onItemsPerPageChange={handleItemsPerPageChange}
+                      totalItems={totalCount}
+                    />
+            </div>
           </div>
         </div>
       </div>

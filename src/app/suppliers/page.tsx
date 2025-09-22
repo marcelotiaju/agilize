@@ -37,7 +37,7 @@ export default function Suppliers() {
   const [formData, setFormData] = useState({
     code: '',
     razaoSocial: '',
-    tipoPessoa: '',
+    tipoPessoa: 'FISICA',
     cpfCnpj: ''
   })
 
@@ -138,7 +138,7 @@ export default function Suppliers() {
     setFormData({
       code: '',
       razaoSocial: '',
-      tipoPessoa: '',
+      tipoPessoa: 'FISICA',
       cpfCnpj: ''
     })
   }

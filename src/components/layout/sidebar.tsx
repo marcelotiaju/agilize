@@ -26,29 +26,33 @@ import { cn } from '@/lib/utils'
 import Image from 'next/image';
 import { permission } from 'process'
 
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: Home },
-  { name: 'Lançamentos', href: '/launches', icon: FileText, permission: 'canLaunchEntry'  },
-  { name: 'Contribuintes', href: '/contributors', icon: Users, permission: 'canCreate' },
-  { name: 'Congregações', href: '/congregations', icon: Building, permission: 'canCreate' },
-  { name: 'Fornecedores', href: '/suppliers', icon: Building2, permission: 'canCreate' },
-  { name: 'Classificações', href: '/classifications', icon: List, permission: 'canCreate' },
-  { name: 'Usuários', href: '/users', icon: UserCheck, permission: 'canManageUsers' },
-  { name: 'Perfil', href: '/profile', icon: User }, // Adicione esta linha
-  { name: 'Exportar Dados', href: '/export', icon: Download, permission: 'canExport' },
-  { name: 'Excluir Histórico', href: '/delete-history', icon: Trash2, permission: 'canDelete' },
-  //{ name: 'Configurações', href: '/settings', icon: Settings },
-]
-
 export function Sidebar() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const pathname = usePathname()
   const { data: session } = useSession()
 
+      const canAccessLaunches = ['canLaunchEntry', 'canLaunchTithe', 'canLaunchExpense', 'canApproveEntry', 'canApproveTithe', 'canApproveExpense'];
+
+    const hasLaunchPermission = canAccessLaunches.find(perm => session?.user?.[perm]);
+
+const navigation = [
+    { name: 'Dashboard', href: '/dashboard', icon: Home },
+    { name: 'Lançamentos', href: '/launches', icon: FileText, permission: `${hasLaunchPermission}` },
+    { name: 'Contribuintes', href: '/contributors', icon: Users, permission: 'canCreate' },
+    { name: 'Congregações', href: '/congregations', icon: Building, permission: 'canCreate' },
+    { name: 'Fornecedores', href: '/suppliers', icon: Building2, permission: 'canCreate' },
+    { name: 'Classificações', href: '/classifications', icon: List, permission: 'canCreate' },
+    { name: 'Usuários', href: '/users', icon: UserCheck, permission: 'canManageUsers' },
+    { name: 'Perfil', href: '/profile', icon: User }, // Adicione esta linha
+    { name: 'Exportar Dados', href: '/export', icon: Download, permission: 'canExport' },
+    { name: 'Excluir Histórico', href: '/delete-history', icon: Trash2, permission: 'canDelete' },
+    //{ name: 'Configurações', href: '/settings', icon: Settings },
+  ] 
+
   const handleSignOut = () => {
     signOut({ callbackUrl: '/auth/signin' })
   }
-           
+  
   // No componente Sidebar, modifique a renderização dos itens de menu:
 const navigationItems = navigation
   .filter((item) => {
@@ -59,6 +63,10 @@ const navigationItems = navigation
     // Caso contrário, ele será incluído apenas se o usuário tiver a permissão
     return session?.user?.[item.permission];
   });
+
+    const handleNavigation = (href :any) => {
+    router.push(href)
+  }
 
   return (
     <>
@@ -128,7 +136,7 @@ const navigationItems = navigation
             {/* <h1 className="text-xl font-bold">Lance Fácil</h1> */}
             <Image
               src="/images/LogoDashboard.png" // Caminho relativo a partir da pasta `public`
-              alt="Logo Dashboard do Lance Fácil"
+              alt="Logo Dashboard do Agilize"
               width={400} // Largura da imagem
               height={300} // Altura da imagem
             />

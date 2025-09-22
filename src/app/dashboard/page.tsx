@@ -23,6 +23,10 @@ export default function Dashboard() {
   const { data: session } = useSession()
   const router = useRouter()
 
+    const canAccessLaunches = ['canLaunchEntry', 'canLaunchTithe', 'canLaunchExpense', 'canApproveEntry', 'canApproveTithe', 'canApproveExpense'];
+
+    const hasLaunchPermission = canAccessLaunches.find(perm => session?.user?.[perm]);
+
   const menuOptions = [
     {
       title: "Lançamentos",
@@ -30,7 +34,7 @@ export default function Dashboard() {
       icon: FileText,
       href: "/launches",
       color: "bg-blue-500 hover:bg-blue-600",
-      permission
+      permission: `${hasLaunchPermission}`
     },
     {
       title: "Exportar Dados",

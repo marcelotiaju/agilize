@@ -157,7 +157,7 @@ model Supplier {
   id          String   @id @default(cuid())
   code        String   @unique
   razaoSocial String
-  tipoPessoa  String?
+  tipoPessoa  PessoaType?
   cpfCnpj     String?  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -190,4 +190,9 @@ enum LaunchStatus {
 enum ContributorType {
   CONGREGADO
   MEMBRO
+}
+
+enum PessoaType {
+  FISICA
+  JURIDICA
 }

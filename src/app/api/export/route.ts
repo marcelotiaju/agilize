@@ -37,6 +37,13 @@ console.log(body)
 
     const workbook = XLSX.utils.book_new()
 
+    function formatDate(date: Date): string {
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0'); // Mês é de 0 a 11
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+
       // if (type === "ENTRADA" || type === "DIZIMO" || type === "SAIDA") {
         const launches = await prisma.launch.findMany({
         where: {
@@ -49,7 +56,9 @@ console.log(body)
           type: { in: type }
         },
         include: {
-          congregation: true
+          congregation: true,
+          contributor: true,
+          supplier: true
         }
       })
 
@@ -93,24 +102,24 @@ console.log(body)
     // }
 
       const launchData = launches.map(launch => ({
-        "CPF/CNPJ Fornecedor": launch.type === "SAIDA" ? launch.supplier?.cpfCnpj :  "",
-        "Codigo do Membro": launch.type === "DIZIMO" ? launch.contributor?.congregationId : "",
-        "Codigo do Congregado": launch.type === "DIZIMO" ? launch.contributor?.congregationId : "",
+        "CPF/CNPJ Fornecedor": launch.type === "SAIDA" ? launch.supplier?.cpfCnpj : launch.type === "DIZIMO" ? launch.contributor?.cpf : "" ,
+        "Codigo do Membro": launch.type === "DIZIMO" ? launch.contributor?.tipo === 'MEMBRO' ? launch.contributor?.code : "": "",
+        "Codigo do Congregado": launch.type === "DIZIMO" ? launch.contributor?.tipo === 'CONGREGADO' ? launch.contributor?.code : "": "",
         "Nome de Outros": launch.type === "DIZIMO" ? launch.contributorName : launch.type === "SAIDA" ? launch.supplierName : "",
         "Numero do Documento": launch.type === "DIZIMO" ? launch.talonNumber : "",
-        "Data de Emissao": launch.date.toISOString().split('T')[0],
-        "Data de Vencimento": launch.date.toISOString().split('T')[0],
+        "Data de Emissao": formatDate(launch.date),
+        "Data de Vencimento": formatDate(launch.date),
         "Codigo da Conta a Pagar": launch.type === "ENTRADA" ? launch.congregation?.entradaAccountPlan : launch.type === "DIZIMO" ? launch.congregation?.dizimoAccountPlan : launch.type === "SAIDA" ? launch.congregation?.saidaAccountPlan : "",
         "Codigo do Caixa": launch.type === "ENTRADA" ? launch.congregation?.entradaFinancialEntity : launch.type === "DIZIMO" ? launch.congregation?.dizimoFinancialEntity : launch.type === "SAIDA" ? launch.congregation?.saidaFinancialEntity : "",
         "Código da Congregação": launch.congregation.code,
         "Codigo da Forma de Pagamento": launch.type === "ENTRADA" ? launch.congregation?.entradaPaymentMethod : launch.type === "DIZIMO" ? launch.congregation?.dizimoPaymentMethod : launch.type === "SAIDA" ? launch.congregation?.saidaPaymentMethod : "",
-        "Nome da Congregação": launch.congregation.name,
+        //"Nome da Congregação": launch.congregation.name,
         "Valor": launch.offerValue + launch.votesValue + launch.ebdValue + launch.campaignValue + launch.value ,
         "Codigo de Conta" : launch.classification?.code,
         "Tipo": launch.type === "SAIDA" ? "D" : "C",
         "Historico": launch.classification?.description || "",
-        "Parcelas": "",
-        "Codigo de Departamento" : ""
+        //"Parcelas": "",
+        //"Codigo de Departamento" : ""
       }))
 
       const launchSheet = XLSX.utils.json_to_sheet(launchData)

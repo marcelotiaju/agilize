@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
           data: {
             code: Codigo,
             razaoSocial: RazãoSocial,
-            tipoPessoa: TipoPessoa,
+            tipoPessoa: TipoPessoa.toUpperCase() === 'F' ? 'FISICA' : TipoPessoa.toUpperCase() === 'J' ? 'JURIDICA': '',
             cpfCnpj: CpfCnpj,
           }
         })

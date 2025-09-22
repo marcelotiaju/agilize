@@ -20,14 +20,14 @@ import { PermissionGuard } from '@/components/auth/PermissionGuard'
 
 interface Contributor {
   id: string
-  congregationCode: string
+  congregationId: string
   // date: string
   // talonNumber: string
   code: string
   name: string
   cpf?: string
   ecclesiasticalPosition?: string
-  type?: string
+  tipo?: string
   congregation: {
     id: string
     name: string
@@ -48,12 +48,12 @@ export default function Contributors() {
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
   const [editingContributor, setEditingContributor] = useState<Contributor | null>(null)
   const [formData, setFormData] = useState({
-    congregationCode: '',
+    congregationId: '',
     code: '',
     name: '',
     cpf: '',
     ecclesiasticalPosition: '',
-    type: 'MEMBRO'
+    tipo: 'MEMBRO'
   })
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const [importing, setImporting] = useState(false)
@@ -133,12 +133,12 @@ export default function Contributors() {
   const handleEdit = (contributor: Contributor) => {
     setEditingContributor(contributor)
     setFormData({
-      congregationCode: contributor.congregationCode,
+      congregationId: contributor.congregationId,
       code: contributor.code,
       name: contributor.name,
       cpf: contributor.cpf || '',
       ecclesiasticalPosition: contributor.ecclesiasticalPosition || '',
-      type: contributor.type || ''
+      tipo: contributor.tipo || ''
     })
     setIsDialogOpen(true)
   }
@@ -168,12 +168,12 @@ export default function Contributors() {
   const resetForm = () => {
     setEditingContributor(null)
     setFormData({
-      congregationCode: '',
+      congregationId: '',
       code: '',
       name: '',
       cpf: '',
       ecclesiasticalPosition: '',
-      type: 'MEMBRO',
+      tipo: 'MEMBRO',
     })
   }
 
@@ -266,12 +266,12 @@ export default function Contributors() {
                   <form onSubmit={handleSubmit}>
                     <div className="grid gap-4 py-4">
                       <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="congregationCode" className="text-right">
+                        <Label htmlFor="congregationId" className="text-right">
                           Congregação
                         </Label>
                         <Select
-                          value={formData.congregationCode}
-                          onValueChange={(value) => handleSelectChange('congregationCode', value)}
+                          value={formData.congregationId}
+                          onValueChange={(value) => handleSelectChange('congregationId', value)}
                         >
                           <SelectTrigger className="col-span-3">
                             <SelectValue placeholder="Selecione" />
@@ -342,10 +342,10 @@ export default function Contributors() {
                       </div>
 
                       <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="type">Tipo</Label>
+                        <Label htmlFor="tipo">Tipo</Label>
                         <Select
-                          value={formData.type}
-                          onValueChange={(value) => handleSelectChange('type', value)}
+                          value={formData.tipo}
+                          onValueChange={(value) => handleSelectChange('tipo', value)}
                         >
                           <SelectTrigger>
                             <SelectValue />
@@ -449,7 +449,7 @@ export default function Contributors() {
                       <TableCell>{contributor.name}</TableCell>
                       <TableCell>{contributor.cpf || '-'}</TableCell>
                       <TableCell>{contributor.ecclesiasticalPosition || '-'}</TableCell>
-                      <TableCell>{contributor.type || '-'}</TableCell>
+                      <TableCell>{contributor.tipo || '-'}</TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
                           <Button
