@@ -32,7 +32,7 @@ export default function SignInForm() {
       })
 
       if (result && result.error) {
-        setError('CPF ou senha incorretos')
+        setError('Login ou senha incorretos')
       } else if (result){
         const session = await getSession()
         if (session && session.user) {

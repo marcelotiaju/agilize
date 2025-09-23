@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import{ authOptions }from "../auth/[...nextauth]/route";
 import { getServerSession } from "next-auth";
-import { ta } from "date-fns/locale";
+import { se, ta } from "date-fns/locale";
 import { Description } from "@radix-ui/react-dialog";
 import Congregations from "@/app/congregations/page";
 import { format } from "path";
@@ -45,27 +45,50 @@ export async function GET(request: NextRequest) {
       where.congregationId = congregationId
     }
 
-    if (startDate && endDate) {
-      where.date = {
-        gte: new Date(startDate as string),
-        lte: new Date(endDate as string)
-      }
-    }
-
-        // Adicionar filtro de pesquisa
-    if (searchTerm) {
+    // if (startDate && endDate) {
+    //   where.date = {
+    //     gte: new Date(startDate as string),
+    //     lte: new Date(endDate as string)
+    //   }
+    // }
+console.log(searchTerm)
+    // 1. Adiciona o filtro de data
+    if (searchTerm.includes('/')) {
+        const launchDateStart = new Date(searchTerm.substring(6, 10).concat('/').concat(searchTerm.substring(3, 5)).concat('/').concat(searchTerm.substring(0, 2)));
+        const launchDateEnd = new Date(searchTerm.substring(6, 10).concat('/').concat(searchTerm.substring(3, 5)).concat('/').concat(searchTerm.substring(0, 2)));
+        launchDateStart.setHours(-3, 0, 0, 0)
+        launchDateEnd.setHours(20,59, 59, 0)
+        where.date = {};
+        where.date.gte = launchDateStart;
+        where.date.lte = launchDateEnd;
+      // //where.date.gte;
+      // where.date.gte.setHours(0, 0, 0, 0);
+      // where.date.lte.setHours(20, 59, 0, 0);
+    } else {
+      if (searchTerm) {
       where.OR = [
         { description: { contains: searchTerm, mode: 'insensitive' } },
         { talonNumber: { contains: searchTerm, mode: 'insensitive' } },
         { contributor: { name: { contains: searchTerm, mode: 'insensitive' } } },
-        { supplier: { name: { contains: searchTerm, mode: 'insensitive' } } }
+        { supplier: { name: { contains: searchTerm, mode: 'insensitive' } } },
       ]
     }
+    }
+
+    // Adicionar filtro de pesquisa
+    // if (searchTerm) {
+    //   where.OR = [
+    //     { description: { contains: searchTerm, mode: 'insensitive' } },
+    //     { talonNumber: { contains: searchTerm, mode: 'insensitive' } },
+    //     { contributor: { name: { contains: searchTerm, mode: 'insensitive' } } },
+    //     { supplier: { name: { contains: searchTerm, mode: 'insensitive' } } }
+    //   ]
+    // }
 
     // Buscar lançamentos com paginação
     const [launches, totalCount] = await Promise.all([
       prisma.launch.findMany({
-        where,
+        where: where,
         include: {
           congregation: true,
           contributor: true,
@@ -107,8 +130,9 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
+
     const {
-      congregationId: congregationCode,
+      congregationId,
       type,
       date,
       talonNumber,
@@ -212,7 +236,7 @@ export async function POST(request: NextRequest) {
         
     const launch = await prisma.launch.create({
       data: {
-        congregationId: userCongregation.congregationId,
+        congregationId: congregationId,
         type,
         date: launchDate,
         talonNumber,

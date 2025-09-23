@@ -36,7 +36,7 @@ export function Sidebar() {
     const hasLaunchPermission = canAccessLaunches.find(perm => session?.user?.[perm]);
 
 const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: Home },
+    { name: 'Página Inicial', href: '/dashboard', icon: Home },
     { name: 'Lançamentos', href: '/launches', icon: FileText, permission: `${hasLaunchPermission}` },
     { name: 'Contribuintes', href: '/contributors', icon: Users, permission: 'canCreate' },
     { name: 'Congregações', href: '/congregations', icon: Building, permission: 'canCreate' },
@@ -50,7 +50,7 @@ const navigation = [
   ] 
 
   const handleSignOut = () => {
-    signOut({ callbackUrl: '/auth/signin' })
+    signOut({ callbackUrl: '/' })
   }
   
   // No componente Sidebar, modifique a renderização dos itens de menu:

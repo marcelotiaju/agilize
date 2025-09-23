@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useReducer } from 'react'
 import { useSession } from 'next-auth/react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Button } from '@/components/ui/button'
@@ -20,6 +20,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { PermissionGuard } from '@/components/auth/PermissionGuard'
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Pagination } from '@/components/ui/pagination'
+import { NumericFormat } from 'react-number-format';
 import {
   Tooltip,
   TooltipContent,
@@ -44,6 +45,9 @@ export default function Launches() {
   const [itemsPerPage, setItemsPerPage] = useState(10)
   const [totalPages, setTotalPages] = useState(0)
   const [totalCount, setTotalCount] = useState(0)
+  // Adicione estes estados junto com os outros
+  
+  const [value, setValue] = useReducer((prev, next) => moneyFormatter.format(next), "")
   
 
   // Tipos
@@ -221,6 +225,18 @@ export default function Launches() {
     }
   }
 
+    const moneyFormatter = Intl.NumberFormat('pt-BR', {
+      currency: 'BRL',
+      currencyDisplay: 'symbol',
+      currencySign: 'standard',
+      style: 'currency',
+      minimumFractionDigits: 2,  
+      maximumFractionDigits: 4,  
+      minimumIntegerDigits: 1,  
+      // minimumSignificantDigits: 1,  
+      // maximumSignificantDigits: 10,  
+  });
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type, checked } = e.target
 
@@ -278,7 +294,7 @@ export default function Launches() {
         }
     
         if (formData.type === 'ENTRADA') {
-          if (!values.offerValue && !values.votesValue && !values.ebdValue) {
+          if (!values.offerValue && !values.votesValue && !values.ebdValue && !values.campaignValue) {
             setError('Pelo menos um dos campos de valor (Oferta, Voto, EBD) deve ser preenchido para Entradas.')
             return
           }
@@ -476,7 +492,8 @@ const filteredLaunches = useMemo(() => {
     const numValue = parseFloat(value)
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: 'BRL'
+      currency: 'BRL',
+      minimumFractionDigits: 2
     }).format(numValue)
   }
 
@@ -521,8 +538,8 @@ const filteredLaunches = useMemo(() => {
           <div className="text-sm font-normal">
             {launch.type === 'ENTRADA' ? (
               <div className="space-y-1 grid grid-cols-2 gap-0">
-                {launch.offerValue ? <div>Oferta: {formatCurrency(launch.offerValue)}</div> : null}
-                {launch.votesValue ? <div>Votos: {formatCurrency(launch.votesValue)}</div> : null}
+                {launch.offerValue > 0 ? <div>Oferta: {formatCurrency(launch.offerValue)}</div> : null}
+                {launch.votesValue > 0 ? <div>Votos: {formatCurrency(launch.votesValue)}</div> : null}
                 {launch.ebdValue > 0 ? <div>EBD: {formatCurrency(launch.ebdValue)}</div> : null}
                 {launch.campaignValue > 0 ? <div>Campanha: {formatCurrency(launch.campaignValue)}</div> : null}
               </div>
@@ -642,7 +659,7 @@ const filteredLaunches = useMemo(() => {
               )}
               
 
-              {launch.status !== 'CANCELED' ? (
+              {launch.status =='NORMAL' && (canLaunchEntry || canLaunchExpense || canLaunchTithe) || (!canApproveEntry || !canApproveExpense || !canApproveTithe) ? (
               <>           
                 <Tooltip>
                     <TooltipTrigger asChild>
@@ -650,7 +667,7 @@ const filteredLaunches = useMemo(() => {
                     variant="outline"
                     size="sm"
                     onClick={() => handleCancel(launch.id)}
-                    disabled={launch.status !== 'NORMAL' || !canEdit}
+                    //disabled={launch.status !== 'NORMAL' || !canEdit}
                     className="flex-1"
                   >
                     <Trash2 className="h-4 w-4 mr-1" />
@@ -824,7 +841,7 @@ const filteredLaunches = useMemo(() => {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <Label htmlFor="offerValue">Valor Oferta</Label>
-                          <Input
+                          {/* <Input
                             id="offerValue"
                             name="offerValue"
                             type="text"
@@ -832,12 +849,30 @@ const filteredLaunches = useMemo(() => {
                             value={formData.offerValue}
                             onChange={handleInputChange}
                             disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                           
+                          /> */}
+                          <NumericFormat
+                            id="offerValue"
+                            name="offerValue"
+                            className="col-span-3 h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            value={formData.offerValue || ''}
+                            onValueChange={(values) => {
+                              const { floatValue } = values;
+                              setFormData({
+                                ...formData,
+                                offerValue: floatValue,
+                              });
+                            }}
+                            thousandSeparator="."
+                            decimalSeparator=","
+                            prefix="R$ "
+                            decimalScale={2}
+                            fixedDecimalScale={true}
                           />
                         </div>
-                        
+                    
                         <div>
                           <Label htmlFor="votesValue">Valor Voto</Label>
-                          <Input
+                          {/* <Input
                             id="votesValue"
                             name="votesValue"
                             type="text"
@@ -845,12 +880,30 @@ const filteredLaunches = useMemo(() => {
                             value={formData.votesValue}
                             onChange={handleInputChange}
                             disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                              
+                          /> */}
+                          <NumericFormat
+                            id="votesValue"
+                            name="votesValue"
+                            className="col-span-3 h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            value={formData.votesValue || ''}
+                            onValueChange={(values) => {
+                              const { floatValue } = values;
+                              setFormData({
+                                ...formData,
+                                votesValue: floatValue,
+                              });
+                            }}
+                            thousandSeparator="."
+                            decimalSeparator=","
+                            prefix="R$ "
+                            decimalScale={2}
+                            fixedDecimalScale={true}
                           />
                         </div>
                         
                         <div>
                           <Label htmlFor="ebdValue">Valor EBD</Label>
-                          <Input
+                          {/* <Input
                             id="ebdValue"
                             name="ebdValue"
                             type="text"
@@ -858,12 +911,30 @@ const filteredLaunches = useMemo(() => {
                             value={formData.ebdValue}
                             onChange={handleInputChange}
                             disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                              
-                          />
+                          /> */}
+                          <NumericFormat
+                            id="ebdValue"
+                            name="ebdValue"
+                            className="col-span-3 h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            value={formData.ebdValue || ''}
+                            onValueChange={(values) => {
+                              const { floatValue } = values;
+                              setFormData({
+                                ...formData,
+                                ebdValue: floatValue,
+                              });
+                            }}
+                            thousandSeparator="."
+                            decimalSeparator=","
+                            prefix="R$ "
+                            decimalScale={2}
+                            fixedDecimalScale={true}
+                          />                          
                         </div>
                         
                         <div>
                           <Label htmlFor="campaignValue">Valor Campanha</Label>
-                          <Input
+                          {/* <Input
                             id="campaignValue"
                             name="campaignValue"
                             type="text"
@@ -871,7 +942,25 @@ const filteredLaunches = useMemo(() => {
                             value={formData.campaignValue}
                             onChange={handleInputChange}
                             disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                           
-                          />
+                          /> */}
+                          <NumericFormat
+                            id="campaignValue"
+                            name="campaignValue"
+                            className="col-span-3 h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            value={formData.campaignValue || ''}
+                            onValueChange={(values) => {
+                              const { floatValue } = values;
+                              setFormData({
+                                ...formData,
+                                campaignValue: floatValue,
+                              });
+                            }}
+                            thousandSeparator="."
+                            decimalSeparator=","
+                            prefix="R$ "
+                            decimalScale={2}
+                            fixedDecimalScale={true}
+                          />                             
                         </div>
                       </div>
                     </div>
@@ -883,7 +972,7 @@ const filteredLaunches = useMemo(() => {
                       <div  className='grid grid-cols-2'>
                         <div>
                           <Label htmlFor="value">Valor</Label>
-                          <Input
+                          {/* <Input
                             id="value"
                             name="value"
                             type="text"
@@ -891,7 +980,25 @@ const filteredLaunches = useMemo(() => {
                             value={formData.value}
                             onChange={handleInputChange}
                             disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                         
-                          />
+                          /> */}
+                          <NumericFormat
+                            id="value"
+                            name="value"
+                            className="col-span-3 h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            value={formData.value || ''}
+                            onValueChange={(values) => {
+                              const { floatValue } = values;
+                              setFormData({
+                                ...formData,
+                                value: floatValue,
+                              });
+                            }}
+                            thousandSeparator="."
+                            decimalSeparator=","
+                            prefix="R$ "
+                            decimalScale={2}
+                            fixedDecimalScale={true}
+                          />                              
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
@@ -943,7 +1050,7 @@ const filteredLaunches = useMemo(() => {
                       <div  className='grid grid-cols-2'>
                         <div>
                           <Label htmlFor="value">Valor</Label>
-                          <Input
+                          {/* <Input
                             id="value"
                             name="value"
                             type="text"
@@ -951,7 +1058,25 @@ const filteredLaunches = useMemo(() => {
                             value={formData.value}
                             onChange={handleInputChange}
                             disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                          
-                          />
+                          /> */}
+                          <NumericFormat
+                            id="value"
+                            name="value"
+                            className="col-span-3 h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            value={formData.value || ''}
+                            onValueChange={(values) => {
+                              const { floatValue } = values;
+                              setFormData({
+                                ...formData,
+                                value: floatValue,
+                              });
+                            }}
+                            thousandSeparator="."
+                            decimalSeparator=","
+                            prefix="R$ "
+                            decimalScale={2}
+                            fixedDecimalScale={true}
+                          />                                  
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
@@ -1152,7 +1277,7 @@ const filteredLaunches = useMemo(() => {
                                    (launch.type === 'SAIDA' && canApproveExpense) ? (
                                     <>
                                       <Tooltip>
-                                        <TooltipTrigger>
+                                        <TooltipTrigger asChild>
                                           <Button
                                             variant="outline"
                                             size="sm"
@@ -1195,10 +1320,10 @@ const filteredLaunches = useMemo(() => {
                                 </>
                               )}
 
-                              {launch.status =='NORMAL' && (!canApproveEntry || !canApproveExpense || !canApproveTithe) ? (
+                              {launch.status =='NORMAL' && (canLaunchEntry || canLaunchExpense || canLaunchTithe) || (!canApproveEntry || !canApproveExpense || !canApproveTithe) ? (
                               <>           
                               <Tooltip>
-                                <TooltipTrigger>
+                                <TooltipTrigger asChild>
                                   <Button
                                     variant="outline"
                                     size="sm"
