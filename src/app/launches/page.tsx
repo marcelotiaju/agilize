@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, Search, Check, X, AlertCircle, MoreVertical, Calendar, DollarSign, User } from 'lucide-react'
+import { Plus, Edit, Trash2, Search, Check, X, AlertCircle, MoreVertical, CalendarIcon, DollarSign, User } from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -21,6 +21,8 @@ import { PermissionGuard } from '@/components/auth/PermissionGuard'
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Pagination } from '@/components/ui/pagination'
 import { NumericFormat } from 'react-number-format';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Tooltip,
   TooltipContent,
@@ -37,22 +39,26 @@ export default function Launches() {
   const [classifications, setClassifications] = useState<Classification[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedCongregation, setSelectedCongregation] = useState('all')
+
+
   const [expandedCard, setExpandedCard] = useState(null)
     // Estados para paginação e filtros
+  const [searchTerm, setSearchTerm] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
   const [totalPages, setTotalPages] = useState(0)
   const [totalCount, setTotalCount] = useState(0)
-  // Adicione estes estados junto com os outros
+  const [selectedCongregation, setSelectedCongregation] = useState('all')
+
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   
   const [value, setValue] = useReducer((prev, next) => moneyFormatter.format(next), "")
   
 
   // Tipos
   type Congregation = { id: string; name: string }
-  type Contributor = { id: string; name: string; cpf: string; congregationId: string }
+  type Contributor = { id: string; name: string; cpf: string; congregationId: string; ecclesiasticalPosition: string }
   type Supplier = { id: string; razaoSocial: string; cpfcnpj: string }
   type Classification = { id: string; description: string }
 
@@ -72,7 +78,7 @@ export default function Launches() {
     exported?: boolean
     congregation?: { id: string; name: string }
     contributorId?: string
-    contributor?: { id: string; name: string; congregationId: string  }
+    contributor?: { id: string; name: string; congregationId: string; ecclesiasticalPosition: string  }
     contributorName?: string
     supplierId?: string
     supplier?: { id: string; razaoSocial: string; cpfcnpj: string }
@@ -94,7 +100,7 @@ export default function Launches() {
   const [editingLaunch, setEditingLaunch] = useState<Launch | null>(null)
   const [formData, setFormData] = useState({
     congregationId: '',
-    type: 'ENTRADA',
+    type: 'DIZIMO',
     date: format(new Date(), 'yyyy-MM-dd'),
     talonNumber: '',
     offerValue: '',
@@ -155,11 +161,10 @@ export default function Launches() {
     try {
       const params = new URLSearchParams({
         page: currentPage.toString(),
-        limit: itemsPerPage.toString()
+        limit: itemsPerPage.toString(),
+        searchTerm,
+        ...(selectedCongregation !== 'all' && { congregationId: selectedCongregation })
       })
-
-      if (searchTerm) params.append('searchTerm', searchTerm)
-      if (selectedCongregation !== 'all') params.append('congregationId', selectedCongregation)
 
       const response = await fetch(`/api/launches?${params.toString()}`)
       if (response.ok) {
@@ -272,8 +277,7 @@ export default function Launches() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError(null)
-
-          // Validações específicas
+      // Validações específicas
       if (formData.type === 'DIZIMO' && !formData.contributorName && !formData.contributorId) {
         setError('Nome do contribuinte é obrigatório para lançamentos do tipo Dízimo')
         return
@@ -306,6 +310,7 @@ export default function Launches() {
         }
 
         try {
+
           const url = editingLaunch ? `/api/launches/${editingLaunch.id}` : '/api/launches' // A API já trata a atualização pelo corpo da requisição
           const method = editingLaunch ? 'PUT' : 'POST';
           
@@ -449,7 +454,7 @@ export default function Launches() {
     setEditingLaunch(null)
     setFormData({
      congregationId: congregations.length === 1 ? congregations[0].id : '',
-      type: 'ENTRADA',
+      type: 'DIZIMO',
       date: format(new Date(), 'yyyy-MM-dd'),
       talonNumber: '',
       offerValue: '',
@@ -471,19 +476,31 @@ export default function Launches() {
 
 
 // Filtrar lançamentos com base no termo de pesquisa e congregação selecionada
-const filteredLaunches = useMemo(() => {
-  return launches.filter(launch => {
-    const matchesSearch = searchTerm === '' || 
-      Object.values(launch).some(value => 
-        value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-      )
+// const filteredLaunches = useMemo(() => {
+//   if (!searchTerm) return launches
+//   return launches.filter(launch => { 
+//     const matchesCongregation = selectedCongregation === 'all' || 
+//         launch.congregationId === selectedCongregation
+
+//     // const matchesSearch = searchTerm === '' || 
+//     //   Object.values(launch).some(value => 
+//     //     value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+//     //   )
+
+//       launch.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+//       launch.talonNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+//       (launch.supplierName && launch.supplierName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+//       (launch.contributorName && launch.contributorName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+//       (launch.supplier?.id && launch.supplier.razaoSocial.toLowerCase().includes(searchTerm.toLowerCase())) ||
+//       (launch.contributor?.id && launch.contributor.name.toLowerCase().includes(searchTerm.toLowerCase())) 
+//       //  return matchesSearch && matchesCongregation
+//     })
     
-    const matchesCongregation = selectedCongregation === 'all' || 
-      launch.congregationId === selectedCongregation
+//   //   const matchesCongregation = selectedCongregation === 'all' || 
+//   //     launch.congregationId === selectedCongregation
     
-    return matchesSearch && matchesCongregation
-  })
-}, [launches, searchTerm, selectedCongregation])
+//   // })
+// }, [launches, searchTerm, selectedCongregation])
 
   // Formatar valor com separador de milhar
   const formatCurrency = (value) => {
@@ -508,14 +525,14 @@ const filteredLaunches = useMemo(() => {
 
     // Componente para cards em dispositivos móveis
   const LaunchCard = ({ launch }) => (
-    <Card key={launch.id} className="mb-3">
+    <Card key={launch.id} className="mb-2">
       <CardContent className="p-4 pt-0.5">
         <div className="flex justify-between items-start mb-1">
           <div className={`px-3 py-1 rounded text-white text-sm font-medium ${
             launch.type === 'ENTRADA' ? 'bg-green-500' : 
             launch.type === 'DIZIMO' ? 'bg-blue-500' : 'bg-red-500'
           }`}>
-            {launch.type === 'ENTRADA' ? 'Entrada' : 
+            {launch.type === 'ENTRADA' ? 'Outras Receitas' : 
              launch.type === 'DIZIMO' ? 'Dízimo' : 'Saída'}
           </div>
           <Badge variant={
@@ -531,7 +548,7 @@ const filteredLaunches = useMemo(() => {
         
         <div className="space-y-1 mb-1">
           <div className="flex items-center text-sm font-normal">
-            <Calendar className="h-4 w-4 mr-1" />
+            <CalendarIcon className="h-4 w-4 mr-1" />
             {format(new Date(launch.date), 'dd/MM/yyyy', { locale: ptBR })}
           </div>
           
@@ -659,7 +676,7 @@ const filteredLaunches = useMemo(() => {
               )}
               
 
-              {launch.status =='NORMAL' && (canLaunchEntry || canLaunchExpense || canLaunchTithe) || (!canApproveEntry || !canApproveExpense || !canApproveTithe) ? (
+              {launch.status =='NORMAL' && (canLaunchEntry || canLaunchExpense || canLaunchTithe)  ? (
               <>           
                 <Tooltip>
                     <TooltipTrigger asChild>
@@ -712,7 +729,7 @@ const filteredLaunches = useMemo(() => {
               <h1 className="text-1xl font-bold text-gray-900">Lançamentos Financeiros</h1>
                <p className="text-gray-600">Gerencie os lançamentos de entradas, dízimos e saídas</p> 
             </div> */}
-            
+            <div className="flex space-x-2">
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
                 <Button onClick={resetForm} disabled={!canLaunchEntry && !canLaunchTithe && !canLaunchExpense}>
@@ -777,9 +794,9 @@ const filteredLaunches = useMemo(() => {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {canLaunchEntry && <SelectItem value="ENTRADA">Entrada</SelectItem>}
-                            {canLaunchTithe && <SelectItem value="DIZIMO">Dízimo</SelectItem>}
-                            {canLaunchExpense && <SelectItem value="SAIDA">Saída</SelectItem>}
+                            {canLaunchTithe && <SelectItem value="DIZIMO">Dízimos</SelectItem>}
+                            {canLaunchEntry && <SelectItem value="ENTRADA">Outras Receitas</SelectItem>}
+                            {canLaunchExpense && <SelectItem value="SAIDA">Saídas</SelectItem>}
                           </SelectContent>
                         </Select>
                       </div>
@@ -867,6 +884,7 @@ const filteredLaunches = useMemo(() => {
                             prefix="R$ "
                             decimalScale={2}
                             fixedDecimalScale={true}
+                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}     
                           />
                         </div>
                     
@@ -898,6 +916,7 @@ const filteredLaunches = useMemo(() => {
                             prefix="R$ "
                             decimalScale={2}
                             fixedDecimalScale={true}
+                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}   
                           />
                         </div>
                         
@@ -929,6 +948,7 @@ const filteredLaunches = useMemo(() => {
                             prefix="R$ "
                             decimalScale={2}
                             fixedDecimalScale={true}
+                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                                
                           />                          
                         </div>
                         
@@ -960,6 +980,7 @@ const filteredLaunches = useMemo(() => {
                             prefix="R$ "
                             decimalScale={2}
                             fixedDecimalScale={true}
+                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                                     
                           />                             
                         </div>
                       </div>
@@ -998,6 +1019,7 @@ const filteredLaunches = useMemo(() => {
                             prefix="R$ "
                             decimalScale={2}
                             fixedDecimalScale={true}
+                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                                 
                           />                              
                         </div>
                       </div>
@@ -1024,7 +1046,7 @@ const filteredLaunches = useMemo(() => {
                             disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}   
                             onChange={(value) => handleSelectChange('contributorId', value)}
                             name="contributorId"
-                            data={contributors.map(c => ({ id: c.id, name: c.name, document: c.cpf }))}
+                            data={contributors.map(c => ({ id: c.id, name: c.name, document: c.cpf, cargo: c.ecclesiasticalPosition }))}
                             searchKeys={['name', 'document']}
                           />  
                         </div>
@@ -1076,6 +1098,7 @@ const filteredLaunches = useMemo(() => {
                             prefix="R$ "
                             decimalScale={2}
                             fixedDecimalScale={true}
+                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                                
                           />                                  
                         </div>
                       </div>
@@ -1141,7 +1164,7 @@ const filteredLaunches = useMemo(() => {
               </DialogContent>
             </Dialog>
           </div>
-
+          </div>
           {/* Filtros */}
           <div className="mb-6 flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
@@ -1153,6 +1176,62 @@ const filteredLaunches = useMemo(() => {
                 className="pl-10"
               />
             </div>
+
+            {/* <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-4 mb-4"> */}
+            {/* Seus filtros existentes, como Status e Tipo, permanecem aqui */}
+
+            {/* Seletor de Data de Início */}
+            {/* <div className="flex-1">
+              <Label htmlFor="startDate" className="block text-sm font-medium text-gray-700">
+                Data de Início
+              </Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "dd/MM/yyyy") : <span>Selecione a data</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={setStartDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Seletor de Data de Fim */}
+            {/* <div className="flex-1">
+              <Label htmlFor="endDate" className="block text-sm font-medium text-gray-700">
+                Data de Fim
+              </Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "dd/MM/yyyy") : <span>Selecione a data</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={setEndDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>  */}
+
             
             <div className="w-full sm:w-64">
               <Select
@@ -1187,6 +1266,9 @@ const filteredLaunches = useMemo(() => {
               <CardHeader>
                 <CardTitle>Lançamentos Recentes</CardTitle>
                 {/* <CardDescription>Lista de lançamentos financeiros</CardDescription> */}
+                {/* <CardDescription>
+                  {totalItems} lançamentos encontrados
+              </CardDescription> */}
               </CardHeader>
             <CardContent>
                 <div className="overflow-x-auto">
@@ -1203,14 +1285,14 @@ const filteredLaunches = useMemo(() => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredLaunches.map((launch) => (
+                      {launches.map((launch) => (
                         <TableRow key={launch.id}>
                           <TableCell>
-                            <div className={`w-full py-1 px-2 rounded text-center text-white font-medium ${
+                            <div className={`w-full py-1 px-0 rounded text-center text-white font-medium ${
                               launch.type === 'ENTRADA' ? 'bg-green-500' : 
                               launch.type === 'DIZIMO' ? 'bg-blue-500' : 'bg-red-500'
                             }`}>
-                              {launch.type === 'ENTRADA' ? 'Entrada' : 
+                              {launch.type === 'ENTRADA' ? 'Outras Receitas' : 
                                launch.type === 'DIZIMO' ? 'Dízimo' : 'Saída'}
                             </div>
                           </TableCell>
@@ -1320,7 +1402,7 @@ const filteredLaunches = useMemo(() => {
                                 </>
                               )}
 
-                              {launch.status =='NORMAL' && (canLaunchEntry || canLaunchExpense || canLaunchTithe) || (!canApproveEntry || !canApproveExpense || !canApproveTithe) ? (
+                              {launch.status =='NORMAL' && (canLaunchEntry || canLaunchExpense || canLaunchTithe)  ? (
                               <>           
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -1348,14 +1430,14 @@ const filteredLaunches = useMemo(() => {
                               
                 {/* Componente de paginação */}
                 <div className="mt-4">
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={handlePageChange}
-                    itemsPerPage={itemsPerPage}
-                    onItemsPerPageChange={handleItemsPerPageChange}
-                    totalItems={totalCount}
-                  />
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={handlePageChange}
+                  itemsPerPage={itemsPerPage}
+                  onItemsPerPageChange={handleItemsPerPageChange}
+                  totalItems={totalCount}
+                />
                 </div>
               </CardContent>
             </Card>
@@ -1363,23 +1445,23 @@ const filteredLaunches = useMemo(() => {
 
           {/* Lista para Mobile */}
           <div className="lg:hidden">
-            {filteredLaunches.map((launch) => (
+            {launches.map((launch) => (
               <LaunchCard key={launch.id} launch={launch} />
             ))}
             <div className="mt-4">
-                    <Pagination
-                      currentPage={currentPage}
-                      totalPages={totalPages}
-                      onPageChange={handlePageChange}
-                      itemsPerPage={itemsPerPage}
-                      onItemsPerPageChange={handleItemsPerPageChange}
-                      totalItems={totalCount}
-                    />
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={handlePageChange}
+                  itemsPerPage={itemsPerPage}
+                  onItemsPerPageChange={handleItemsPerPageChange}
+                  totalItems={totalCount}
+                />
             </div>
           </div>
         </div>
       </div>
     </div>
-  </PermissionGuard>
+   </PermissionGuard>
   )
 }

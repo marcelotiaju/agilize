@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse, userAgent } from "next/server"
 import { getServerSession } from "next-auth"
 import prisma from "@/lib/prisma"
 import{ authOptions }from "../../auth/[...nextauth]/route";
@@ -46,58 +46,64 @@ export async function POST(request: NextRequest) {
 
       const columns = line.split(',').map(col => col.trim())
       
-      if (columns.length < 2) {
-        errors.push(`Linha ${i + 2}: Formato inválido - esperado código,nome,nome_regional`)
+      if (columns.length < 1) {
+        errors.push(`Linha ${i + 2}: Formato inválido`)
         continue
       }
 
-      const [CodeCongregacao,NomeCongregacao,NomeRegional,EntradaPlanoContas,EntradaEntidadeFinanceira,EntradaFormaPagto,
-        DizimoPlanoContas,DizimoEntidadeFinanceira,DizimoFormaPagto,SaidaPlanoContas,SaidaEntidadeFinanceira,SaidaFormaPagto,
-        MatriculaEnegisa,MatriculaIgua] = columns
+      const [usulogin,codCongregacao] = columns
 
-      if (!CodeCongregacao || !NomeCongregacao) {
-        errors.push(`Linha ${i + 2}: Código e nome são obrigatórios`)
+      if (!usulogin || !codCongregacao ) {
+        errors.push(`Linha ${i + 2}: usulogin,codcongregacao são obrigatórios`)
         continue
       }
 
       try {
-        // Verifica se já existe uma congregação com este código
-        const existing = await prisma.congregation.findUnique({
-          where: { code: CodeCongregacao }
+        // Verifica se já existe um usuario com este código
+        const usuario = await prisma.user.findUnique({
+          where: { cpf: usulogin.toString() },
+          select: {
+            id: true
+          }
         })
 
-        if (existing) {
-          errors.push(`Linha ${i + 2}: Código ${CodeCongregacao} já existe`)
-          continue
-        }
+        const congregacao = await prisma.congregation.findUnique({
+          where: { code: codCongregacao.toString() },
+          select: {
+            id: true
+          }
+        })
+        // const usuario_congregacao = await prisma.userCongregation.findUnique({
+        //     where: { 
+        //         userId: usuario?.id, 
+        //         congregationId: congregacao?.id 
+        //     },
+        //     select: {
+        //         userId: true,
+        //         congregationId: true
+        //     }
+        // })
+        
+        // console.log(usuario_congregacao)
+        // if (usuario_congregacao) {
+        //   errors.push(`Linha ${i + 2}: Usuário ${usulogin} já associado`)
+        //   continue
+        // }
 
-        // Cria a nova congregação
-        await prisma.congregation.create({
+        // Associa novo usuario
+        await prisma.userCongregation.create({
           data: {
-            code: CodeCongregacao,
-            name: NomeCongregacao,
-            regionalName: NomeRegional,
-            entradaAccountPlan: EntradaPlanoContas,
-            entradaFinancialEntity: EntradaEntidadeFinanceira,
-            entradaPaymentMethod: EntradaFormaPagto,
-            dizimoAccountPlan: DizimoPlanoContas,
-            dizimoFinancialEntity: DizimoEntidadeFinanceira,
-            dizimoPaymentMethod: DizimoFormaPagto,
-            saidaAccountPlan: SaidaPlanoContas,
-            saidaFinancialEntity: SaidaEntidadeFinanceira,
-            saidaPaymentMethod: SaidaFormaPagto,
-            matriculaEnergisa: MatriculaEnegisa,
-            matriculaIgua: MatriculaIgua
+            userId: usuario?.id,
+            congregationId: congregacao?.id
           }
         })
 
         imported++
       } catch (error) {
-        errors.push(`Linha ${i + 2}: Erro ao criar congregação - ${error.message}`)
+        errors.push(`Linha ${i + 2}: Erro ao criar usuário - ${error.message}`)
       }
     }
     console.log(errors)
-
     if (errors.length > 0) {
       return NextResponse.json({ 
         error: "Erro na importação", 
@@ -105,6 +111,7 @@ export async function POST(request: NextRequest) {
         imported 
       }, { status: 400 })
     }
+
     return NextResponse.json({ 
       message: "Importação concluída com sucesso",
       imported 

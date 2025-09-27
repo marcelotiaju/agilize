@@ -90,6 +90,8 @@ model Congregation {
   saidaAccountPlan       String?
   saidaFinancialEntity   String?
   saidaPaymentMethod     String?
+  matriculaEnergisa      String?
+  matriculaIgua          String?
   users                  UserCongregation[]
   launches               Launch[]
   contributors           Contributor[]

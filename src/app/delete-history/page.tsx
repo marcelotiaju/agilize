@@ -219,6 +219,14 @@ export default function DeleteHistory() {
 
                     <div>
                       <Label>Tipo de Dados</Label>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="type-dizimo"
+                            checked={formData.type.includes('DIZIMO')}
+                            onCheckedChange={(checked) => handleTypeChange('DIZIMO', checked as boolean)}
+                          />
+                          <Label htmlFor="type-dizimo">Dízimos</Label>
+                        </div>
                       <div className="space-y-2 mt-2">
                         <div className="flex items-center space-x-2">
                           <Checkbox
@@ -226,15 +234,7 @@ export default function DeleteHistory() {
                             checked={formData.type.includes('ENTRADA')}
                             onCheckedChange={(checked) => handleTypeChange('ENTRADA', checked as boolean)}
                           />
-                          <Label htmlFor="type-entrada">ENTRADA</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="type-dizimo"
-                            checked={formData.type.includes('DIZIMO')}
-                            onCheckedChange={(checked) => handleTypeChange('DIZIMO', checked as boolean)}
-                          />
-                          <Label htmlFor="type-dizimo">DIZIMO</Label>
+                          <Label htmlFor="type-entrada">Outras Receitas</Label>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Checkbox
@@ -242,7 +242,7 @@ export default function DeleteHistory() {
                             checked={formData.type.includes('SAIDA')}
                             onCheckedChange={(checked) => handleTypeChange('SAIDA', checked as boolean)}
                           />
-                          <Label htmlFor="type-saida">SAIDA</Label>
+                          <Label htmlFor="type-saida">Saídas</Label>
                         </div>
                       </div>
                     </div>

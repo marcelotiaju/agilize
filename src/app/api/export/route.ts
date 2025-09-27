@@ -17,8 +17,8 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { startDate, endDate, type, congregationIds } = body
-console.log(body)
+    const { startDate, endDate, type, congregationIds, status } = body
+
     const userCongregations = await prisma.userCongregation.findMany({
       where: {
         userId: session.user.id,
@@ -52,8 +52,8 @@ console.log(body)
             gte: launchDateStart,
             lte: launchDateEnd
           },
-          status: "APPROVED",
-          type: { in: type }
+          type: { in: type },
+          status: { in: status },
         },
         include: {
           congregation: true,
@@ -101,29 +101,52 @@ console.log(body)
       // })
     // }
 
+      const getFormattedTitle = (launch) => {
+      if (launch.contributorId && !launch.contributor?.ecclesiasticalPosition.includes('MEMBRO','CONGREGADO')) {
+        const cargoMap = {
+          'AUXILIAR': 'Aux',
+          'DIACONO': 'Dc',
+          'PRESBITERO': 'Pb',
+          'EVANGELISTA': 'Ev',
+          'PASTOR': 'Pr',
+        };
+        const cargoAbreviado = cargoMap[launch.contributor.ecclesiasticalPosition] || '';
+        return `DÍZIMOS E OFERTAS DE ${cargoAbreviado} - ${launch.contributor.name}`;
+      } else {
+        if (launch.contributorName) {
+          return `DÍZIMOS E OFERTAS DE ${launch.contributorName}`;
+        } else {
+          // Retorna a string original ou uma variação, caso contributorName não esteja preenchido
+          return `DÍZIMOS E OFERTAS DE ${launch.contributor?.tipo} - ${launch.contributor.name} - ${launch.contributor?.cpf}`
+        }
+      }
+      } 
+
       const launchData = launches.map(launch => ({
-        "CPF/CNPJ Fornecedor": launch.type === "SAIDA" ? launch.supplier?.cpfCnpj : launch.type === "DIZIMO" ? launch.contributor?.cpf : "" ,
+        "CPF/CNPJ Fornecedor": launch.type === "SAIDA" ? launch.supplier?.cpfCnpj : "" ,
         "Codigo do Membro": launch.type === "DIZIMO" ? launch.contributor?.tipo === 'MEMBRO' ? launch.contributor?.code : "": "",
         "Codigo do Congregado": launch.type === "DIZIMO" ? launch.contributor?.tipo === 'CONGREGADO' ? launch.contributor?.code : "": "",
         "Nome de Outros": launch.type === "DIZIMO" ? launch.contributorName : launch.type === "SAIDA" ? launch.supplierName : "",
-        "Numero do Documento": launch.type === "DIZIMO" ? launch.talonNumber : "",
+        "Numero do Documento": launch.talonNumber,
         "Data de Emissao": formatDate(launch.date),
-        "Data de Vencimento": formatDate(launch.date),
-        "Codigo da Conta a Pagar": launch.type === "ENTRADA" ? launch.congregation?.entradaAccountPlan : launch.type === "DIZIMO" ? launch.congregation?.dizimoAccountPlan : launch.type === "SAIDA" ? launch.congregation?.saidaAccountPlan : "",
+        "Data de Vencimento": "",
+        "Codigo da Conta a Pagar": "",
         "Codigo do Caixa": launch.type === "ENTRADA" ? launch.congregation?.entradaFinancialEntity : launch.type === "DIZIMO" ? launch.congregation?.dizimoFinancialEntity : launch.type === "SAIDA" ? launch.congregation?.saidaFinancialEntity : "",
         "Código da Congregação": launch.congregation.code,
         "Codigo da Forma de Pagamento": launch.type === "ENTRADA" ? launch.congregation?.entradaPaymentMethod : launch.type === "DIZIMO" ? launch.congregation?.dizimoPaymentMethod : launch.type === "SAIDA" ? launch.congregation?.saidaPaymentMethod : "",
         //"Nome da Congregação": launch.congregation.name,
         "Valor": launch.offerValue + launch.votesValue + launch.ebdValue + launch.campaignValue + launch.value ,
-        "Codigo de Conta" : launch.classification?.code,
+        "Codigo de Conta" : launch.type === "ENTRADA" ? launch.congregation?.entradaAccountPlan : launch.type === "DIZIMO" ? launch.congregation?.dizimoAccountPlan : launch.type === "SAIDA" ? launch.congregation?.saidaAccountPlan : "",
         "Tipo": launch.type === "SAIDA" ? "D" : "C",
-        "Historico": launch.classification?.description || "",
-        //"Parcelas": "",
-        //"Codigo de Departamento" : ""
+        "Historico": launch.type === "ENTRADA" ? launch.description || "" : 
+                     launch.type === "DIZIMO" ? getFormattedTitle(launch) : // Mantenha o resto da sua lógica aqui : 
+                     launch.type === "SAIDA" ? launch.description || "" : "",
+        "Parcelas": "",
+        "Codigo de Departamento" : ""
       }))
 
       const launchSheet = XLSX.utils.json_to_sheet(launchData)
-      XLSX.utils.book_append_sheet(workbook, launchSheet, "Lançamentos")
+      XLSX.utils.book_append_sheet(workbook, launchSheet, "Planilha1")
 
       await prisma.launch.updateMany({
         where: {

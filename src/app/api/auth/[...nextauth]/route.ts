@@ -3,6 +3,7 @@
   import CredentialsProvider from 'next-auth/providers/credentials';
   import prisma from "@/lib/prisma"
   import bcrypt from "bcrypt"
+  import { endOfDay, getTime } from 'date-fns';
 
   export const authOptions : NextAuthOptions = {
   providers: [
@@ -63,12 +64,16 @@
   ],
   secret: process.env.SECRET,
   session: {
-    strategy: "jwt"
+    strategy: "jwt",
+    maxAge: 7 * 24 * 60 * 60, 
   },
   callbacks: {
     async jwt({ token, user }) {
       // O 'user' só está presente na primeira vez que o token é criado (login)
       if (user) {
+        const endOfToday = endOfDay(new Date());
+        token.exp = Math.floor(getTime(endOfToday) / 1000);
+        token.user = user;
         return {
           ...token,
           cpf: user.cpf,
@@ -95,6 +100,8 @@
       return token
     },
     async session({ session, token }) {
+      session.user = token.user as any;
+      session.expires = new Date(token.exp * 1000).toISOString()
       // O 'id' do usuário está no 'token.sub' por padrão.
       session.user = {
         ...session.user,

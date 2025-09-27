@@ -61,8 +61,11 @@ export async function POST(request: NextRequest) {
           type: { in: type },
           OR: [
             {
-              status: "CANCELED"
+              status: "CANCELED" 
             },
+            {
+              status: "EXPORTED"
+            }
           ]
         }
       })

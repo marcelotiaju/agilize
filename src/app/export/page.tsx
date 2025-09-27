@@ -24,10 +24,11 @@ export default function Export() {
   const { data: session } = useSession()
   const [congregations, setCongregations] = useState<Congregation[]>([])
   const [formData, setFormData] = useState({
-    startDate: format(new Date(new Date().setDate(new Date().getDate() - 30)), 'yyyy-MM-dd'),
-    endDate: format(new Date(), 'yyyy-MM-dd'),
+    startDate: format(new Date(new Date().setDate(new Date().getDate() - 1)), 'yyyy-MM-dd'),
+    endDate: format(new Date(new Date().setDate(new Date().getDate() - 1)), 'yyyy-MM-dd'),
     type: ['ENTRADA', 'DIZIMO', 'SAIDA'], // Defina todas as opções como padrão
-    congregationIds: [] as string[]
+    congregationIds: [] as string[],
+    status: ['APPROVED'] // Apenas lançamentos aprovados
 })
   const [isExporting, setIsExporting] = useState(false)
 
@@ -102,6 +103,11 @@ export default function Export() {
       return
     }
 
+    if (formData.status.length === 0) {
+    alert('Selecione pelo menos um status de lançamento');
+    return;
+    }
+
     setIsExporting(true)
     
     try {
@@ -137,6 +143,16 @@ export default function Export() {
   }
 
   const allSelected = congregations.length > 0 && formData.congregationIds.length === congregations.length
+  
+  const handleStatusChange = (status: string, checked: boolean) => {
+  setFormData(prev => {
+    const statuses = checked
+      ? [...prev.status, status]
+      : prev.status.filter(s => s !== status);
+
+    return { ...prev, status: statuses };
+  });
+  };
 
   return (
     <PermissionGuard 
@@ -193,24 +209,24 @@ export default function Export() {
                       </div>
                     </div>
 
-                    <div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1 mt-2">
                       <Label>Tipo de Dados</Label>
-                      <div className="space-y-2 mt-2">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="type-entrada"
-                            checked={formData.type.includes('ENTRADA')}
-                            onCheckedChange={(checked) => handleTypeChange('ENTRADA', checked as boolean)}
-                          />
-                          <Label htmlFor="type-entrada">ENTRADA</Label>
-                        </div>
                         <div className="flex items-center space-x-2">
                           <Checkbox
                             id="type-dizimo"
                             checked={formData.type.includes('DIZIMO')}
                             onCheckedChange={(checked) => handleTypeChange('DIZIMO', checked as boolean)}
                           />
-                          <Label htmlFor="type-dizimo">DIZIMO</Label>
+                          <Label htmlFor="type-dizimo">Dízimos</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="type-entrada"
+                            checked={formData.type.includes('ENTRADA')}
+                            onCheckedChange={(checked) => handleTypeChange('ENTRADA', checked as boolean)}
+                          />
+                          <Label htmlFor="type-entrada">Outras Receitas</Label>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Checkbox
@@ -218,9 +234,30 @@ export default function Export() {
                             checked={formData.type.includes('SAIDA')}
                             onCheckedChange={(checked) => handleTypeChange('SAIDA', checked as boolean)}
                           />
-                          <Label htmlFor="type-saida">SAIDA</Label>
+                          <Label htmlFor="type-saida">Saídas</Label>
                         </div>
                       </div>
+                    <div>
+                      <Label>Status dos Lançamentos</Label>
+                      <div className="space-y-2 mt-2">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="status-approved"
+                            checked={formData.status.includes('APPROVED')}
+                            onCheckedChange={(checked) => handleStatusChange('APPROVED', checked as boolean)}
+                          />
+                          <Label htmlFor="status-approved">Não Exportados</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="status-exported"
+                            checked={formData.status.includes('EXPORTED')}
+                            onCheckedChange={(checked) => handleStatusChange('EXPORTED', checked as boolean)}
+                          />
+                          <Label htmlFor="status-exported">Exportados</Label>
+                        </div>
+                      </div>
+                    </div>
                     </div>
 
                     <div>

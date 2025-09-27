@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge'
 import { Plus, Edit, Trash2, List, Upload } from 'lucide-react'
 import { PermissionGuard } from '@/components/auth/PermissionGuard'
+import { SearchInput } from '@/components/ui/search-input'
 
 export default function Classifications() {
   const { data: session } = useSession()
@@ -21,6 +22,7 @@ export default function Classifications() {
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const [importing, setImporting] = useState(false)
   const [editingClassification, setEditingClassification] = useState<Classification | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
   const [formData, setFormData] = useState({
     code: '',
     shortCode: '',
@@ -55,6 +57,17 @@ export default function Classifications() {
       console.error('Erro ao carregar classificações:', error)
     }
   }
+
+      // Filtrar classificacoes com base no termo de pesquisa
+  const filteredClassifications = useMemo(() => {
+    if (!searchTerm) return classifications
+    
+    return classifications.filter(classification =>
+      classification.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      classification.shortCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (classification.description && classification.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    )
+  }, [classifications, searchTerm])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -195,146 +208,160 @@ export default function Classifications() {
           <div className="flex justify-between items-center mb-6">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Classificações</h1>
-              <p className="text-gray-600">Gerencie as classificações do sistema</p>
+              {/* <p className="text-gray-600">Gerencie as classificações do sistema</p> */}
             </div>
             
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button
-                    onClick={resetForm}
-                    disabled={!canCreate}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Nova Classificação
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingClassification ? 'Editar Classificação' : 'Nova Classificação'}
-                  </DialogTitle>
-                  <DialogDescription>
-                    Preencha os dados da classificação
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleSubmit}>
+            <div className="flex space-x-2">
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                      onClick={resetForm}
+                      disabled={!canCreate}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Nova Classificação
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>
+                      {editingClassification ? 'Editar Classificação' : 'Nova Classificação'}
+                    </DialogTitle>
+                    <DialogDescription>
+                      Preencha os dados da classificação
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleSubmit}>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="code" className="text-right">
+                          Código
+                        </Label>
+                        <Input
+                          id="code"
+                          name="code"
+                          value={formData.code}
+                          onChange={handleInputChange}
+                          className="col-span-3"
+                          //placeholder="ex: 4.3.14"
+                          required
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="shortCode" className="text-right">
+                          Reduzido
+                        </Label>
+                        <Input
+                          id="shortCode"
+                          name="shortCode"
+                          value={formData.shortCode}
+                          onChange={handleInputChange}
+                          className="col-span-3"
+                          //placeholder="ex: 4314"
+                          required
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="description" className="text-right">
+                          Descrição
+                        </Label>
+                        <Input
+                          id="description"
+                          name="description"
+                          value={formData.description}
+                          onChange={handleInputChange}
+                          className="col-span-3"
+                          //placeholder="ex: LANCHES E REFEIÇÕES"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button type="submit">
+                        {editingClassification ? 'Atualizar' : 'Salvar'}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" onClick={resetImportForm}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Importar CSV
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[600px]">
+                  <DialogHeader>
+                    <DialogTitle>Importar Classificações via CSV</DialogTitle>
+                    <DialogDescription>
+                      Faça upload de um arquivo CSV com as Classificações. O arquivo deve ter as colunas: Codigo, Reduzido, Descrição.
+                    </DialogDescription>
+                  </DialogHeader>
                   <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="code" className="text-right">
-                        Código
+                      <Label htmlFor="csvFile" className="text-right">
+                        Arquivo CSV
                       </Label>
                       <Input
-                        id="code"
-                        name="code"
-                        value={formData.code}
-                        onChange={handleInputChange}
+                        id="csvFile"
+                        type="file"
+                        accept=".csv"
+                        onChange={handleFileChange}
                         className="col-span-3"
-                        //placeholder="ex: 4.3.14"
                         required
                       />
                     </div>
                     
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="shortCode" className="text-right">
-                        Reduzido
-                      </Label>
-                      <Input
-                        id="shortCode"
-                        name="shortCode"
-                        value={formData.shortCode}
-                        onChange={handleInputChange}
-                        className="col-span-3"
-                        //placeholder="ex: 4314"
-                        required
-                      />
-                    </div>
-                    
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="description" className="text-right">
-                        Descrição
-                      </Label>
-                      <Input
-                        id="description"
-                        name="description"
-                        value={formData.description}
-                        onChange={handleInputChange}
-                        className="col-span-3"
-                        //placeholder="ex: LANCHES E REFEIÇÕES"
-                        required
-                      />
+                    <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
+                      <p className="font-medium mb-2">Formato esperado do CSV:</p>
+                      <p className="text-xs font-mono">Codigo, Reduzido, Descrição</p>
+                      <p className="text-xs font-mono">4.3.14,4314,LANCHES E REFEIÇÕES</p>
+                      {/* <p className="text-xs font-mono">2,MARIA SANTOS,F,98765432100</p> */}
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <a 
+                          href="/exemplo-classificacao.csv" 
+                          download
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        >
+                          📥 Baixar arquivo de exemplo
+                        </a>
+                      </div>
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button type="submit">
-                      {editingClassification ? 'Atualizar' : 'Salvar'}
+                    <Button 
+                      type="button" 
+                      onClick={handleImportCSV}
+                      disabled={!csvFile || importing}
+                    >
+                      {importing ? 'Importando...' : 'Importar'}
                     </Button>
                   </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
 
-            <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" onClick={resetImportForm}>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Importar CSV
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px]">
-                <DialogHeader>
-                  <DialogTitle>Importar Classificações via CSV</DialogTitle>
-                  <DialogDescription>
-                    Faça upload de um arquivo CSV com as Classificações. O arquivo deve ter as colunas: Codigo, Reduzido, Descrição.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="csvFile" className="text-right">
-                      Arquivo CSV
-                    </Label>
-                    <Input
-                      id="csvFile"
-                      type="file"
-                      accept=".csv"
-                      onChange={handleFileChange}
-                      className="col-span-3"
-                      required
-                    />
-                  </div>
-                  
-                  <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
-                    <p className="font-medium mb-2">Formato esperado do CSV:</p>
-                    <p className="text-xs font-mono">Codigo, Reduzido, Descrição</p>
-                    <p className="text-xs font-mono">4.3.14,4314,LANCHES E REFEIÇÕES</p>
-                    {/* <p className="text-xs font-mono">2,MARIA SANTOS,F,98765432100</p> */}
-                    <div className="mt-3 pt-3 border-t border-gray-200">
-                      <a 
-                        href="/exemplo-classificacao.csv" 
-                        download
-                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                      >
-                        📥 Baixar arquivo de exemplo
-                      </a>
-                    </div>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button 
-                    type="button" 
-                    onClick={handleImportCSV}
-                    disabled={!csvFile || importing}
-                  >
-                    {importing ? 'Importando...' : 'Importar'}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-
+          {/* Campo de pesquisa */}
+          <div className="mb-6">
+            <SearchInput
+              placeholder="Pesquisar classificações por codigo, reduzido e descrição ..."
+              value={searchTerm}
+              onChange={setSearchTerm}
+              className="max-w-md"
+            />
           </div>
 
           <Card>
             <CardHeader>
               <CardTitle>Classificações Cadastradas</CardTitle>
-              <CardDescription>Lista de classificações do sistema</CardDescription>
+              {/* <CardDescription>Lista de classificações do sistema</CardDescription> */}
+              <CardDescription>
+                {filteredClassifications.length} classificações encontradas
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
@@ -347,7 +374,7 @@ export default function Classifications() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {classifications.map((classification: Classification) => (
+                  {filteredClassifications.map((classification: Classification) => (
                     <TableRow key={classification.id}>
                       <TableCell className="font-medium">{classification.code}</TableCell>
                       <TableCell>{classification.shortCode}</TableCell>
@@ -380,7 +407,7 @@ export default function Classifications() {
           </Card>
         </div>
       </div>
-    </div>
+      </div>
     </PermissionGuard>
   )
 }

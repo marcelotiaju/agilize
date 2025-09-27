@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       where: {
         id: {
           in: congregationIds
-        }
+        },
       }
     })
 

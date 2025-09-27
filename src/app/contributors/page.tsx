@@ -1,7 +1,7 @@
 // 11. Página de Contribuintes (pages/contributors.tsx)
 'use client'
 
-import { useState, useEffect, ChangeEventHandler } from 'react'
+import { useState, useEffect, useMemo, ChangeEventHandler } from 'react'
 import { useSession } from 'next-auth/react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Button } from '@/components/ui/button'
@@ -17,6 +17,7 @@ import { Plus, Edit, Trash2, User, Upload } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { PermissionGuard } from '@/components/auth/PermissionGuard'
+import { SearchInput } from '@/components/ui/search-input'
 
 interface Contributor {
   id: string
@@ -47,6 +48,7 @@ export default function Contributors() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
   const [editingContributor, setEditingContributor] = useState<Contributor | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
   const [formData, setFormData] = useState({
     congregationId: '',
     code: '',
@@ -79,6 +81,17 @@ export default function Contributors() {
       console.error('Erro ao carregar contribuintes:', error)
     }
   }
+
+    // Filtrar contribuintes com base no termo de pesquisa
+  const filteredContributors = useMemo(() => {
+    if (!searchTerm) return contributors
+    
+    return contributors.filter(contributor =>
+      contributor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (contributor.cpf && contributor.cpf.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      contributor.code.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  }, [contributors, searchTerm])
 
   const fetchCongregations = async () => {
     try {
@@ -242,7 +255,7 @@ export default function Contributors() {
           <div className="flex justify-between items-center mb-6">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Contribuintes</h1>
-              <p className="text-gray-600">Gerencie os registros de contribuintes</p>
+              {/* <p className="text-gray-600">Gerencie os registros de contribuintes</p> */}
             </div>
             
             <div className="flex space-x-2">
@@ -425,10 +438,23 @@ export default function Contributors() {
             </div>
           </div> 
 
+          {/* Campo de pesquisa */}
+          <div className="mb-6">
+            <SearchInput
+              placeholder="Pesquisar contribuintes por Codigo, nome ou CPF..."
+              value={searchTerm}
+              onChange={setSearchTerm}
+              className="max-w-md"
+            />
+          </div>
+
           <Card>
             <CardHeader>
               <CardTitle>Contribuintes</CardTitle>
-              <CardDescription>Lista de contribuintes registrados</CardDescription>
+              {/* <CardDescription>Lista de contribuintes registrados</CardDescription> */}
+              <CardDescription>
+                {filteredContributors.length} contribuintes encontrados
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
@@ -443,7 +469,7 @@ export default function Contributors() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {contributors.map((contributor) => (
+                  {filteredContributors.map((contributor) => (
                     <TableRow key={contributor.id}>
                       <TableCell>{contributor.code}</TableCell>
                       <TableCell>{contributor.name}</TableCell>

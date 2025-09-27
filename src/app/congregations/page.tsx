@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Button } from '@/components/ui/button'
@@ -10,12 +10,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Textarea } from '@/components/ui/textarea'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Plus, Edit, Trash2, Church, ChevronDown, ChevronUp, Upload } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { SearchInput } from '@/components/ui/search-input'
 
 
 interface Congregation {
@@ -35,6 +34,8 @@ interface Congregation {
   saidaAccountPlan?: string
   saidaFinancialEntity?: string
   saidaPaymentMethod?: string
+  matriculaEnergisa?: String
+matriculaIgua?: String
 }
 
 export default function Congregations() {
@@ -48,6 +49,7 @@ export default function Congregations() {
     dizimo: false,
     saida: false
   })
+  const [searchTerm, setSearchTerm] = useState('')
   const [formData, setFormData] = useState({
     code: '',
     name: '',
@@ -63,7 +65,9 @@ export default function Congregations() {
     // Campos para Saída
     saidaAccountPlan: '',
     saidaFinancialEntity: '',
-    saidaPaymentMethod: ''
+    saidaPaymentMethod: '',
+    matriculaEnergisa: '',
+    matriculaIgua: ''
   })
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const [importing, setImporting] = useState(false)
@@ -88,6 +92,16 @@ export default function Congregations() {
       console.error('Erro ao carregar congregações:', error)
     }
   }
+
+  // Filtrar congregações com base no termo de pesquisa
+  const filteredCongregations = useMemo(() => {
+    if (!searchTerm) return congregations
+    
+    return congregations.filter(congregation =>
+      congregation.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      congregation.code.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  }, [congregations, searchTerm])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -141,7 +155,10 @@ export default function Congregations() {
       // Campos para Saída
       saidaAccountPlan: congregation.saidaAccountPlan || '',
       saidaFinancialEntity: congregation.saidaFinancialEntity || '',
-      saidaPaymentMethod: congregation.saidaPaymentMethod || ''
+      saidaPaymentMethod: congregation.saidaPaymentMethod || '',
+            // Novos campos
+      matriculaEnergisa: congregation.matriculaEnergisa || '',
+      matriculaIgua: congregation.matriculaIgua || ''
     })
     setIsDialogOpen(true)
   }
@@ -197,7 +214,10 @@ export default function Congregations() {
       // Campos para Saída
       saidaAccountPlan: '',
       saidaFinancialEntity: '',
-      saidaPaymentMethod: ''
+      saidaPaymentMethod: '',
+      // Novos campos
+      matriculaEnergisa: '',
+      matriculaIgua: '',
     })
   }
 
@@ -260,7 +280,7 @@ export default function Congregations() {
           <div className="flex justify-between items-center mb-6">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Congregações</h1>
-              <p className="text-gray-600">Gerencie as congregações da igreja</p>
+              {/* <p className="text-gray-600">Gerencie as congregações da igreja</p> */}
             </div>
             
             <div className="flex space-x-2">
@@ -329,11 +349,12 @@ export default function Congregations() {
                       </div>
                     </div>
 
-                    <Tabs defaultValue="entrada" className="w-full mt-4">
-                      <TabsList className="grid w-full grid-cols-3">
-                          <TabsTrigger value="entrada">Entrada</TabsTrigger>
+                    <Tabs defaultValue="dizimo" className="w-full mt-4 space-x-10">
+                      <TabsList className="grid w-full grid-cols-4">
                           <TabsTrigger value="dizimo">Dízimo</TabsTrigger>
+                          <TabsTrigger value="entrada">Out Receitas</TabsTrigger>
                           <TabsTrigger value="saida">Saída</TabsTrigger>
+                          <TabsTrigger value="outros">Outros</TabsTrigger>
                       </TabsList>
                       <TabsContent value="entrada" className="space-y-4 mt-4">
                           <div>
@@ -431,6 +452,30 @@ export default function Congregations() {
                               />
                           </div>
                       </TabsContent>
+
+                      <TabsContent value="outros" className="space-y-4 mt-4">
+                          <div>
+                              <Label htmlFor="saidaAccountPlan">Energisa</Label>
+                              <Input
+                                  id="saidaAccountPlan"
+                                  name="saidaAccountPlan"
+                                  value={formData.matriculaEnergisa}
+                                  onChange={handleInputChange}
+                                  placeholder=""
+                              />
+                          </div>
+                          <div>
+                              <Label htmlFor="saidaFinancialEntity">Iguá</Label>
+                              <Input
+                                  id="saidaFinancialEntity"
+                                  name="saidaFinancialEntity"
+                                  value={formData.matriculaIgua}
+                                  onChange={handleInputChange}
+                                  placeholder=""
+                              />
+                          </div>                                
+                      </TabsContent>                      
+                      
                       </Tabs>
                       <DialogFooter>
                         <Button type="submit">
@@ -499,10 +544,24 @@ export default function Congregations() {
               </Dialog>
             </div>
           </div>
+
+          {/* Campo de pesquisa */}
+          <div className="mb-6">
+            <SearchInput
+              placeholder="Pesquisar congregações por Codigo ou nome..."
+              value={searchTerm}
+              onChange={setSearchTerm}
+              className="max-w-md"
+            />
+          </div>
+
           <Card>
             <CardHeader>
               <CardTitle>Congregações</CardTitle>
-              <CardDescription>Lista de congregações cadastradas</CardDescription>
+              {/* <CardDescription>Lista de congregações cadastradas</CardDescription> */}
+              <CardDescription>
+                {filteredCongregations.length} congregações encontradas
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
@@ -517,7 +576,7 @@ export default function Congregations() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {congregations.map((congregation) => (
+                  {filteredCongregations.map((congregation) => (
                     <TableRow key={congregation.id}>
                       <TableCell>
                         <Badge variant="outline">{congregation.code}</Badge>

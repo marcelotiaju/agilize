@@ -21,7 +21,7 @@ interface SearchableSelectProps {
   value: string;
   onChange: (value: string, name: string) => void;
   name: string;
-  data: { id: string; name: string; document?: string }[];
+  data: { id: string; name: string; document?: string, cargo: string;  }[];
   searchKeys: ('name' | 'document')[];
 }
 
@@ -92,7 +92,7 @@ export function SearchableSelect({
                 className="w-full justify-start"
                 onClick={() => handleSelect(item)}
               >
-                {item.name} {item.document ? `(${item.document})` : ''}
+                {item.name} {item.document ? `(${item.document})` : ''} {item.cargo ? `${item.cargo}` : ''}
               </Button>
             ))
           ) : (

@@ -15,6 +15,9 @@ export async function GET(request: NextRequest) {
 
 
     const congregations = await prisma.congregation.findMany({
+      orderBy: {
+        name: "asc"
+      }
     })
 
     return NextResponse.json(congregations)

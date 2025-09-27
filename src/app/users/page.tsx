@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Button } from '@/components/ui/button'
@@ -11,12 +11,13 @@ import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, Building, Download, Trash } from 'lucide-react'
+import { Plus, Edit, Trash2, Building, Download, Trash, Upload } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { PermissionGuard } from '@/components/auth/PermissionGuard'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs' // Adicione esta linha
+import { SearchInput } from '@/components/ui/search-input'
 
 
 interface UserData {
@@ -66,6 +67,12 @@ export default function Users() {
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [defaultPage, setDefaultPage] = useState(session?.user?.defaultPage || '/dashboard')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [csvFile, setCsvFile] = useState<File | null>(null)
+  const [ImportingAssociate, setImportingAssociate] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
+  const [isImportAssDialogOpen, setIsImportAssDialogOpen] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -125,6 +132,18 @@ export default function Users() {
       setIsLoading(false)
     }
   }
+
+    // Filtrar usuários com base no termo de pesquisa
+  const filteredUsers = useMemo(() => {
+    if (!searchTerm) return users
+    
+    return users.filter(user =>
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.cpf.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()))
+    )
+  }, [users, searchTerm])
+
 
   const fetchCongregations = async () => {
     try {
@@ -337,6 +356,88 @@ const handleAssociation = (user: UserData) => {
     })
   }
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0]
+  if (file && file.type === 'text/csv') {
+    setCsvFile(file)
+  } else {
+    alert('Por favor, selecione um arquivo CSV válido')
+    e.target.value = ''
+  }
+  }
+
+  const handleImportCSV = async () => {
+  if (!csvFile) {
+    alert('Por favor, selecione um arquivo CSV')
+    return
+  }
+
+  setImporting(true)
+  try {
+    const formData = new FormData()
+    formData.append('file', csvFile)
+
+    const response = await fetch('/api/users/import', {
+      method: 'POST',
+      body: formData
+    })
+
+    if (response.ok) {
+      const result = await response.json()
+      alert(`Importação concluída! ${result.imported} usuários importados com sucesso.`)
+      fetchUsers()
+      setIsImportDialogOpen(false)
+      setCsvFile(null)
+    } else {
+      const error = await response.json()
+      alert(error.error || 'Erro ao importar arquivo CSV')
+    }
+  } catch (error) {
+    console.error('Erro ao importar CSV:', error)
+    alert('Erro ao importar arquivo CSV')
+  } finally {
+    setImporting(false)
+  }
+}
+
+  const handleImportAssociateCSV = async () => {
+  if (!csvFile) {
+    alert('Por favor, selecione um arquivo CSV')
+    return
+  }
+
+  setImportingAssociate(true)
+  try {
+    const formData = new FormData()
+    formData.append('file', csvFile)
+
+    const response = await fetch('/api/users/importAssociate', {
+      method: 'POST',
+      body: formData
+    })
+
+    if (response.ok) {
+      const result = await response.json()
+      alert(`Importação concluída! ${result.imported} usuários associados com sucesso.`)
+      fetchUsers()
+      setIsImportDialogOpen(false)
+      setCsvFile(null)
+    } else {
+      const error = await response.json()
+      alert(error.error || 'Erro ao importar arquivo CSV')
+    }
+  } catch (error) {
+    console.error('Erro ao importar CSV:', error)
+    alert('Erro ao importar arquivo CSV')
+  } finally {
+    setImportingAssociate(false)
+  }
+}
+
+const resetImportForm = () => {
+  setCsvFile(null)
+  setImporting(false)
+}
 
   if (!session?.user?.canCreate && !session?.user?.canEdit) {
     return (
@@ -370,323 +471,441 @@ const handleAssociation = (user: UserData) => {
           <div className="flex justify-between items-center mb-6">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Gerenciar Usuários</h1>
-              <p className="text-gray-600">Gerencie usuários e suas permissões</p>
+              {/* <p className="text-gray-600">Gerencie usuários e suas permissões</p> */}
             </div>
-            
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={resetForm}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Novo Usuário
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[800px]">
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingUser ? 'Editar Usuário' : 'Novo Usuário'}
-                  </DialogTitle>
-                  <DialogDescription>
-                    Preencha os dados do usuário e defina as permissões
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleSubmit}>
-                  <Tabs defaultValue="user-data" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-                      <TabsTrigger value="user-data">Dados do Usuário</TabsTrigger>
-                      <TabsTrigger value="launch-permissions">Lançamentos</TabsTrigger>
-                      <TabsTrigger value="approve-permissions">Aprovação</TabsTrigger>
-                      <TabsTrigger value="crud-permissions">Cadastros</TabsTrigger>
-                      <TabsTrigger value="system-permissions">Sistema</TabsTrigger>
-                    </TabsList>
+            <div className="flex space-x-2">            
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={resetForm}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Novo Usuário
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[800px]">
+                  <DialogHeader>
+                    <DialogTitle>
+                      {editingUser ? 'Editar Usuário' : 'Novo Usuário'}
+                    </DialogTitle>
+                    <DialogDescription>
+                      Preencha os dados do usuário e defina as permissões
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleSubmit}>
+                    <Tabs defaultValue="user-data" className="w-full">
+                      <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+                        <TabsTrigger value="user-data">Dados do Usuário</TabsTrigger>
+                        <TabsTrigger value="launch-permissions">Lançamentos</TabsTrigger>
+                        <TabsTrigger value="approve-permissions">Aprovação</TabsTrigger>
+                        <TabsTrigger value="crud-permissions">Cadastros</TabsTrigger>
+                        <TabsTrigger value="system-permissions">Sistema</TabsTrigger>
+                      </TabsList>
 
-                    {/* Conteúdo da Aba: Dados do Usuário */}
-                    <TabsContent value="user-data" className="mt-4">
-                      <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="name">Nome</Label>
-                            <Input
-                              id="name"
-                              name="name"
-                              value={formData.name}
-                              onChange={handleInputChange}
-                              required
-                            />
+                      {/* Conteúdo da Aba: Dados do Usuário */}
+                      <TabsContent value="user-data" className="mt-4">
+                        <div className="grid gap-4 py-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor="name">Nome</Label>
+                              <Input
+                                id="name"
+                                name="name"
+                                value={formData.name}
+                                onChange={handleInputChange}
+                                required
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="email">Email</Label>
+                              <Input
+                                id="email"
+                                name="email"
+                                type="email"
+                                value={formData.email}
+                                onChange={handleInputChange}
+                                required
+                              />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor="cpf">CPF</Label>
+                              <Input
+                                id="cpf"
+                                name="cpf"
+                                value={formData.cpf}
+                                onChange={handleInputChange}
+                                required
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="phone">Telefone</Label>
+                              <Input
+                                id="phone"
+                                name="phone"
+                                value={formData.phone}
+                                onChange={handleInputChange}
+                              />
+                            </div>
                           </div>
                           <div>
-                            <Label htmlFor="email">Email</Label>
+                            <Label htmlFor="password">Senha</Label>
                             <Input
-                              id="email"
-                              name="email"
-                              type="email"
-                              value={formData.email}
+                              id="password"
+                              name="password"
+                              type="password"
+                              value={formData.password}
                               onChange={handleInputChange}
-                              required
+                              placeholder={editingUser ? 'Deixe em branco para não alterar' : ''}
+                              required={!editingUser}
                             />
                           </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="cpf">CPF</Label>
-                            <Input
-                              id="cpf"
-                              name="cpf"
-                              value={formData.cpf}
-                              onChange={handleInputChange}
-                              required
-                            />
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor="validFrom">Válido de</Label>
+                              <Input
+                                id="validFrom"
+                                name="validFrom"
+                                type="date"
+                                value={formData.validFrom}
+                                onChange={handleInputChange}
+                                required
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="validTo">Válido até</Label>
+                              <Input
+                                id="validTo"
+                                name="validTo"
+                                type="date"
+                                value={formData.validTo}
+                                onChange={handleInputChange}
+                                required
+                              />
+                            </div>
                           </div>
-                          <div>
-                            <Label htmlFor="phone">Telefone</Label>
-                            <Input
-                              id="phone"
-                              name="phone"
-                              value={formData.phone}
-                              onChange={handleInputChange}
-                            />
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor="historyDays">Dias de Histórico</Label>
+                              <Input
+                                id="historyDays"
+                                name="historyDays"
+                                type="number"
+                                value={formData.historyDays}
+                                onChange={handleInputChange}
+                                min="1"
+                                max="365"
+                                required
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="defaultPage">Página Inicial</Label>
+                              <Select
+                                value={formData.defaultPage}
+                                onValueChange={(value) => handleSelectChange('defaultPage', value)}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="/dashboard">Dashboard</SelectItem>
+                                  <SelectItem value="/launches">Lançamentos</SelectItem>
+                                  <SelectItem value="/contributors">Contribuintes</SelectItem>
+                                  <SelectItem value="/classifications">Classificações</SelectItem>
+                                  <SelectItem value="/suppliers">Fornecedores</SelectItem>
+                                  <SelectItem value="/congregations">Congregações</SelectItem>
+                                  <SelectItem value="/export">Exportar Dados</SelectItem>
+                                  <SelectItem value="/delete-history">Excluir Histórico</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </div>
-                        </div>
-                        <div>
-                          <Label htmlFor="password">Senha</Label>
-                          <Input
-                            id="password"
-                            name="password"
-                            type="password"
-                            value={formData.password}
-                            onChange={handleInputChange}
-                            placeholder={editingUser ? 'Deixe em branco para não alterar' : ''}
-                            required={!editingUser}
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="validFrom">Válido de</Label>
-                            <Input
-                              id="validFrom"
-                              name="validFrom"
-                              type="date"
-                              value={formData.validFrom}
-                              onChange={handleInputChange}
-                              required
-                            />
                           </div>
-                          <div>
-                            <Label htmlFor="validTo">Válido até</Label>
-                            <Input
-                              id="validTo"
-                              name="validTo"
-                              type="date"
-                              value={formData.validTo}
-                              onChange={handleInputChange}
-                              required
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <Label htmlFor="historyDays">Dias de Histórico</Label>
-                          <Input
-                            id="historyDays"
-                            name="historyDays"
-                            type="number"
-                            value={formData.historyDays}
-                            onChange={handleInputChange}
-                            min="1"
-                            max="365"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="defaultPage">Página Inicial</Label>
-                          <Select
-                            value={formData.defaultPage}
-                            onValueChange={(value) => handleSelectChange('defaultPage', value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="/dashboard">Dashboard</SelectItem>
-                              <SelectItem value="/launches">Lançamentos</SelectItem>
-                              <SelectItem value="/contributors">Contribuintes</SelectItem>
-                              <SelectItem value="/classifications">Classificações</SelectItem>
-                              <SelectItem value="/suppliers">Fornecedores</SelectItem>
-                              <SelectItem value="/congregations">Congregações</SelectItem>
-                              <SelectItem value="/export">Exportar Dados</SelectItem>
-                              <SelectItem value="/delete-history">Excluir Histórico</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    </TabsContent>
+                      </TabsContent>
 
-                    {/* Conteúdo da Aba: Lançamento */}
-                    <TabsContent value="launch-permissions" className="mt-4">
-                      <div className="space-y-4 py-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id="canLaunchEntry"
-                              name="canLaunchEntry"
-                              checked={formData.canLaunchEntry}
-                              onCheckedChange={(checked) => 
-                                setFormData(prev => ({ ...prev, canLaunchEntry: checked }))
-                              }
-                            />
-                            <Label htmlFor="canLaunchEntry">Lançar Entrada</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id="canLaunchTithe"
-                              name="canLaunchTithe"
-                              checked={formData.canLaunchTithe}
-                              onCheckedChange={(checked) => 
-                                setFormData(prev => ({ ...prev, canLaunchTithe: checked }))
-                              }
-                            />
-                            <Label htmlFor="canLaunchTithe">Lançar Dízimo</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id="canLaunchExpense"
-                              name="canLaunchExpense"
-                              checked={formData.canLaunchExpense}
-                              onCheckedChange={(checked) => 
-                                setFormData(prev => ({ ...prev, canLaunchExpense: checked }))
-                              }
-                            />
-                            <Label htmlFor="canLaunchExpense">Lançar Saída</Label>
+                      {/* Conteúdo da Aba: Lançamento */}
+                      <TabsContent value="launch-permissions" className="mt-4">
+                        <div className="space-y-4 py-4">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="canLaunchEntry"
+                                name="canLaunchEntry"
+                                checked={formData.canLaunchEntry}
+                                onCheckedChange={(checked) => 
+                                  setFormData(prev => ({ ...prev, canLaunchEntry: checked }))
+                                }
+                              />
+                              <Label htmlFor="canLaunchEntry">Lançar Entrada</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="canLaunchTithe"
+                                name="canLaunchTithe"
+                                checked={formData.canLaunchTithe}
+                                onCheckedChange={(checked) => 
+                                  setFormData(prev => ({ ...prev, canLaunchTithe: checked }))
+                                }
+                              />
+                              <Label htmlFor="canLaunchTithe">Lançar Dízimo</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="canLaunchExpense"
+                                name="canLaunchExpense"
+                                checked={formData.canLaunchExpense}
+                                onCheckedChange={(checked) => 
+                                  setFormData(prev => ({ ...prev, canLaunchExpense: checked }))
+                                }
+                              />
+                              <Label htmlFor="canLaunchExpense">Lançar Saída</Label>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </TabsContent>
+                      </TabsContent>
 
-                    {/* Conteúdo da Aba: Aprovação */}
-                    <TabsContent value="approve-permissions" className="mt-4">
-                      <div className="space-y-4 py-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id="canApproveEntry"
-                              name="canApproveEntry"
-                              checked={formData.canApproveEntry}
-                              onCheckedChange={(checked) => 
-                                setFormData(prev => ({ ...prev, canApproveEntry: checked }))
-                              }
-                            />
-                            <Label htmlFor="canApproveEntry">Aprovar Entrada</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id="canApproveTithe"
-                              name="canApproveTithe"
-                              checked={formData.canApproveTithe}
-                              onCheckedChange={(checked) => 
-                                setFormData(prev => ({ ...prev, canApproveTithe: checked }))
-                              }
-                            />
-                            <Label htmlFor="canApproveTithe">Aprovar Dízimo</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id="canApproveExpense"
-                              name="canApproveExpense"
-                              checked={formData.canApproveExpense}
-                              onCheckedChange={(checked) => 
-                                setFormData(prev => ({ ...prev, canApproveExpense: checked }))
-                              }
-                            />
-                            <Label htmlFor="canApproveExpense">Aprovar Saída</Label>
+                      {/* Conteúdo da Aba: Aprovação */}
+                      <TabsContent value="approve-permissions" className="mt-4">
+                        <div className="space-y-4 py-4">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="canApproveEntry"
+                                name="canApproveEntry"
+                                checked={formData.canApproveEntry}
+                                onCheckedChange={(checked) => 
+                                  setFormData(prev => ({ ...prev, canApproveEntry: checked }))
+                                }
+                              />
+                              <Label htmlFor="canApproveEntry">Aprovar Entrada</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="canApproveTithe"
+                                name="canApproveTithe"
+                                checked={formData.canApproveTithe}
+                                onCheckedChange={(checked) => 
+                                  setFormData(prev => ({ ...prev, canApproveTithe: checked }))
+                                }
+                              />
+                              <Label htmlFor="canApproveTithe">Aprovar Dízimo</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="canApproveExpense"
+                                name="canApproveExpense"
+                                checked={formData.canApproveExpense}
+                                onCheckedChange={(checked) => 
+                                  setFormData(prev => ({ ...prev, canApproveExpense: checked }))
+                                }
+                              />
+                              <Label htmlFor="canApproveExpense">Aprovar Saída</Label>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </TabsContent>
+                      </TabsContent>
 
-                    {/* Conteúdo da Aba: Cadastros (CRUD) */}
-                    <TabsContent value="crud-permissions" className="mt-4">
-                      <div className="space-y-4 py-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id="canCreate"
-                              name="canCreate"
-                              checked={formData.canCreate}
-                              onCheckedChange={(checked) => 
-                                setFormData(prev => ({ ...prev, canCreate: checked }))
-                              }
-                            />
-                            <Label htmlFor="canCreate">Incluir Registros</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id="canEdit"
-                              name="canEdit"
-                              checked={formData.canEdit}
-                              onCheckedChange={(checked) => 
-                                setFormData(prev => ({ ...prev, canEdit: checked }))
-                              }
-                            />
-                            <Label htmlFor="canEdit">Editar Registros</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id="canExclude"
-                              name="canExclude"
-                              checked={formData.canExclude}
-                              onCheckedChange={(checked) => 
-                                setFormData(prev => ({ ...prev, canExclude: checked }))
-                              }
-                            />
-                            <Label htmlFor="canExclude">Excluir Registros</Label>
+                      {/* Conteúdo da Aba: Cadastros (CRUD) */}
+                      <TabsContent value="crud-permissions" className="mt-4">
+                        <div className="space-y-4 py-4">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="canCreate"
+                                name="canCreate"
+                                checked={formData.canCreate}
+                                onCheckedChange={(checked) => 
+                                  setFormData(prev => ({ ...prev, canCreate: checked }))
+                                }
+                              />
+                              <Label htmlFor="canCreate">Incluir Registros</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="canEdit"
+                                name="canEdit"
+                                checked={formData.canEdit}
+                                onCheckedChange={(checked) => 
+                                  setFormData(prev => ({ ...prev, canEdit: checked }))
+                                }
+                              />
+                              <Label htmlFor="canEdit">Editar Registros</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="canExclude"
+                                name="canExclude"
+                                checked={formData.canExclude}
+                                onCheckedChange={(checked) => 
+                                  setFormData(prev => ({ ...prev, canExclude: checked }))
+                                }
+                              />
+                              <Label htmlFor="canExclude">Excluir Registros</Label>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </TabsContent>
+                      </TabsContent>
+                      
+                      {/* Conteúdo da Aba: Sistema */}
+                      <TabsContent value="system-permissions" className="mt-4">
+                        <div className="space-y-4 py-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="canExport"
+                                name="canExport"
+                                checked={formData.canExport}
+                                onCheckedChange={(checked) => 
+                                  setFormData(prev => ({ ...prev, canExport: checked }))
+                                }
+                              />
+                              <Label htmlFor="canExport">Permissão para exportar dados</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="canDelete"
+                                name="canDelete"
+                                checked={formData.canDelete}
+                                onCheckedChange={(checked) => 
+                                  setFormData(prev => ({ ...prev, canDelete: checked }))
+                                }
+                              />
+                              <Label htmlFor="canDelete">Permissão para excluir histórico</Label>
+                            </div>
+                          </div>
+                        </div>
+                      </TabsContent>
+                    </Tabs>
                     
-                    {/* Conteúdo da Aba: Sistema */}
-                    <TabsContent value="system-permissions" className="mt-4">
-                      <div className="space-y-4 py-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id="canExport"
-                              name="canExport"
-                              checked={formData.canExport}
-                              onCheckedChange={(checked) => 
-                                setFormData(prev => ({ ...prev, canExport: checked }))
-                              }
-                            />
-                            <Label htmlFor="canExport">Permissão para exportar dados</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id="canDelete"
-                              name="canDelete"
-                              checked={formData.canDelete}
-                              onCheckedChange={(checked) => 
-                                setFormData(prev => ({ ...prev, canDelete: checked }))
-                              }
-                            />
-                            <Label htmlFor="canDelete">Permissão para excluir histórico</Label>
-                          </div>
-                        </div>
-                      </div>
-                    </TabsContent>
-                  </Tabs>
-                  
-                  <DialogFooter className="mt-6">
-                    <Button type="submit">
-                      {editingUser ? 'Atualizar' : 'Salvar'}
+                    <DialogFooter className="mt-6">
+                      <Button type="submit">
+                        {editingUser ? 'Atualizar' : 'Salvar'}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" onClick={resetImportForm}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Importar Usuário
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Importar Usuários via CSV</DialogTitle>
+                    {/* <DialogDescription>
+                      Faça upload de um arquivo CSV com os usuários. O arquivo deve ter as colunas: código, nome
+                    </DialogDescription> */}
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="csvFile" className="text-right">
+                        Arquivo CSV
+                      </Label>
+                      <Input
+                        id="csvFile"
+                        type="file"
+                        accept=".csv"
+                        onChange={handleFileChange}
+                        className="col-span-3"
+                        required
+                      />
+                    </div>
+                    
+                    <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
+                      <p className="font-medium mb-2">Formato esperado do CSV:</p>
+                      <p className="text-xs font-mono">nome,email,cpf,dias_historico,</p>
+                      <p className="text-xs font-mono">telefone,validade_inicio,validade_fim,</p>
+                      <p className="text-xs font-mono">lanc_out_rec,lanc_dizimo,lanc_saida,</p>
+                      <p className="text-xs font-mono">aprov_out_rec,aprov_dizimo,aprov_saida,</p>
+                      <p className="text-xs font-mono">cad_incluir,cad_editar,cad_excluir,</p>
+                      <p className="text-xs font-mono">sist_exportar,sist_excluir</p>
+
+                      {/* <div className="mt-3 pt-3 border-t border-gray-200">
+                        <a 
+                          href="/exemplo-usuarios.csv" 
+                          download
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        >
+                          📥 Baixar arquivo de exemplo
+                        </a>
+                      </div> */}
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button 
+                      type="button" 
+                      onClick={handleImportCSV}
+                      disabled={!csvFile || importing}
+                    >
+                      {importing ? 'Importando...' : 'Importar'}
                     </Button>
                   </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={isImportAssDialogOpen} onOpenChange={setIsImportAssDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" onClick={resetImportForm}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Importar Associação
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Importar Associação via CSV</DialogTitle>
+                    {/* <DialogDescription>
+                      Faça upload de um arquivo CSV com os usuários. O arquivo deve ter as colunas: código, nome
+                    </DialogDescription> */}
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="csvFile" className="text-right">
+                        Arquivo CSV
+                      </Label>
+                      <Input
+                        id="csvFile"
+                        type="file"
+                        accept=".csv"
+                        onChange={handleFileChange}
+                        className="col-span-3"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button 
+                      type="button" 
+                      onClick={handleImportAssociateCSV}
+                      disabled={!csvFile || importing}
+                    >
+                      {importing ? 'Importando...' : 'Importar'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
+
+          {/* Campo de pesquisa */}
+          <div className="mb-6">
+            <SearchInput
+              placeholder="Pesquisar usuários por nome, CPF ou e-mail..."
+              value={searchTerm}
+              onChange={setSearchTerm}
+              className="max-w-md"
+            />
           </div>
 
           <Card>
             <CardHeader>
               <CardTitle>Usuários ({users.length})</CardTitle>
-              <CardDescription>Lista de usuários do sistema</CardDescription>
+              {/* <CardDescription>Lista de usuários do sistema</CardDescription> */}
+              <CardDescription>
+                {filteredUsers.length} usuários encontrados
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {isLoading ? (
@@ -705,7 +924,7 @@ const handleAssociation = (user: UserData) => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {users.map((user) => (
+                    {filteredUsers.map((user) => (
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">{user.name}</TableCell>
                         <TableCell>{user.email}</TableCell>
@@ -748,8 +967,6 @@ const handleAssociation = (user: UserData) => {
               )}
             </CardContent>
           </Card>
-        </div>
-      </div>
 
       <Dialog open={isAssociationDialogOpen} onOpenChange={setIsAssociationDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
@@ -774,7 +991,7 @@ const handleAssociation = (user: UserData) => {
                                     onCheckedChange={(checked) => handleCongregationChange(congregation.id, checked as boolean)}
                                 />
                                 <Label htmlFor={`congregation-${congregation.id}`}>
-                                    {congregation.code} - {congregation.name}
+                                    {congregation.name}
                                 </Label>
                             </div>
                         ))}
@@ -792,5 +1009,7 @@ const handleAssociation = (user: UserData) => {
         </DialogContent>
       </Dialog>
     </div>
+  </div>
+  </div>
   )
 }

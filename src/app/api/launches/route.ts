@@ -2,11 +2,6 @@ import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import{ authOptions }from "../auth/[...nextauth]/route";
 import { getServerSession } from "next-auth";
-import { se, ta } from "date-fns/locale";
-import { Description } from "@radix-ui/react-dialog";
-import Congregations from "@/app/congregations/page";
-import { format } from "path";
-import { parseISO } from "date-fns";
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -23,7 +18,6 @@ export async function GET(request: NextRequest) {
     const searchTerm = searchParams.get('searchTerm') || ''
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
-
 
     const skip = (page - 1) * limit
 
@@ -45,35 +39,41 @@ export async function GET(request: NextRequest) {
       where.congregationId = congregationId
     }
 
-    // if (startDate && endDate) {
-    //   where.date = {
-    //     gte: new Date(startDate as string),
-    //     lte: new Date(endDate as string)
-    //   }
-    // }
-console.log(searchTerm)
+    if (startDate && endDate) {
+      where.date = {
+        gte: new Date(startDate as string),
+        lte: new Date(endDate as string)
+      }
+    }
+
     // 1. Adiciona o filtro de data
-    if (searchTerm.includes('/')) {
-        const launchDateStart = new Date(searchTerm.substring(6, 10).concat('/').concat(searchTerm.substring(3, 5)).concat('/').concat(searchTerm.substring(0, 2)));
-        const launchDateEnd = new Date(searchTerm.substring(6, 10).concat('/').concat(searchTerm.substring(3, 5)).concat('/').concat(searchTerm.substring(0, 2)));
-        launchDateStart.setHours(-3, 0, 0, 0)
-        launchDateEnd.setHours(20,59, 59, 0)
-        where.date = {};
-        where.date.gte = launchDateStart;
-        where.date.lte = launchDateEnd;
-      // //where.date.gte;
-      // where.date.gte.setHours(0, 0, 0, 0);
-      // where.date.lte.setHours(20, 59, 0, 0);
-    } else {
-      if (searchTerm) {
+    // if (searchTerm.includes('/')) {
+    //     const launchDateStart = new Date(searchTerm.substring(6, 10).concat('/').concat(searchTerm.substring(3, 5)).concat('/').concat(searchTerm.substring(0, 2)) as string);
+    //     const launchDateEnd = new Date(searchTerm.substring(6, 10).concat('/').concat(searchTerm.substring(3, 5)).concat('/').concat(searchTerm.substring(0, 2)) as string);
+    //     launchDateStart.setHours(-3, 0, 0, 0)
+    //     launchDateEnd.setHours(20,59, 59, 0)
+    //     where.date = {
+    //       gte: launchDateStart,
+    //       lte: launchDateEnd
+    //     }
+    //   //where.date.gte;
+    //   where.date.gte.setHours(0, 0, 0, 0);
+    //   where.date.lte.setHours(20, 59, 0, 0);
+    //        console.log(launchDateStart,launchDateEnd)
+    //   } 
+
+    if (searchTerm ) {
       where.OR = [
-        { description: { contains: searchTerm, mode: 'insensitive' } },
-        { talonNumber: { contains: searchTerm, mode: 'insensitive' } },
-        { contributor: { name: { contains: searchTerm, mode: 'insensitive' } } },
-        { supplier: { name: { contains: searchTerm, mode: 'insensitive' } } },
+        { description: { contains: searchTerm } },
+        { talonNumber: { contains: searchTerm } },
+        { contributor: { name: { contains: searchTerm } } },
+        { supplier: { razaoSocial: { contains: searchTerm } } },
+        { supplierName: { contains: searchTerm } },
+        { contributorName: { contains: searchTerm } },
+        // { type: { contains: searchTerm } }
       ]
     }
-    }
+ console.log(`SearchTerm ${searchTerm}`)
 
     // Adicionar filtro de pesquisa
     // if (searchTerm) {
@@ -86,18 +86,20 @@ console.log(searchTerm)
     // }
 
     // Buscar lançamentos com paginação
-    const [launches, totalCount] = await Promise.all([
+      const [launches, totalCount] = await Promise.all([
       prisma.launch.findMany({
-        where: where,
+        where,
         include: {
           congregation: true,
           contributor: true,
           supplier: true,
           classification: true
         },
-        orderBy: {
-          date: 'desc'
-        },
+        orderBy: [
+          { date: 'desc' }, // Primeiro, ordena pela data (mais recente primeiro)
+          { type: 'asc' },  // Em seguida, ordena pelo tipo (ordem alfabética)
+          { createdAt: 'desc' }    // Por fim, usa o ID como critério de desempate (garante consistência)
+        ],
         skip,
         take: limit
       }),
@@ -105,7 +107,6 @@ console.log(searchTerm)
     ])
 
     const totalPages = Math.ceil(totalCount / limit)
-
     return NextResponse.json({
       launches,
       pagination: {

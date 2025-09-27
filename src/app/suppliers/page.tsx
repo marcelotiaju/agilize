@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Button } from '@/components/ui/button'
@@ -15,6 +15,7 @@ import { Plus, Edit, Trash2, Building2, Upload } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { PermissionGuard } from '@/components/auth/PermissionGuard'
+import { SearchInput } from '@/components/ui/search-input'
 
 interface Supplier {
   id: string
@@ -34,6 +35,7 @@ export default function Suppliers() {
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const [importing, setImporting] = useState(false)
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
   const [formData, setFormData] = useState({
     code: '',
     razaoSocial: '',
@@ -61,6 +63,18 @@ export default function Suppliers() {
       console.error('Erro ao carregar fornecedores:', error)
     }
   }
+
+
+  // Filtrar fornecedores com base no termo de pesquisa
+  const filteredSuppliers = useMemo(() => {
+    if (!searchTerm) return suppliers
+    
+    return suppliers.filter(supplier =>
+      supplier.razaoSocial.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      supplier.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (supplier.cpfCnpj && supplier.cpfCnpj.toLowerCase().includes(searchTerm.toLowerCase()))
+    )
+  }, [suppliers, searchTerm])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -208,7 +222,7 @@ export default function Suppliers() {
           <div className="flex justify-between items-center mb-6">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Fornecedores</h1>
-              <p className="text-gray-600">Gerencie os fornecedores da igreja</p>
+              {/* <p className="text-gray-600">Gerencie os fornecedores da igreja</p> */}
             </div>
             
             <div className="flex space-x-2">
@@ -362,10 +376,23 @@ export default function Suppliers() {
             </div>
           </div>
 
+          {/* Campo de pesquisa */}
+          <div className="mb-6">
+            <SearchInput
+              placeholder="Pesquisar fornecedores por codigo, nome ou cpf/cnpj..."
+              value={searchTerm}
+              onChange={setSearchTerm}
+              className="max-w-md"
+            />
+          </div>
+
           <Card>
             <CardHeader>
               <CardTitle>Fornecedores</CardTitle>
-              <CardDescription>Lista de fornecedores cadastrados</CardDescription>
+              {/* <CardDescription>Lista de fornecedores cadastrados</CardDescription> */}
+              <CardDescription>
+                {filteredSuppliers.length} fornecedores encontrados
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
@@ -380,7 +407,7 @@ export default function Suppliers() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {suppliers.map((supplier) => (
+                  {filteredSuppliers.map((supplier) => (
                     <TableRow key={supplier.id}>
                       <TableCell>
                         <Badge variant="outline">{supplier.code}</Badge>

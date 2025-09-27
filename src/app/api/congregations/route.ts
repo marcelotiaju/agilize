@@ -36,6 +36,9 @@ export async function GET(request: NextRequest) {
             userId: session.user.id
           }
         }
+      },
+      orderBy: {
+        name: "asc"
       }
     })
 
@@ -67,7 +70,9 @@ export async function POST(request: NextRequest) {
       dizimoPaymentMethod,
       saidaAccountPlan,
       saidaFinancialEntity,
-      saidaPaymentMethod
+      saidaPaymentMethod,
+      matriculaEnergisa,
+      matriculaIgua
     } = body
 
     if (!code || !name) {
@@ -87,7 +92,9 @@ export async function POST(request: NextRequest) {
         dizimoPaymentMethod,
         saidaAccountPlan,
         saidaFinancialEntity,
-        saidaPaymentMethod
+        saidaPaymentMethod,
+        matriculaEnergisa,
+        matriculaIgua
     }})
 
     // Associar o usuário atual à nova congregação
@@ -127,7 +134,9 @@ export async function PUT(request: NextRequest) {
       dizimoPaymentMethod,
       saidaAccountPlan,
       saidaFinancialEntity,
-      saidaPaymentMethod
+      saidaPaymentMethod,
+      matriculaEnergisa,
+      matriculaIgua
     } = body
 
     const congregation = await prisma.congregation.update({
@@ -144,7 +153,9 @@ export async function PUT(request: NextRequest) {
         dizimoPaymentMethod,
         saidaAccountPlan,
         saidaFinancialEntity,
-        saidaPaymentMethod
+        saidaPaymentMethod,
+        matriculaEnergisa,
+        matriculaIgua
       }
     })
 
