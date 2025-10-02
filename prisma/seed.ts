@@ -37,7 +37,7 @@ async function main() {
   console.log('✅ Congregações criadas:', { congregation1, congregation2, congregation3 })
 */
   // Criar usuário de teste
-  const hashedPassword = await bcrypt.hash('123456', 12)
+  const hashedPassword = await bcrypt.hash('19321932', 12)
   
   const user1 = await prisma.user.upsert({
     where: { email: 'admin@igreja.com' },
@@ -52,7 +52,23 @@ async function main() {
       validTo: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
       historyDays: 30,
       canExport: true,
-      canDelete: true
+      canDelete: true,
+      // Novas permissões
+      canLaunchEntry: true,
+      canLaunchTithe       :true,
+      canLaunchExpense     :true,
+      canApproveEntry      :true,
+      canApproveTithe      :true,
+      canApproveExpense    :true,
+      canCreate            :true,
+      canEdit              :true,
+      canExclude           :true,
+      canManageUsers       :true,
+      defaultPage          :"/launches",
+      canManageSummary     :true,
+      canApproveTreasury   :true,
+      canApproveAccountant :true,
+      canApproveDirector   :true,
     }
   })
 
@@ -123,23 +139,23 @@ async function main() {
 
   // Criar Fornecedor
  
-  await prisma.supplier.createMany({
-    data: [{
-      code: '0000',
-      razaoSocial: 'Fornecedor Avulso'
-    }]
+  // await prisma.supplier.createMany({
+  //   data: [{
+  //     code: '0000',
+  //     razaoSocial: 'Fornecedor Avulso'
+  //   }]
 
-  })
+  // })
 
     // Criar Contribuinte
  
-  await prisma.contributor.createMany({
-    data: [{
-      code: '0000',
-      name: 'Contribuinte Avulso'
-    }]
+  // await prisma.contributor.createMany({
+  //   data: [{
+  //     code: '0000',
+  //     name: 'Contribuinte Avulso'
+  //   }]
 
-  })
+  // })
 
 
   console.log('🎉 Seed concluído com sucesso!')

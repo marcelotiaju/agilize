@@ -1,7 +1,7 @@
 // 11. Página de Contribuintes (pages/contributors.tsx)
 'use client'
 
-import { useState, useEffect, useMemo, ChangeEventHandler } from 'react'
+import { useState, useEffect, useMemo, ChangeEventHandler, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Button } from '@/components/ui/button'
@@ -32,7 +32,8 @@ interface Contributor {
   congregation: {
     id: string
     name: string
-  }
+  },
+    photoUrl: string
 }
 
 interface Congregation {
@@ -55,10 +56,14 @@ export default function Contributors() {
     name: '',
     cpf: '',
     ecclesiasticalPosition: '',
-    tipo: 'MEMBRO'
+    tipo: 'MEMBRO',
+    photoUrl: ''
   })
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const [importing, setImporting] = useState(false)
+  const [photoPreview, setPhotoPreview] = useState('')
+  const [isUploading, setIsUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   // Verificar permissões
   const canCreate = session?.user?.canCreate
@@ -105,13 +110,50 @@ export default function Contributors() {
     }
   }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
   const handleSelectChange = (name: string, value: string) => {
     setFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handlePhotoChange = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    // Mostrar preview
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setPhotoPreview(e.target.result)
+    }
+    reader.readAsDataURL(file)
+
+    // Fazer upload
+    setIsUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/contributors/upload', {
+        method: 'POST',
+        body: formData
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setFormData(prev => ({ ...prev, photoUrl: data.url }))
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Erro ao fazer upload da foto')
+      }
+    } catch (error) {
+      console.error('Erro ao fazer upload:', error)
+      alert('Erro ao fazer upload da foto')
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -151,8 +193,10 @@ export default function Contributors() {
       name: contributor.name,
       cpf: contributor.cpf || '',
       ecclesiasticalPosition: contributor.ecclesiasticalPosition || '',
-      tipo: contributor.tipo || ''
+      tipo: contributor.tipo || '',
+      photoUrl: contributor.photoUrl || ''
     })
+    setPhotoPreview(`uploads/${contributor.photoUrl}` || '')
     setIsDialogOpen(true)
   }
 
@@ -187,10 +231,12 @@ export default function Contributors() {
       cpf: '',
       ecclesiasticalPosition: '',
       tipo: 'MEMBRO',
+      photoUrl: ''
     })
+    setPhotoPreview('')
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e) => {
     const file = e.target.files?.[0]
     if (file && file.type === 'text/csv') {
       setCsvFile(file)
@@ -368,6 +414,43 @@ export default function Contributors() {
                             <SelectItem value="MEMBRO">Membro</SelectItem>
                           </SelectContent>
                         </Select>
+                      </div>
+
+                      {/* Campo de Foto */}
+                      <div className="space-y-2">
+                        <Label htmlFor="photo">Foto</Label>
+                        <div className="flex items-center space-x-4">
+                          <div className="flex-shrink-0">
+                            {photoPreview ? (
+                              <img 
+                                src={photoPreview} 
+                                alt="Preview" 
+                                className="h-16 w-16 rounded-full object-cover border"
+                              />
+                            ) : (
+                              <div className="h-16 w-16 rounded-full bg-gray-200 flex items-center justify-center">
+                                <User className="h-8 w-8 text-gray-400" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <input
+                              type="file"
+                              ref={fileInputRef}
+                              onChange={handlePhotoChange}
+                              accept="image/*"
+                              className="hidden"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => fileInputRef.current?.click()}
+                              disabled={isUploading}
+                            >
+                              {isUploading ? 'Enviando...' : 'Selecionar Foto'}
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                     <DialogFooter>

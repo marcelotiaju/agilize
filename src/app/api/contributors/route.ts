@@ -78,7 +78,8 @@ export async function POST(request: NextRequest) {
       name,
       cpf,
       ecclesiasticalPosition,
-      type
+      type,
+      photoUrl 
     } = body
 
     const userCongregation = await prisma.userCongregation.findFirst({
@@ -107,7 +108,8 @@ export async function POST(request: NextRequest) {
         name,
         cpf,
         ecclesiasticalPosition,
-        tipo: type
+        tipo: type,
+        photoUrl 
       }
     })
 
@@ -122,7 +124,8 @@ export async function POST(request: NextRequest) {
         name,
         cpf,
         ecclesiasticalPosition,
-        tipo: type
+        tipo: type,
+        photoUrl 
       }
     })
 
@@ -142,7 +145,7 @@ export async function PUT(request: NextRequest) {
   try {
     const body = await request.json()
 
-    const { id,name,cpf,ecclesiasticalPosition } = body
+    const { id,name,cpf,ecclesiasticalPosition,tipo,photoUrl } = body
 
     const contributor = await prisma.contributor.findUnique({
       where: { id }
@@ -173,7 +176,7 @@ export async function PUT(request: NextRequest) {
 
     const updatedContributor = await prisma.contributor.update({
       where: { id },
-      data: { code: body.code, name: body.name, cpf: body.cpf, ecclesiasticalPosition: body.ecclesiasticalPosition, tipo: body.tipo }
+      data: { code: body.code, name: body.name, cpf: body.cpf, ecclesiasticalPosition: body.ecclesiasticalPosition, tipo: body.tipo, photoUrl }
     })
 
     return NextResponse.json(updatedContributor)

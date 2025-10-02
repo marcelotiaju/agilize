@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Church, Users, FileText, BarChart3 } from 'lucide-react'
+import { stringify } from 'querystring'
 
 export default function Home() {
   const { data: session, status } = useSession()
@@ -14,7 +15,8 @@ export default function Home() {
 
   useEffect(() => {
     if (status === "authenticated") {
-      router.push("/dashboard")
+      const defaultPage = (session?.user as any)?.defaultPage;
+      router.push(defaultPage ? defaultPage : "/dashboard");
     } else {
       router.push("/auth/signin")
     }

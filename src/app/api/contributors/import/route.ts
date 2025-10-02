@@ -45,12 +45,12 @@ export async function POST(request: NextRequest) {
 
       const columns = line.split(',').map(col => col.trim())
       
-      if (columns.length < 6) {
-        errors.push(`Linha ${i + 2}: Formato inválido - esperado codigo,nome,cpf,cargoEclesiástico,CodCongregação, Tipo`)
+      if (columns.length < 3) {
+        errors.push(`Linha ${i + 2}: Formato inválido - esperado codigo,nome,cpf,cargoEclesiástico,CodCongregação,Tipo,Foto`)
         continue
       }
 
-      const [Codigo, Nome, cpf, cargoEclesiástico, Codcongregacao, tipo] = columns
+      const [Codigo, Nome, cpf, cargoEclesiástico, Codcongregacao, tipo, Foto] = columns
 
       if (!Codcongregacao || !Codigo || !Nome ) {
         errors.push(`Linha ${i + 2}: , codigo, nome e Congregação são obrigatórios`)
@@ -81,7 +81,8 @@ export async function POST(request: NextRequest) {
             name: Nome,
             cpf: cpf,
             ecclesiasticalPosition: cargoEclesiástico,
-            tipo: tipo.toUpperCase() === 'CONGREGADO' ? 'CONGREGADO' : 'MEMBRO'
+            tipo: tipo.toUpperCase() === 'CONGREGADO' ? 'CONGREGADO' : 'MEMBRO',
+            photoUrl: Foto
           }
         })
 
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
         errors.push(`Linha ${i + 2}: Erro ao criar contribuinte - ${error.message}`)
       }
     }
-
+    console.log(errors)
     if (errors.length > 0) {
       return NextResponse.json({ 
         error: "Erro na importação", 

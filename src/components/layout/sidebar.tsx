@@ -19,7 +19,8 @@ import {
   UserCheck,
   Building2,
   List,
-  User
+  User,
+  PieChart 
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -46,6 +47,7 @@ const navigation = [
     { name: 'Perfil', href: '/profile', icon: User }, // Adicione esta linha
     { name: 'Exportar Dados', href: '/export', icon: Download, permission: 'canExport' },
     { name: 'Excluir Histórico', href: '/delete-history', icon: Trash2, permission: 'canDelete' },
+    { name: 'Resumo Congregação', href: '/congregation-summary', icon: PieChart, permission: 'canManageSummary' }, 
     //{ name: 'Configurações', href: '/settings', icon: Settings },
   ] 
 

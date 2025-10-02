@@ -39,6 +39,7 @@ export default function Launches() {
   const [classifications, setClassifications] = useState<Classification[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [salvando, setSalvando] = useState(false)
 
 
   const [expandedCard, setExpandedCard] = useState(null)
@@ -58,7 +59,7 @@ export default function Launches() {
 
   // Tipos
   type Congregation = { id: string; name: string }
-  type Contributor = { id: string; name: string; cpf: string; congregationId: string; ecclesiasticalPosition: string }
+  type Contributor = { id: string; name: string; cpf: string; congregationId: string; ecclesiasticalPosition: string, photoUrl: string }
   type Supplier = { id: string; razaoSocial: string; cpfcnpj: string }
   type Classification = { id: string; description: string }
 
@@ -78,7 +79,7 @@ export default function Launches() {
     exported?: boolean
     congregation?: { id: string; name: string }
     contributorId?: string
-    contributor?: { id: string; name: string; congregationId: string; ecclesiasticalPosition: string  }
+    contributor?: { id: string; name: string; congregationId: string; ecclesiasticalPosition: string, photoUrl: string }
     contributorName?: string
     supplierId?: string
     supplier?: { id: string; razaoSocial: string; cpfcnpj: string }
@@ -274,17 +275,20 @@ export default function Launches() {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setError(null)
+    setSalvando(true)
       // Validações específicas
       if (formData.type === 'DIZIMO' && !formData.contributorName && !formData.contributorId) {
         setError('Nome do contribuinte é obrigatório para lançamentos do tipo Dízimo')
+        setSalvando(false)
         return
       }
       
       if (formData.type === 'SAIDA' && !formData.classificationId) {
         setError('Classificação é obrigatória para lançamentos do tipo Saída')
+        setSalvando(false)
         return
       }
 
@@ -300,11 +304,13 @@ export default function Launches() {
         if (formData.type === 'ENTRADA') {
           if (!values.offerValue && !values.votesValue && !values.ebdValue && !values.campaignValue) {
             setError('Pelo menos um dos campos de valor (Oferta, Voto, EBD) deve ser preenchido para Entradas.')
+            setSalvando(false)
             return
           }
         } else if (formData.type === 'DIZIMO' || formData.type === 'SAIDA') {
           if (!values.value) {
             setError(`O campo Valor deve ser preenchido para ${formData.type === 'DIZIMO' ? 'Dízimos' : 'Saídas'}.`)
+            setSalvando(false)
             return
           }
         }
@@ -326,13 +332,16 @@ export default function Launches() {
             fetchLaunches()
             setIsDialogOpen(false)
             resetForm()
+            setSalvando(false)
           } else {
             const error = await response.json()
             alert(error.error || 'Erro ao salvar lançamento')
+            setSalvando(false)
           }
         } catch (error) {
           console.error('Erro ao salvar lançamento:', error)
           alert('Erro ao salvar lançamento')
+          setSalvando(false)
         }
       }
 
@@ -805,6 +814,7 @@ export default function Launches() {
                         <div>
                           <Label htmlFor="classificationId">Classificação</Label>
                           <Select
+                            key={formData.classificationId}
                             value={formData.classificationId}
                             onValueChange={(value) => handleSelectChange('classificationId', value)}
                             disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}   
@@ -1040,13 +1050,14 @@ export default function Launches() {
                         <div>
                           <Label htmlFor="contributorId">Contribuinte</Label>
                           <SearchableSelect
+                            key={formData.contributorId}
                             label="Buscar Contribuinte"
                             placeholder="Selecione o contribuinte"
                             value={formData.contributorId}
                             disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}   
                             onChange={(value) => handleSelectChange('contributorId', value)}
                             name="contributorId"
-                            data={contributors.map(c => ({ id: c.id, name: c.name, document: c.cpf, cargo: c.ecclesiasticalPosition }))}
+                            data={contributors.map(c => ({ id: c.id, name: c.name, document: c.cpf, cargo: c.ecclesiasticalPosition, photoUrl: c.photoUrl }))}
                             searchKeys={['name', 'document']}
                           />  
                         </div>
@@ -1119,6 +1130,7 @@ export default function Launches() {
                         <div>
                           <Label htmlFor="supplierId">Fornecedor</Label>
                           <SearchableSelect
+                            key={formData.supplierId}
                             label="Buscar Fornecedor"
                             placeholder="Selecione o fornecedor"
                             value={formData.supplierId}
@@ -1156,7 +1168,7 @@ export default function Launches() {
                   </div>
                   
                   <DialogFooter>
-                    <Button type="submit" disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}>
+                    <Button type="submit" disabled={editingLaunch && editingLaunch.status !== 'NORMAL' || salvando}>
                       {editingLaunch ? 'Atualizar' : 'Salvar'}
                     </Button>
                   </DialogFooter>
@@ -1253,12 +1265,12 @@ export default function Launches() {
             </div>
           </div>
 
-          {error && (
+          {/* {error && (
             <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md flex items-center">
               <AlertCircle className="h-4 w-4 mr-2" />
               {error}
             </div>
-          )}
+          )} */}
 
           {/* Lista para Desktop */}
           <div className="hidden lg:block">

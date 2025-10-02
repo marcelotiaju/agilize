@@ -49,6 +49,10 @@ interface UserData {
     name: string
     code: string
   }[]
+  canManageSummary: boolean
+  canApproveTreasury: boolean
+  canApproveAccountant: boolean
+  canApproveDirector: boolean
 }
 
 interface Congregation {
@@ -97,7 +101,11 @@ export default function Users() {
     canCreate: false,
     canEdit: false,
     canExclude: false,
-    defaultPage: '/dashboard'
+    defaultPage: '/dashboard',
+    canManageSummary: false,
+    canApproveTreasury: false,
+    canApproveAccountant: false,
+    canApproveDirector: false
   })
   const [associationData, setAssociationData] = useState({
     congregationIds: [] as string[]
@@ -242,7 +250,11 @@ export default function Users() {
       canCreate: user.canCreate || false,
       canEdit: user.canEdit || false,
       canExclude: user.canExclude || false,
-      defaultPage: user.defaultPage || '/dashboard'
+      defaultPage: user.defaultPage || '/dashboard',
+      canManageSummary: user.canManageSummary || false,
+      canApproveTreasury: user.canApproveTreasury || false,
+      canApproveAccountant: user.canApproveAccountant || false,
+      canApproveDirector: user.canApproveDirector || false
     })
     setIsDialogOpen(true)
   }
@@ -351,7 +363,11 @@ const handleAssociation = (user: UserData) => {
       canCreate: false,
       canEdit: false,
       canExclude: false,
-      defaultPage: '/dashboard'
+      defaultPage: '/dashboard',
+      canManageSummary: false,
+      canApproveTreasury: false,
+      canApproveAccountant: false,
+      canApproveDirector: false
       
     })
   }
@@ -770,6 +786,67 @@ const resetImportForm = () => {
                                 }
                               />
                               <Label htmlFor="canDelete">Permissão para excluir histórico</Label>
+                            </div>
+                          </div>
+                        </div>
+                      </TabsContent>
+
+                      {/* Conteúdo da Aba: Resumo */}
+                      <TabsContent value="system-permissions" className="mt-4">
+                      <div className="space-y-4 space-x-2 py-4">
+                          {/* <h3 className="text-lg font-medium border-b pb-2">Permissões de Resumo</h3> */}
+                          
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="canManageSummary"
+                              name="canManageSummary"
+                              checked={formData.canManageSummary}
+                              onCheckedChange={(checked) => 
+                                setFormData(prev => ({ ...prev, canManageSummary: checked }))
+                              }
+                            />
+                            <Label htmlFor="canManageSummary">Gerenciar Resumo</Label>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          {/* <h3 className="text-lg font-medium border-b pb-2">Permissões de Aprovação</h3> */}
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="canApproveTreasury"
+                                name="canApproveTreasury"
+                                checked={formData.canApproveTreasury}
+                                onCheckedChange={(checked) => 
+                                  setFormData(prev => ({ ...prev, canApproveTreasury: checked }))
+                                }
+                              />
+                              <Label htmlFor="canApproveTreasury">Aprovar como Tesoureiro</Label>
+                            </div>
+                            
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="canApproveAccountant"
+                                name="canApproveAccountant"
+                                checked={formData.canApproveAccountant}
+                                onCheckedChange={(checked) => 
+                                  setFormData(prev => ({ ...prev, canApproveAccountant: checked }))
+                                }
+                              />
+                              <Label htmlFor="canApproveAccountant">Aprovar como Contador</Label>
+                            </div>
+                            
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="canApproveDirector"
+                                name="canApproveDirector"
+                                checked={formData.canApproveDirector}
+                                onCheckedChange={(checked) => 
+                                  setFormData(prev => ({ ...prev, canApproveDirector: checked }))
+                                }
+                              />
+                              <Label htmlFor="canApproveDirector">Aprovar como Dirigente</Label>
                             </div>
                           </div>
                         </div>

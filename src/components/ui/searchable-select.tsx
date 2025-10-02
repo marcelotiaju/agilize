@@ -12,8 +12,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Search, X } from 'lucide-react';
+import { Badge, Search, User, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Card, CardContent } from './card';
 
 interface SearchableSelectProps {
   label: string;
@@ -23,6 +24,7 @@ interface SearchableSelectProps {
   name: string;
   data: { id: string; name: string; document?: string, cargo: string;  }[];
   searchKeys: ('name' | 'document')[];
+  photoUrl?: string;
 }
 
 export function SearchableSelect({
@@ -86,16 +88,65 @@ export function SearchableSelect({
         <div className="mt-4 max-h-60 overflow-y-auto space-y-2">
           {filteredData.length > 0 ? (
             filteredData.map((item) => (
-              <Button
-                key={item.id}
-                variant="ghost"
-                className="w-full justify-start"
-                onClick={() => handleSelect(item)}
-              >
-                {item.name} {item.document ? `(${item.document})` : ''} {item.cargo ? `${item.cargo}` : ''}
-              </Button>
-            ))
-          ) : (
+          //     <Button
+          //       key={item.id}
+          //       variant="ghost"
+          //       className="w-full justify-start"
+          //       onClick={() => handleSelect(item)}
+          //     >
+          //       {item.name} {item.document ? `(${item.document})` : ''} {item.cargo ? `${item.cargo}` : ''}
+          //     </Button>
+          //   ))
+          // ) : (
+          //   <div className="text-center text-sm text-muted-foreground">
+          //     Nenhum resultado encontrado.
+          //   </div>
+          <Card 
+            className={`cursor-pointer transition-all hover:shadow-md ${
+              selectedItem ? 'ring-2 ring-blue-500' : ''
+            }`}
+            onClick={() => handleSelect(item)}
+          >
+            <CardContent className="p-3">
+              <div className="flex items-center space-x-3">
+                <div key={item.id} className="flex-shrink-0"></div>
+                <div className="flex-shrink-0">
+                  {item.photoUrl ? (
+                    <img 
+                      src={`uploads/${item.photoUrl}`} 
+                      alt={item.name} 
+                      className="h-12 w-12 rounded-full object-cover border"
+                    />
+                  ) : (
+                    <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center">
+                      <User className="h-6 w-6 text-gray-400" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm truncate">
+                    {item.name}
+                  </p>
+                  {item.document && (
+                    <p className="text-xs text-gray-500 truncate">
+                      CPF: {item.document}
+                    </p>
+                  )}
+                  {item.cargo && (
+                    <p className="text-xs text-gray-500 truncate">
+                      Cargo: {item.cargo}
+                    </p>
+                  )}
+                </div>
+                {selectedItem && (
+                  <Badge variant="default" className="flex-shrink-0">
+                    Selecionado
+                  </Badge>
+                )}
+              </div>
+            </CardContent>
+          </Card>          
+          ))) : (
             <div className="text-center text-sm text-muted-foreground">
               Nenhum resultado encontrado.
             </div>

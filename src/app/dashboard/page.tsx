@@ -13,6 +13,7 @@ import {
   Church,
   List,
   User,
+  PieChart
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -90,6 +91,14 @@ export default function Dashboard() {
     icon: User,
     href: "/profile",
     color: "bg-indigo-500 hover:bg-indigo-600"
+  },
+  {
+    title: "Resumo Congregação",
+    description: "Visualize resumos financeiros",
+    icon: PieChart,
+    href: "/congregation-summary",
+    color: "bg-yellow-500 hover:bg-yellow-600",
+    permission: "canManageSummary"
   },
   ]
 

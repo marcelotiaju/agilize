@@ -33,7 +33,11 @@ export default function Register() {
     canCreate: false,
     canEdit: false,
     canExclude: false,
-    defaultPage: '/dashboard'
+    defaultPage: '/dashboard',
+    canManageSummary: false,
+    canApproveTreasury: false,
+    canApproveAccountant: false,
+    canApproveDirector: false
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')

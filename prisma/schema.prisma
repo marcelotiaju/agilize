@@ -43,41 +43,45 @@ model VerificationToken {
 }
 
 model User {
-  id                String             @id @default(cuid())
-  name              String?
-  email             String             @unique
-  emailVerified     DateTime?
-  image             String?
-  cpf               String             @unique
-  phone             String?
-  password          String
-  validFrom         DateTime
-  validTo           DateTime
-  historyDays       Int                @default(30)
-  canExport         Boolean            @default(false)
-  canDelete         Boolean            @default(false)
+  id                   String             @id @default(cuid())
+  name                 String?
+  email                String             @unique
+  emailVerified        DateTime?
+  image                String?
+  cpf                  String             @unique
+  phone                String?
+  password             String
+  validFrom            DateTime
+  validTo              DateTime
+  historyDays          Int                @default(30)
+  canExport            Boolean            @default(false)
+  canDelete            Boolean            @default(false)
   // Novas permissões
-  canLaunchEntry    Boolean            @default(false)
-  canLaunchTithe    Boolean            @default(false)
-  canLaunchExpense  Boolean            @default(false)
-  canApproveEntry   Boolean            @default(false)
-  canApproveTithe   Boolean            @default(false)
-  canApproveExpense Boolean            @default(false)
-  canCreate         Boolean            @default(false)
-  canEdit           Boolean            @default(false)
-  canExclude        Boolean            @default(false)
-  canManageUsers    Boolean            @default(false)
-  defaultPage       String    @default("/dashboard")
-  accounts          Account[]
-  sessions          Session[]
-  congregations     UserCongregation[]
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
+  canLaunchEntry       Boolean            @default(false)
+  canLaunchTithe       Boolean            @default(false)
+  canLaunchExpense     Boolean            @default(false)
+  canApproveEntry      Boolean            @default(false)
+  canApproveTithe      Boolean            @default(false)
+  canApproveExpense    Boolean            @default(false)
+  canCreate            Boolean            @default(false)
+  canEdit              Boolean            @default(false)
+  canExclude           Boolean            @default(false)
+  canManageUsers       Boolean            @default(false)
+  defaultPage          String             @default("/dashboard")
+  canManageSummary     Boolean            @default(false)
+  canApproveTreasury   Boolean            @default(false)
+  canApproveAccountant Boolean            @default(false)
+  canApproveDirector   Boolean            @default(false)
+  accounts             Account[]
+  sessions             Session[]
+  congregations        UserCongregation[]
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
 }
 
 model Congregation {
-  id                     String             @id @default(cuid())
-  code                   String             @unique
+  id                     String                @id @default(cuid())
+  code                   String                @unique
   name                   String
   regionalName           String?
   // Novos campos
@@ -95,8 +99,9 @@ model Congregation {
   users                  UserCongregation[]
   launches               Launch[]
   contributors           Contributor[]
-  createdAt              DateTime           @default(now())
-  updatedAt              DateTime           @updatedAt
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+  CongregationSummary    CongregationSummary[]
 }
 
 model UserCongregation {
@@ -110,9 +115,9 @@ model UserCongregation {
 }
 
 model Launch {
-  id               String          @id @default(cuid())
+  id               String               @id @default(cuid())
   congregationId   String
-  congregation     Congregation    @relation(fields: [congregationId], references: [id], onDelete: Cascade)
+  congregation     Congregation         @relation(fields: [congregationId], references: [id], onDelete: Cascade)
   type             LaunchType
   date             DateTime
   talonNumber      String?
@@ -122,19 +127,21 @@ model Launch {
   campaignValue    Float?
   value            Float?
   description      String?
-  status           LaunchStatus    @default(NORMAL)
+  status           LaunchStatus         @default(NORMAL)
   // exported         Boolean         @default(false)
   // approved         Boolean         @default(false) // Campo para aprovação
   contributorId    String? // Relacionamento com contribuinte
-  contributor      Contributor?    @relation(fields: [contributorId], references: [id])
+  contributor      Contributor?         @relation(fields: [contributorId], references: [id])
   contributorName  String?
   supplierId       String? // Relacionamento com fornecedor
-  supplier         Supplier?       @relation(fields: [supplierId], references: [id])
+  supplier         Supplier?            @relation(fields: [supplierId], references: [id])
   supplierName     String?
   classificationId String? // Novo campo para classificação
-  classification   Classification? @relation(fields: [classificationId], references: [id])
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  classification   Classification?      @relation(fields: [classificationId], references: [id])
+  summaryId        String?
+  summary          CongregationSummary? @relation(fields: [summaryId], references: [id])
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
 
   //@@unique([congregationId, date, type, status], name: "unique_launch_per_day_type_status")
 }
@@ -148,6 +155,8 @@ model Contributor {
   cpf                    String?
   ecclesiasticalPosition String?
   tipo                   ContributorType?
+   // Novo campo para foto
+  photoUrl               String?
   createdAt              DateTime         @default(now())
   updatedAt              DateTime         @updatedAt
   Launch                 Launch[]
@@ -156,13 +165,13 @@ model Contributor {
 }
 
 model Supplier {
-  id          String   @id @default(cuid())
-  code        String   @unique
+  id          String      @id @default(cuid())
+  code        String      @unique
   razaoSocial String
   tipoPessoa  PessoaType?
-  cpfCnpj     String?  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  cpfCnpj     String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
   Launch      Launch[]
 }
 
@@ -174,6 +183,37 @@ model Classification {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   Launch      Launch[]
+}
+
+model CongregationSummary {
+  id                 String       @id @default(cuid())
+  congregationId     String
+  congregation       Congregation @relation(fields: [congregationId], references: [id], onDelete: Cascade)
+  date               DateTime
+  // Campos de totais
+  entryCount         Int          @default(0)
+  exitCount          Int          @default(0)
+  // Valores de entrada
+  titheValue         Float        @default(0)
+  offerValue         Float        @default(0)
+  votesValue         Float        @default(0)
+  campaignValue      Float        @default(0)
+  ebdValue           Float        @default(0)
+  // Valores de saída
+  exitValue          Float        @default(0)
+  // Campos de prestação de contas
+  depositValue       Float        @default(0)
+  cashValue          Float        @default(0)
+  totalValue         Float        @default(0)
+  // Aprovações
+  treasurerApproved  Boolean      @default(false)
+  accountantApproved Boolean      @default(false)
+  directorApproved   Boolean      @default(false)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  Launch             Launch[]
+
+  //@@unique([congregationId, startDate, endDate])
 }
 
 enum LaunchType {

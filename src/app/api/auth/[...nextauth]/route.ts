@@ -3,7 +3,7 @@
   import CredentialsProvider from 'next-auth/providers/credentials';
   import prisma from "@/lib/prisma"
   import bcrypt from "bcrypt"
-  import { endOfDay, getTime } from 'date-fns';
+
 
   export const authOptions : NextAuthOptions = {
   providers: [
@@ -58,22 +58,23 @@
           canExclude: user.canExclude,
           canManageUsers: user.canManageUsers,
           defaultPage: user.defaultPage,
+          canManageSummary: user.canManageSummary,
+          canApproveTreasury: user.canApproveTreasury,
+          canApproveAccountant: user.canApproveAccountant,
+          canApproveDirector: user.canApproveDirector
         }
       }
     })
   ],
   secret: process.env.SECRET,
+  //currentSecret,
+  //process.env.SECRET,
   session: {
-    strategy: "jwt",
-    maxAge: 7 * 24 * 60 * 60, 
   },
   callbacks: {
     async jwt({ token, user }) {
       // O 'user' só está presente na primeira vez que o token é criado (login)
       if (user) {
-        const endOfToday = endOfDay(new Date());
-        token.exp = Math.floor(getTime(endOfToday) / 1000);
-        token.user = user;
         return {
           ...token,
           cpf: user.cpf,
@@ -95,13 +96,15 @@
           canExclude: user.canExclude,
           canManageUsers: user.canManageUsers,
           defaultPage: user.defaultPage,
+          canManageSummary: user.canManageSummary,
+          canApproveTreasury: user.canApproveTreasury,
+          canApproveAccountant: user.canApproveAccountant,
+          canApproveDirector: user.canApproveDirector
         }
       }
       return token
     },
     async session({ session, token }) {
-      session.user = token.user as any;
-      session.expires = new Date(token.exp * 1000).toISOString()
       // O 'id' do usuário está no 'token.sub' por padrão.
       session.user = {
         ...session.user,
@@ -129,6 +132,10 @@
         canExclude: typeof token.canExclude === "boolean" ?  token.canExclude : undefined,
         canManageUsers: typeof token.canManageUsers === "boolean" ? token.canManageUsers : undefined,
         defaultPage: typeof token.defaultPage === "string" ? token.defaultPage : undefined,
+        canManageSummary: typeof token.canManageSummary === "boolean" ? token.canManageSummary : undefined,
+        canApproveTreasury: typeof token.canApproveTreasury === "boolean" ? token.canApproveTreasury : undefined,
+        canApproveAccountant: typeof token.canApproveAccountant === "boolean" ? token.canApproveAccountant : undefined,
+        canApproveDirector: typeof token.canApproveDirector === "boolean" ? token.canApproveDirector : undefined
       }
       return session
     }

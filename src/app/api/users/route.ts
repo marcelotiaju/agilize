@@ -60,7 +60,11 @@ export async function POST(request: NextRequest) {
       canCreate,
       canEdit,
       canExclude,
-      defaultPage
+      defaultPage,
+      canManageSummary,
+      canApproveTreasury,
+      canApproveAccountant,
+      canApproveDirector
      } = await request.json()
 
     // Validações básicas
@@ -108,7 +112,11 @@ export async function POST(request: NextRequest) {
         canCreate: canCreate || false,
         canEdit: canEdit || false,
         canExclude: canExclude || false,
-        defaultPage: defaultPage || '/dashboard'
+        defaultPage: defaultPage || '/dashboard',
+        canManageSummary: canManageSummary || false,
+        canApproveTreasury: canApproveTreasury || false,
+        canApproveAccountant: canApproveAccountant || false,
+        canApproveDirector: canApproveDirector || false
       }
     })
 
@@ -131,7 +139,11 @@ export async function PUT(request: NextRequest) {
       canCreate,
       canEdit,
       canExclude,
-      defaultPage
+      defaultPage,
+      canManageSummary,
+      canApproveTreasury,
+      canApproveAccountant,
+      canApproveDirector
      } = await request.json()
 
     if (!id) {
@@ -188,7 +200,11 @@ export async function PUT(request: NextRequest) {
         canCreate: canCreate || false,
         canEdit: canEdit || false,
         canExclude: canExclude || false,
-        defaultPage: defaultPage || '/dashboard'
+        defaultPage: defaultPage || '/dashboard',
+        canManageSummary: canManageSummary || false,
+        canApproveTreasury: canApproveTreasury || false,
+        canApproveAccountant: canApproveAccountant || false,
+        canApproveDirector: canApproveDirector || false
       }
     })
 
