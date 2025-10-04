@@ -59,7 +59,7 @@ export default function Launches() {
 
   // Tipos
   type Congregation = { id: string; name: string }
-  type Contributor = { id: string; name: string; cpf: string; congregationId: string; ecclesiasticalPosition: string, photoUrl: string }
+  type Contributor = { id: string; name: string; cpf: string; congregationId: string; ecclesiasticalPosition: string, photoUrl: string, photoExists: boolean }
   type Supplier = { id: string; razaoSocial: string; cpfcnpj: string }
   type Classification = { id: string; description: string }
 
@@ -195,7 +195,8 @@ export default function Launches() {
 
   const fetchContributors = async () => {
     try {
-      const response = await fetch('/api/contributors')
+
+      const response = await fetch(`/api/contributors`)
       if (response.ok) {
         const data = await response.json()
         setContributors(data)
@@ -773,7 +774,7 @@ export default function Launches() {
                   <div className="space-y-2">
                     <div>
                       <Label htmlFor="congregationId">Congregação</Label>
-                      <Select
+                      {/* <Select
                         value={formData.congregationId}
                         onValueChange={(value) => handleSelectChange('congregationId', value)}
                         disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}   
@@ -788,7 +789,18 @@ export default function Launches() {
                             </SelectItem>
                           ))}
                         </SelectContent>
-                      </Select>
+                      </Select> */}
+                      <SearchableSelect
+                        // key={formData.congregationId}
+                        label="Buscar Congregação"
+                        placeholder="Selecione a Congregação"
+                        value={formData.congregationId}
+                        disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}  
+                        onChange={(value) => handleSelectChange('congregationId', value)}
+                        name="congregationId"
+                        data={congregations.map(s => ({ id: s.id, name: s.name }))}
+                        searchKeys={['name']}
+                      />                      
                     </div>
                     
                     <div className="grid grid-cols-3 gap-1">
@@ -1057,7 +1069,7 @@ export default function Launches() {
                             disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}   
                             onChange={(value) => handleSelectChange('contributorId', value)}
                             name="contributorId"
-                            data={contributors.map(c => ({ id: c.id, name: c.name, document: c.cpf, cargo: c.ecclesiasticalPosition, photoUrl: c.photoUrl }))}
+                            data={contributors.filter(f => (f.congregationId == formData.congregationId)).map(c => ({ key: c.id, id: c.id, name: c.name, document: c.cpf, cargo: c.ecclesiasticalPosition, photoUrl: c.photoUrl, photoExists: c.photoExists }))}
                             searchKeys={['name', 'document']}
                           />  
                         </div>
@@ -1137,7 +1149,7 @@ export default function Launches() {
                             disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}  
                             onChange={(value) => handleSelectChange('supplierId', value)}
                             name="supplierId"
-                            data={suppliers.map(s => ({ id: s.id, name: s.razaoSocial, document: s.cpfcnpj }))}
+                            data={suppliers.map(s => ({ key: s.id, id: s.id, name: s.razaoSocial, document: s.cpfcnpj }))}
                             searchKeys={['name', 'document']}
                           />
                         </div>

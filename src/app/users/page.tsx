@@ -281,13 +281,20 @@ export default function Users() {
     }
   }
 
-const handleAssociation = (user: UserData) => {
-    setSelectedUser(user)
-    setAssociationData({
-        congregationIds: user.congregations.map(c => c.id) // <--- Esta linha é a mais importante.
+  const handleAssociation = (user: UserData) => {
+      setSelectedUser(user)
+      setAssociationData({
+          congregationIds: user.congregations.map(c => c.id) // <--- Esta linha é a mais importante.
+      })
+      setIsAssociationDialogOpen(true)
+  }
+
+  const handleSelectAll = (checked: boolean) => {
+    setAssociationData(prev => {
+      const allCongregationIds = checked ? congregations.map(c => c.id) : []
+      return { ...prev, congregationIds: allCongregationIds }
     })
-    setIsAssociationDialogOpen(true)
-}
+  }
 
   const handleAssociationSubmit = async () => {
     if (!selectedUser) return
@@ -1054,6 +1061,22 @@ const resetImportForm = () => {
             </DialogDescription>
           </DialogHeader>
             <div className="space-y-4 py-4">
+              {congregations.length > 0 && (
+                  <div className="flex items-center space-x-2 pb-2 border-b">
+                    <Checkbox
+                      id="selectAllCongregations"
+                      // Determina se todas estão marcadas
+                      checked={associationData.congregationIds.length === congregations.length && congregations.length > 0}
+                      // Determina o estado "indeterminado" (algumas, mas não todas)
+                      // Esta lógica é útil, mas para simplicidade, um cast para boolean pode ser usado aqui
+                      onCheckedChange={(checked) => handleSelectAll(checked as boolean)}
+                    />
+                    <Label htmlFor="selectAllCongregations" className="font-semibold cursor-pointer">
+                      Marcar/Desmarcar Todas ({associationData.congregationIds.length}/{congregations.length})
+                    </Label>
+                  </div>
+                )}
+                
                 {congregations.length === 0 ? (
                     <div className="text-center py-4 text-gray-500">
                         Nenhuma congregação encontrada

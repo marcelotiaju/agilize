@@ -1,7 +1,7 @@
 // src/components/ui/searchable-select.tsx
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Badge, Search, User, X } from 'lucide-react';
+import { Badge, Church, Search, User, X ,church} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from './card';
 
@@ -22,9 +22,10 @@ interface SearchableSelectProps {
   value: string;
   onChange: (value: string, name: string) => void;
   name: string;
-  data: { id: string; name: string; document?: string, cargo: string;  }[];
+  data: { id: string; name: string; document?: string, cargo: string; photoExists: boolean }[];
   searchKeys: ('name' | 'document')[];
   photoUrl?: string;
+  photoExists?: boolean;
 }
 
 export function SearchableSelect({
@@ -38,11 +39,21 @@ export function SearchableSelect({
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [imgLoadError, setImgLoadError] = useState(false);
 
+  const handleImageError = () => {
+    setImgLoadError(true);
+  };
+
+  const handleReload = () => {
+    // Isso forçará o componente a tentar carregar a imagem de novo
+    setImgLoadError(false); 
+  };
+  
   const selectedItem = useMemo(() => {
     return data.find((item) => item.id === value);
   }, [data, value]);
-
+  
   const filteredData = useMemo(() => {
     const term = searchTerm.toLowerCase();
     if (!term) {
@@ -102,24 +113,29 @@ export function SearchableSelect({
           //     Nenhum resultado encontrado.
           //   </div>
           <Card 
-            className={`cursor-pointer transition-all hover:shadow-md ${
-              selectedItem ? 'ring-2 ring-blue-500' : ''
-            }`}
+          // className={`cursor-pointer transition-all hover:shadow-md ${
+            //   selectedItem ? 'ring-2 ring-blue-500' : ''
+            // }`}
             onClick={() => handleSelect(item)}
-          >
+            key={item.id}
+            >
             <CardContent className="p-3">
               <div className="flex items-center space-x-3">
                 <div key={item.id} className="flex-shrink-0"></div>
                 <div className="flex-shrink-0">
-                  {item.photoUrl ? (
+                  {item.photoUrl && item.photoExists ? (
                     <img 
-                      src={`uploads/${item.photoUrl}`} 
-                      alt={item.name} 
-                      className="h-12 w-12 rounded-full object-cover border"
+                    src={`uploads/${item.photoUrl}`} 
+                    alt="Foto"
+                    className="h-12 w-12 rounded-full object-cover border"
                     />
                   ) : (
                     <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center">
-                      <User className="h-6 w-6 text-gray-400" />
+                      {!item.document && !item.cargo && !item.photoExists ? (
+                        <Church className="h-6 w-6 text-gray-400" />
+                      ) : (
+                        <User className="h-6 w-6 text-gray-400" />
+                      )}
                     </div>
                   )}
                 </div>
@@ -138,11 +154,11 @@ export function SearchableSelect({
                     </p>
                   )}
                 </div>
-                {selectedItem && (
+                {/* {selectedItem && (
                   <Badge variant="default" className="flex-shrink-0">
-                    Selecionado
+                  Selecionado
                   </Badge>
-                )}
+                  )} */}
               </div>
             </CardContent>
           </Card>          

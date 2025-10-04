@@ -155,7 +155,7 @@ model Contributor {
   cpf                    String?
   ecclesiasticalPosition String?
   tipo                   ContributorType?
-   // Novo campo para foto
+  // Novo campo para foto
   photoUrl               String?
   createdAt              DateTime         @default(now())
   updatedAt              DateTime         @updatedAt
@@ -189,10 +189,18 @@ model CongregationSummary {
   id                 String       @id @default(cuid())
   congregationId     String
   congregation       Congregation @relation(fields: [congregationId], references: [id], onDelete: Cascade)
-  date               DateTime
+  date               DateTime     @default(now())
+  startDate          DateTime
+  endDate            DateTime
   // Campos de totais
+  launchCount        Int          @default(0)
   entryCount         Int          @default(0)
+  titheCount         Int          @default(0)
   exitCount          Int          @default(0)
+  // Campos de totais por tipo
+  entryTotal        Float         @default(0)
+  titheTotal        Float         @default(0)
+  exitTotal         Float         @default(0)
   // Valores de entrada
   titheValue         Float        @default(0)
   offerValue         Float        @default(0)
@@ -209,11 +217,12 @@ model CongregationSummary {
   treasurerApproved  Boolean      @default(false)
   accountantApproved Boolean      @default(false)
   directorApproved   Boolean      @default(false)
+  status             SummaryStatus @default(PENDING)
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
   Launch             Launch[]
 
-  //@@unique([congregationId, startDate, endDate])
+  @@unique([congregationId, startDate, endDate])
 }
 
 enum LaunchType {
@@ -237,4 +246,9 @@ enum ContributorType {
 enum PessoaType {
   FISICA
   JURIDICA
+}
+
+enum SummaryStatus {
+  PENDING
+  APPROVED
 }

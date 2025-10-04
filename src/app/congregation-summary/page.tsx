@@ -1,4 +1,3 @@
-// app/congregation-summary/page.tsx
 "use client"
 
 import { useState, useEffect } from 'react'
@@ -6,74 +5,89 @@ import { useSession } from 'next-auth/react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Calendar, Check, X, FileText, DollarSign, TrendingUp, TrendingDown, UserCheck, Plus, Edit, CheckCircle, XCircle } from 'lucide-react'
-import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Calendar, FileText, Trash2, Plus, Save, Search, List } from 'lucide-react'
+import { format } from 'date-fns'
+import { id, ptBR } from 'date-fns/locale'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { totalmem } from 'os'
+import { NumericFormat } from 'react-number-format';
+
+type Summary = {
+  id: string;
+  date: string;
+  startDate: string;
+  endDate: string;
+  entryTotal: number;
+  titheTotal: number;
+  exitTotal: number;
+  depositValue?: number;
+  cashValue?: number;
+  status: string;
+  treasurerApproved?: boolean;
+  accountantApproved?: boolean;
+  directorApproved?: boolean;
+  offerValue?: number;
+  voteValue?: number;
+  ebdValue?: number;
+  campaignValue?: number;
+  launches?: any[];
+  // Add other properties as needed
+};
 
 export default function CongregationSummary() {
   const { data: session } = useSession()
-  const [congregations, setCongregations] = useState([])
+  const [congregations, setCongregations] = useState<any[]>([])
   const [selectedCongregation, setSelectedCongregation] = useState('')
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'))
-  const [summaryDate, setSummaryDate] = useState(format(new Date(), 'yyyy-MM-dd'))
-  const [isLoading, setIsLoading] = useState(false)
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [approveDialogOpen, setApproveDialogOpen] = useState(false)
-  const [selectedLaunch, setSelectedLaunch] = useState(null)
-  const [approvalData, setApprovalData] = useState({
-    treasury: null,
-    accountant: null,
-    director: null
-  })
-  const [approvedBy, setApprovedBy] = useState('')
-
-  const [summaries, setSummaries] = useState([])
-  const [selectedSummary, setSelectedSummary] = useState(null)
-  const [launches, setLaunches] = useState<any[]>([]); 
+  const [summaries, setSummaries] = useState<Summary[]>([])
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-
-    // const summaryDateStart = new Date(`${startDate}T12:00:00Z`)
-    // const summaryDateEnd = new Date(`${endDate}T12:00:00Z`)
-    // summaryDateStart.setHours(0, 0, 0, 0)
-    // summaryDateEnd.setHours(0, 0, 0, 0)
-
-  function dataAtualFormatada(){
-    var data = new Date(),
-        dia  = data.getDate().toString(),
-        diaF = (dia.length == 1) ? '0'+dia : dia,
-        mes  = (data.getMonth()+1).toString(), //+1 pois no getMonth Janeiro começa com zero.
-        mesF = (mes.length == 1) ? '0'+mes : mes,
-        anoF = data.getFullYear();
-    return diaF+"/"+mesF+"/"+anoF;
-  }
+  const [editingSummary, setEditingSummary] = useState<Summary | null>(null)
+  const [selectedSummary, setSelectedSummary] = useState<Summary | null>(null)
+  const [launches, setLaunches] = useState<any[]>([])
+  const [activeTab, setActiveTab] = useState('summaries')
+  const [editFormData, setEditFormData] = useState({
+    id: '',
+    congregationId: '',
+    date: '',
+    startDate: format(new Date(), 'yyyy-MM-dd'),  
+    endDate: format(new Date(), 'yyyy-MM-dd'),
+    depositValue: '',
+    cashValue: '',
+    treasurerApproved: false,
+    accountantApproved: false,
+    directorApproved: false,
+    status: 'PENDING',
+    // Campos para detalhamento
+    offerValue: '',
+    votesValue: '',
+    ebdValue: '',
+    campaignValue: '',
+    entryTotal: '',
+    titheTotal: '',
+    exitTotal: '',
+    totalTithe: 0,
+    totalExit: 0
+  })
+  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
-    if (session?.user?.canManageSummary) {
-      fetchCongregations()
-    }
-  }, [session])
+    fetchCongregations()
+  }, [])
 
   useEffect(() => {
     if (selectedCongregation && startDate && endDate) {
       fetchSummaries()
     }
   }, [selectedCongregation, startDate, endDate])
-
-    useEffect(() => {
-    if (selectedSummary) {
-      fetchLaunches()
-    }
-  }, [selectedSummary])
 
   const fetchCongregations = async () => {
     try {
@@ -93,55 +107,56 @@ export default function CongregationSummary() {
   }
 
   const fetchSummaries = async () => {
+    if (!selectedCongregation || !startDate || !endDate) return
+    
+    setIsLoading(true)
     try {
       const params = new URLSearchParams({
         congregationId: selectedCongregation,
-        startDate: startDate,
-        endDate: endDate,
-        date: summaryDate
+        startDate,
+        endDate,
+        id: selectedSummary?.id || ''
       })
-      const response = await fetch(`/api/congregation-summary?${params}`)
+      
+      const response = await fetch(`/api/congregation-summaries?${params.toString()}`)
       if (response.ok) {
         const data = await response.json()
-        setSummaries(data)
+        setSummaries(data.summaries || [])
+        setLaunches(data.summaries.flatMap(summary => summary.Launch || []) || [])
       }
     } catch (error) {
       console.error('Erro ao carregar resumos:', error)
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const fetchLaunches = async () => {
-    try {
-      const response = await fetch(`/api/launches?congregationId=${selectedCongregation}&startDate=${selectedSummary.startDate}&endDate=${selectedSummary.endDate}`)
-      if (response.ok) {
-        const data = await response.json()
-        setLaunches(data.launches || []);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar lançamentos:', error)
-      setLaunches([]);
-    }
-  }
+// const fetchLaunches = async (summaryId) => {
+//     try {
+//       const response = await fetch(`/api/congregation-summaries/${summaryId}/launches`)
+//       if (response.ok) {
+//         const data = await response.json()
+//         setLaunches(data)
+//       }
+//     } catch (error) {
+//       console.error('Erro ao carregar lançamentos:', error)
+//     }
+//   }
 
-    const handleCreateSummary = async () => {
-    setIsLoading(true)
+  const handleCreateSummary = async () => {
     try {
-      const response = await fetch('/api/congregation-summary', {
+      const response = await fetch('/api/congregation-summaries', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          congregationId: selectedCongregation,
-          startDate: startDate,
-          endDate: endDate,
-          date: summaryDate
-        })
+        body: JSON.stringify({ ...editFormData, congregationId: selectedCongregation })
       })
 
       if (response.ok) {
         fetchSummaries()
         setIsCreateDialogOpen(false)
+        resetForm()
       } else {
         const error = await response.json()
         alert(error.error || 'Erro ao criar resumo')
@@ -149,139 +164,107 @@ export default function CongregationSummary() {
     } catch (error) {
       console.error('Erro ao criar resumo:', error)
       alert('Erro ao criar resumo')
-    } finally {
-      setIsLoading(false)
     }
   }
 
-  const handleEditSummary = async () => {
-    setIsLoading(true)
+  const handleEditSummary = (summary) => {
+    setSelectedSummary(summary)
+    setEditFormData({
+      id: summary.id,
+      congregationsId: summary.congregationId,
+      startDate: new Date(summary.startDate),
+      endDate: new Date(summary.endDate),
+      depositValue: (summary.depositValue ?? 0).toString(), 
+      cashValue: (summary.cashValue ?? 0).toString(),
+      status: summary.status,
+      treasurerApproved: summary.treasurerApproved ?? false,
+      accountantApproved: summary.accountantApproved ?? false,
+      directorApproved: summary.directorApproved ?? false,
+      entryTotal: (summary.entryTotal ?? 0).toString(),
+      titheTotal: (summary.titheTotal ?? 0).toString(), // Campo corrigido
+      exitTotal: (summary.exitTotal ?? 0).toString(),   // Campo corrigido
+      offerValue: summary.offerValue ?? 0,
+      votesValue: summary.voteValue ?? 0, // ⭐️ CORRIGIDO: nome da propriedade era 'voteValue'
+      ebdValue: summary.ebdValue ?? 0,
+      campaignValue: summary.campaignValue ?? 0,
+      totalTithe: summary.totalTithe || 0,
+      totalExit: summary.totalExit || 0
+    })
+    setIsEditDialogOpen(true)
+    setActiveTab('summaries')
+    // fetchLaunches(summary.id)
+  }
+
+  const handleUpdateSummary = async () => {
     try {
-      const response = await fetch('/api/congregation-summary', {
+      const response = await fetch('/api/congregation-summaries', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           id: selectedSummary.id,
-          depositValue: selectedSummary.depositValue,
-          cashValue: selectedSummary.cashValue,
-          totalValue: selectedSummary.totalValue,
-          treasurerApproved: selectedSummary.treasurerApproved,
-          accountantApproved: selectedSummary.accountantApproved,
-          directorApproved: selectedSummary.directorApproved
+          ...editFormData,
+          depositValue: parseFloat(editFormData.depositValue),
+          cashValue: parseFloat(editFormData.cashValue),
+          treasurerApproved: editFormData.treasurerApproved,
+          accountantApproved: editFormData.accountantApproved,
+          directorApproved: editFormData.directorApproved,
         })
       })
 
       if (response.ok) {
-        fetchSummaries()
-        setIsEditDialogOpen(false)
+        try {
+          fetchSummaries()
+          setIsEditDialogOpen(false)
+        } catch (error) {
+          console.error('Erro ao buscar resumos:', error)
+          alert('Erro ao buscar resumos')
+        }
       } else {
-        const error = await response.json()
-        alert(error.error || 'Erro ao atualizar resumo')
+        try {
+          const error = await response.json()
+          alert(error.error || 'Erro ao atualizar resumo')
+        } catch (error) {
+          console.error('Erro ao atualizar resumo:', error)
+          alert('Erro ao atualizar resumo')
+        }
       }
     } catch (error) {
       console.error('Erro ao atualizar resumo:', error)
       alert('Erro ao atualizar resumo')
-    } finally {
-      setIsLoading(false)
     }
   }
 
-  const generateSummary = async () => {
-    if (!selectedCongregation || !startDate || !endDate) {
-      alert('Selecione uma congregação e defina o período')
-      return
-    }
-
-    setIsGenerating(true)
-    try {
-      const response = await fetch('/api/congregation-summary', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          congregationId: selectedCongregation,
-          startDate: startDate,
-          endDate: endDate,
-          date: summaryDate
+  const handleDeleteSummary = async (id: string) => {
+    if (confirm('Tem certeza que deseja excluir este resumo?')) {
+      try {
+        const response = await fetch(`/api/congregation-summaries?id=${id}`, {
+          method: 'DELETE'
         })
-      })
 
-      if (response.ok) {
-        const data = await response.json()
-        setSummaryData(data)
-      } else {
-        const error = await response.json()
-        alert(error.error || 'Erro ao gerar resumo')
-      }
-    } catch (error) {
-      console.error('Erro ao gerar resumo:', error)
-      alert('Erro ao gerar resumo')
-    } finally {
-      setIsGenerating(false)
-    }
-  }
-
-  const handleApprove = (launch) => {
-    setSelectedLaunch(launch)
-    setApproveDialogOpen(true)
-  }
-
-  const confirmApprove = async () => {
-    if (!approvedBy) {
-      alert('Selecione quem está aprovando')
-      return
-    }
-
-    try {
-      const response = await fetch('/api/congregation-summary', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          launchId: selectedLaunch.id,
-          approved: true,
-          approvedBy
-        })
-      })
-
-      if (response.ok) {
-        // Atualizar o resumo
-        const updatedApprovalData = { ...approvalData }
-        if (approvedBy === 'tesoureiro') {
-          updatedApprovalData.treasury = selectedLaunch
-        } else if (approvedBy === 'contador') {
-          updatedApprovalData.accountant = selectedLaunch
-        } else if (approvedBy === 'dirigente') {
-          updatedApprovalData.director = selectedLaunch
+        if (response.ok) {
+          fetchSummaries()
+        } else {
+          const error = await response.json()
+          alert(error.error || 'Erro ao excluir resumo')
         }
-        setApprovalData(updatedApprovalData)
-        
-        // Atualizar o resumo
-        generateSummary()
-        setApproveDialogOpen(false)
-        setSelectedLaunch(null)
-        setApprovedBy('')
-      } else {
-        const error = response.json()
-        alert(error.error || 'Erro ao aprovar lançamento')
+      } catch (error) {
+        console.error('Erro ao excluir resumo:', error)
+        alert('Erro ao excluir resumo')
       }
-    } catch (error) {
-      console.error('Erro ao aprovar lançamento:', error)
-      alert('Erro ao aprovar lançamento')
     }
   }
 
-  // Verificar permissões
-  const canManageSummary = session?.user?.canManageSummary
-  const canApproveTreasury = session?.user?.canApproveTreasury
-  const canApproveAccountant = session?.user?.canApproveAccountant
-  const canApproveDirector = session?.user?.canApproveDirector
+  const resetForm = () => {
+    setEditFormData({
+      congregationId: '',
+      startDate: format(new Date(), 'yyyy-MM-dd'),
+      endDate: format(new Date(), 'yyyy-MM-dd')
+    })
+  }
 
-  if (!canManageSummary) {
+  if (!session?.user?.canManageSummary) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Sidebar />
@@ -304,8 +287,8 @@ export default function CongregationSummary() {
       <div className="lg:pl-64">
         <div className="p-6">
           <div className="mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">Resumo de Congregação</h1>
-            <p className="text-gray-600">Visualize e aprove lançamentos financeiros</p>
+            <h1 className="text-2xl font-bold text-gray-900">Resumo Congregação</h1>
+            {/* <p className="text-gray-600">Gerencie os resumos financeiros das congregações</p> */}
           </div>
 
           {/* Filtros */}
@@ -314,7 +297,7 @@ export default function CongregationSummary() {
               <CardTitle>Filtros</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                   <Label htmlFor="congregation">Congregação</Label>
                   <Select
@@ -339,8 +322,8 @@ export default function CongregationSummary() {
                   <Input
                     id="startDate"
                     type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
+                    value={editFormData.startDate}
+                    onChange={(e) => setEditFormData({ ...editFormData, startDate: e.target.value })}
                   />
                 </div>
                 
@@ -349,338 +332,415 @@ export default function CongregationSummary() {
                   <Input
                     id="endDate"
                     type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
+                    value={editFormData.endDate}
+                    onChange={(e) => setEditFormData({ ...editFormData, endDate: e.target.value })}
                   />
+                </div>
+                
+                <div className="flex items-end">
+                  <Button onClick={handleCreateSummary} disabled={isLoading}>
+                    {isLoading ? 'Listando...' : 'Gerar Resumo'}
+                  </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Lista de Resumos */}
-          <Card className="mb-6">
+          <Card>
             <CardHeader>
-              <CardTitle className="flex justify-between items-center">
-                Resumos
-                <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Novo Resumo
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Criar Novo Resumo</DialogTitle>
-                      <DialogDescription>
-                        Isso criará um novo resumo para o período selecionado
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="py-4">
-                      <p>Tem certeza que deseja criar um resumo para o período de {dataAtualFormatada(new Date(startDate))} a {dataAtualFormatada(new Date(endDate))}?</p>
-                    </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                        Cancelar
-                      </Button>
-                      <Button onClick={handleCreateSummary} disabled={isLoading}>
-                        {isLoading ? 'Criando...' : 'Criar'}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </CardTitle>
+              <CardTitle>Resumos</CardTitle>
+              <CardDescription>
+                {summaries.length > 0 
+                  ? `Mostrando ${summaries.length} resumo(s)` 
+                  : 'Nenhum resumo encontrado'
+                }
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {summaries.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
-                  Nenhum resumo encontrado para o período selecionado
+                  Nenhum resumo encontrado para os filtros selecionados.
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {summaries.map((summary) => (
-                    <Card key={summary.id} className={`cursor-pointer ${selectedSummary?.id === summary.id ? 'ring-2 ring-blue-500' : ''}`} onClick={() => setSelectedSummary(summary)}>
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="font-medium">
-                              {format(new Date(summary.date), 'dd/MM/yyyy')}
-                            </h3>
-                            <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                              <div>
-                                <span className="text-gray-500">Entradas:</span>
-                                <div className="font-medium">{summary.entryCount}</div>
-                              </div>
-                              <div>
-                                <span className="text-gray-500">Saídas:</span>
-                                <div className="font-medium">{summary.exitCount}</div>
-                              </div>
-                              <div>
-                                <span className="text-gray-500">Total Entradas:</span>
-                                <div className="font-medium">R$ {(summary.titheValue + summary.offerValue + summary.votesValue + summary.campaignValue + summary.ebdValue).toFixed(2)}</div>
-                              </div>
-                              <div>
-                                <span className="text-gray-500">Total Saídas:</span>
-                                <div className="font-medium">R$ {summary.exitValue.toFixed(2)}</div>
-                              </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Período</TableHead>
+                      <TableHead>Entradas</TableHead>
+                      <TableHead>Dízimos</TableHead>
+                      <TableHead>Saídas</TableHead>
+                      <TableHead>Aprovações</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {summaries.map((summary) => (
+                      <TableRow key={summary.id}>
+                        <TableCell>
+                          {format(new Date(summary.date), 'dd/MM/yyyy', { locale: ptBR })}
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(summary.startDate), 'dd/MM/yyyy', { locale: ptBR })} - {' '}
+                          {format(new Date(summary.endDate), 'dd/MM/yyyy', { locale: ptBR })}
+                        </TableCell>
+                        <TableCell>R$ {(summary.entryTotal ?? 0.00).toFixed(2)}</TableCell>
+                        <TableCell>R$ {(summary.titheTotal ?? 0.00).toFixed(2)}</TableCell>
+                        <TableCell>R$ {(summary.exitTotal ?? 0.00).toFixed(2)}</TableCell>
+                        {/* <TableCell>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={editingSummary?.id === summary.id ? formData.depositAmount : summary.depositAmount || ''}
+                            onChange={(e) => {
+                              if (editingSummary?.id === summary.id) {
+                                handleInputChange(e)
+                              } else {
+                                // Atualizar diretamente no backend
+                                fetch(`/api/congregation-summaries`, {
+                                  method: 'PUT',
+                                  headers: {
+                                    'Content-Type': 'application/json'
+                                  },
+                                  body: JSON.stringify({
+                                    id: summary.id,
+                                    depositAmount: e.target.value ? parseFloat(e.target.value) : null
+                                  })
+                                }).then(() => fetchSummaries())
+                              }
+                            }}
+                            disabled={!editingSummary || editingSummary.id !== summary.id}
+                            className="w-24"
+                          />
+                        </TableCell> */}
+                        {/* <TableCell>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={editingSummary?.id === summary.id ? formData.cashAmount : summary.cashAmount || ''}
+                            onChange={(e) => {
+                              if (editingSummary?.id === summary.id) {
+                                handleInputChange(e)
+                              } else {
+                                // Atualizar diretamente no backend
+                                fetch(`/api/congregation-summaries`, {
+                                  method: 'PUT',
+                                  headers: {
+                                    'Content-Type': 'application/json'
+                                  },
+                                  body: JSON.stringify({
+                                    id: summary.id,
+                                    cashAmount: e.target.value ? parseFloat(e.target.value) : null
+                                  })
+                                }).then(() => fetchSummaries())
+                              }
+                            }}
+                            disabled={!editingSummary || editingSummary.id !== summary.id}
+                            className="w-24"
+                          />
+                        </TableCell> */}
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                checked={summary.treasurerApproved}
+                                onCheckedChange={() => handleApprove(summary.id, 'treasurerApproved')}
+                                disabled
+                              />
+                              <span className="text-sm">Tesoureiro</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                checked={summary.accountantApproved}
+                                onCheckedChange={() => handleApprove(summary.id, 'accountantApproved')}
+                                disabled
+                              />
+                              <span className="text-sm">Contador</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                checked={summary.directorApproved}
+                                onCheckedChange={() => handleApprove(summary.id, 'directorApproved')}
+                                disabled
+                              />
+                              <span className="text-sm">Dirigente</span>
                             </div>
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={summary.status === 'APPROVED' ? 'default' : 'secondary'}>
+                            {summary.status === 'APPROVED' ? 'Aprovado' : 'Pendente'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
                           <div className="flex space-x-2">
-                            <Badge variant={summary.treasurerApproved ? "default" : "secondary"}>
-                              Tesoureiro: {summary.treasurerApproved ? "Aprovado" : "Pendente"}
-                            </Badge>
-                            <Badge variant={summary.accountantApproved ? "default" : "secondary"}>
-                              Contador: {summary.accountantApproved ? "Aprovado" : "Pendente"}
-                            </Badge>
-                            <Badge variant={summary.directorApproved ? "default" : "secondary"}>
-                              Dirigente: {summary.directorApproved ? "Aprovado" : "Pendente"}
-                            </Badge>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditSummary(summary)}
+                            >
+                              Editar
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteSummary(summary.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               )}
             </CardContent>
           </Card>
+          
+          {/* Diálogo de Edição */}
+          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Editar Resumo</DialogTitle>
+                <DialogDescription>
+                  Atualize as informações do resumo
+                </DialogDescription>
+              </DialogHeader>
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="summaries" className="flex items-center">
+                    <FileText className="mr-2 h-4 w-4" />
+                    Resumos
+                  </TabsTrigger>
+                  <TabsTrigger value="launches" className="flex items-center" disabled={!selectedSummary}>
+                    <List className="mr-2 h-4 w-4" />
+                    Lançamentos
+                  </TabsTrigger>
+                </TabsList>
+ 
+              <div className="max-h-[80vh] overflow-y-auto pr-4"> 
+                <TabsContent value="summaries" className="mt-0">
+                  <div className="space-y-4 py-4">
+                      {/* Totais */}
+                      {editFormData && (
+                        <div className="pt-0 mt-0">
+                          <h4 className="font-medium mb-2">Totais</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="flex flex-col gap-4">
+                                  {/* 1. CARD DE ENTRADAS (DETALHADO) */}
+                                  <div className="bg-blue-50 p-3 rounded-lg">
+                                      <h5 className="font-medium text-blue-700">Entradas</h5>
+                                      <div className="text-sm space-y-1">
+                                          {/* Detalhes com Título à Esquerda e Valor à Direita */}
+                                          <div className="flex justify-between">
+                                              <span>Oferta:</span>
+                                              <span className="font-semibold">
+                                                  R$ {Number(editFormData.offerValue ?? 0).toFixed(2)}
+                                              </span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                              <span>Votos:</span>
+                                              <span className="font-semibold">
+                                                  R$ {Number(editFormData.votesValue ?? 0).toFixed(2)}
+                                              </span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                              <span>EBD:</span>
+                                              <span className="font-semibold">
+                                                  R$ {Number(editFormData.ebdValue ?? 0).toFixed(2)}
+                                              </span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                              <span>Campanha:</span>
+                                              <span className="font-semibold">
+                                                  R$ {Number(editFormData.campaignValue ?? 0).toFixed(2)}
+                                              </span>
+                                          </div>
+                                      </div>
+                                  </div>
+                                  
+                                  {/* 2. CARD DE DÍZIMOS */}
+                                  <div className="bg-green-50 p-3 rounded-lg flex justify-between items-center">
+                                      <h5 className="font-medium text-green-700">Dízimos</h5>
+                                      <div className="text-md font-semibold flex justify-end">
+                                          R$ {Number(editFormData.titheTotal).toFixed(2)}
+                                      </div>
+                                  </div>
 
-          {/* Detalhes do Resumo */}
-          {selectedSummary && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex justify-between items-center">
-                  Detalhes do Resumo
-                  <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        <Edit className="mr-2 h-4 w-4" />
-                        Editar
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[600px]">
-                      <DialogHeader>
-                        <DialogTitle>Editar Resumo</DialogTitle>
-                        <DialogDescription>
-                          Atualize os dados do resumo e as aprovações
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="depositValue">Valor do Depósito</Label>
-                            <Input
-                              id="depositValue"
-                              type="number"
-                              step="0.01"
-                              value={selectedSummary.depositValue}
-                              onChange={(e) => setSelectedSummary({
-                                ...selectedSummary,
-                                depositValue: parseFloat(e.target.value) || 0
-                              })}
-                            />
+                                  {/* ⭐️ NOVO: CARD TOTAL DE ENTRADAS (Entrada + Dízimo) ⭐️ */}
+                                  <div className="bg-blue-100 p-3 rounded-lg border-2 border-blue-300">
+                                      <div className="flex justify-between items-center">
+                                          <h5 className="font-bold text-blue-800">Tot Entradas</h5>
+                                          <div className="text-md font-extrabold text-blue-800">
+                                              {/* Calcula Entradas (entryTotal) + Dízimo (titheTotal) */}
+                                              R$ {(Number(editFormData.entryTotal) + Number(editFormData.titheTotal)).toFixed(2)}
+                                          </div>
+                                      </div>
+                                  </div>
+                              </div>
+                              
+                              {/* ⭐️ COLUNA DIREITA: SAÍDAS E TOTAIS FINAIS ⭐️ */}
+                              <div className="flex flex-col gap-4">
+                                  
+                                  {/* 3. CARD TOTAL DE SAÍDAS */}
+                                  <div className="bg-red-50 p-3 *:rounded-lg flex justify-between items-center md:mb-39">
+                                      <h5 className="font-medium text-red-700">Saídas</h5>
+                                      <div className="text-md font-semibold ">
+                                          R$ {Number(editFormData.exitTotal).toFixed(2)}
+                                      </div>
+                                  </div>
+
+                                 
+                                  {/* ⭐️ NOVO: CARD TOTAL GERAL (Entrada - Saída) ⭐️ */}
+                                  <div className="bg-purple-100 p-3 rounded-lg border-2 border-purple-300">
+                                      <div className="flex justify-between items-center">
+                                          <h5 className="font-bold text-purple-800">Saldo Geral</h5>
+                                          <div className="text-md font-extrabold text-purple-800">
+                                              {/* Calcula (Entrada + Dízimo) - Saída */}
+                                              R$ {(
+                                                  (Number(editFormData.entryTotal) + Number(editFormData.titheTotal)) - Number(editFormData.exitTotal)
+                                              ).toFixed(2)}
+                                          </div>
+                                      </div>
+                                  </div>
+                              </div>
                           </div>
-                          <div>
-                            <Label htmlFor="cashValue">Valor em Espécie</Label>
-                            <Input
+                        </div>
+                      )}
+                    </div>
+                      <div className='grid grid-cols-1 md:grid-cols-2 space-x-2'>
+                        <div>
+                        <Label htmlFor="depositValue">Valor Depósito</Label>
+                        {/* <Input
+                          id="depositValue"
+                          name="depositValue"
+                          type="number"
+                          step="0.01"
+                          value={editFormData.depositValue}
+                          onChange={(e) => setEditFormData(prev => ({ ...prev, depositValue: e.target.value }))}
+                        /> */}
+                        <NumericFormat
+                            id="depositValue"
+                            name="depositValue"
+                            className="col-span-3 h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            value={editFormData.depositValue || ''}
+                            onValueChange={(values) => {
+                              const { floatValue } = values;
+                              setEditFormData(prev => ({ ...prev, depositValue: floatValue }));
+                            }}
+                            thousandSeparator="."
+                            decimalSeparator=","
+                            prefix="R$ "
+                            decimalScale={2}
+                            fixedDecimalScale={true}
+                            allowNegative={false}
+                            placeholder="R$ 0,00"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="cashValue">Valor Espécie</Label>
+                          {/* <Input
+                            id="cashValue"
+                            name="cashValue"
+                            type="number"
+                            step="0.01"
+                            value={editFormData.cashValue}
+                            onChange={(e) => setEditFormData(prev => ({ ...prev, cashValue: e.target.value }))}
+                          /> */}
+                          <NumericFormat
                               id="cashValue"
-                              type="number"
-                              step="0.01"
-                              value={selectedSummary.cashValue}
-                              onChange={(e) => setSelectedSummary({
-                                ...selectedSummary,
-                                cashValue: parseFloat(e.target.value) || 0
-                              })}
-                            />
+                              name="cashValue"
+                              className="col-span-3 h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                              value={editFormData.cashValue || ''}
+                              onValueChange={(values) => {
+                                const { floatValue } = values;
+                                setEditFormData(prev => ({ ...prev, cashValue: floatValue }));
+                              }}
+                              thousandSeparator="."
+                              decimalSeparator=","
+                              prefix="R$ "
+                              decimalScale={2}
+                              fixedDecimalScale={true}
+                              allowNegative={false}
+                              placeholder="R$ 0,00"
+                            />  
+                        </div>                      
+                      </div>
+
+                      {/* ⭐️ NOVO: CARD TOTAL DE DEPÓSITO + ESPÉCIE ⭐️ */}
+                      <div className="bg-yellow-50 p-3 rounded-lg">
+                          <div className="flex justify-between items-center">
+                              <h5 className="font-medium text-yellow-700">Total Depósito + Espécie</h5>
+                              <div className="text-lg font-semibold text-yellow-800">
+                                  {/* Calcula Depósito (depositValue) + Espécie (cashValue) */}
+                                  R$ {(Number(editFormData.depositValue) + Number(editFormData.cashValue)).toFixed(2)}
+                              </div>
                           </div>
+                      </div>
+                     
+                      <div className="space-y-2">
+                        <h4 className="font-medium">Aprovações</h4>
+                        <div className='grid grid-cols-1 md:grid-cols-3 space-x-4'>
                           <div>
-                            <Label htmlFor="totalValue">Total para Prestação de Contas</Label>
-                            <Input
-                              id="totalValue"
-                              type="number"
-                              step="0.01"
-                              value={selectedSummary.totalValue}
-                              onChange={(e) => setSelectedSummary({
-                                ...selectedSummary,
-                                totalValue: parseFloat(e.target.value) || 0
-                              })}
+                            <input
+                              type="checkbox"
+                              id="treasurerApproved"
+                              checked={editFormData.treasurerApproved}
+                              disabled={!session.user.canApproveTreasury}
+                              onChange={(e) => setEditFormData(prev => ({ ...prev, treasurerApproved: e.target.checked }))}
                             />
+                            <Label htmlFor="treasurerApproved">Tesoureiro</Label>
                           </div>
-                        </div>
                         
-                        <div className="space-y-2">
-                          <h4 className="font-medium">Aprovações</h4>
-                          <div className="grid grid-cols-3 gap-4">
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
-                                id="treasurerApproved"
-                                checked={selectedSummary.treasurerApproved}
-                                onCheckedChange={(checked) => 
-                                  setSelectedSummary({
-                                    ...selectedSummary,
-                                    treasurerApproved: checked
-                                  })
-                                }
-                              />
-                              <Label htmlFor="treasurerApproved">Tesoureiro</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
-                                id="accountantApproved"
-                                checked={selectedSummary.accountantApproved}
-                                onCheckedChange={(checked) => 
-                                  setSelectedSummary({
-                                    ...selectedSummary,
-                                    accountantApproved: checked
-                                  })
-                                }
-                              />
-                              <Label htmlFor="accountantApproved">Contador</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
-                                id="directorApproved"
-                                checked={selectedSummary.directorApproved}
-                                onCheckedChange={(checked) => 
-                                  setSelectedSummary({
-                                    ...selectedSummary,
-                                    directorApproved: checked
-                                  })
-                                }
-                              />
-                              <Label htmlFor="directorApproved">Dirigente</Label>
-                            </div>
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id="accountantApproved"
+                              checked={editFormData.accountantApproved}
+                              disabled={!session.user.canApproveAccountant}
+                              onChange={(e) => setEditFormData(prev => ({ ...prev, accountantApproved: e.target.checked }))}
+                            />
+                            <Label htmlFor="accountantApproved">Contador</Label>
+                          </div>
+                        
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id="directorApproved"
+                              checked={editFormData.directorApproved}
+                              disabled={!session.user.canApproveDirector || !editFormData.accountantApproved || !editFormData.treasurerApproved}
+                              onChange={(e) => setEditFormData(prev => ({ ...prev, directorApproved: e.target.checked }))}
+                            />
+                            <Label htmlFor="directorApproved">Dirigente</Label>
                           </div>
                         </div>
                       </div>
-                      <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                          Cancelar
-                        </Button>
-                        <Button onClick={handleEditSummary} disabled={isLoading}>
-                          {isLoading ? 'Salvando...' : 'Salvar'}
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Tabs defaultValue="summary" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="summary">Resumo</TabsTrigger>
-                    <TabsTrigger value="launches">Lançamentos</TabsTrigger>
-                  </TabsList>
+                     </TabsContent> 
+
                   
-                  <TabsContent value="summary" className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <h3 className="text-lg font-medium mb-4">Entradas</h3>
-                        <div className="space-y-3">
-                          <div className="flex justify-between">
-                            <span>Quantidade de Lançamentos:</span>
-                            <span className="font-medium">{selectedSummary.entryCount}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Dízimos:</span>
-                            <span className="font-medium">R$ {selectedSummary.titheValue.toFixed(2)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Ofertas:</span>
-                            <span className="font-medium">R$ {selectedSummary.offerValue.toFixed(2)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Votos:</span>
-                            <span className="font-medium">R$ {selectedSummary.votesValue.toFixed(2)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Campanha:</span>
-                            <span className="font-medium">R$ {selectedSummary.campaignValue.toFixed(2)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>EBD:</span>
-                            <span className="font-medium">R$ {selectedSummary.ebdValue.toFixed(2)}</span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <h3 className="text-lg font-medium mb-4">Saídas</h3>
-                        <div className="space-y-3">
-                          <div className="flex justify-between">
-                            <span>Quantidade de Lançamentos:</span>
-                            <span className="font-medium">{selectedSummary.exitCount}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Valor Total:</span>
-                            <span className="font-medium">R$ {selectedSummary.exitValue.toFixed(2)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <h3 className="text-lg font-medium mb-4">Prestação de Contas</h3>
-                      <div className="space-y-3">
-                        <div className="flex justify-between">
-                          <span>Valor do Depósito:</span>
-                          <span className="font-medium">R$ {selectedSummary.depositValue.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Valor em Espécie:</span>
-                          <span className="font-medium">R$ {selectedSummary.cashValue.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Total para Prestação de Contas:</span>
-                          <span className="font-medium">R$ {selectedSummary.totalValue.toFixed(2)}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="mt-6">
-                        <h4 className="font-medium mb-3">Aprovações</h4>
-                        <div className="grid grid-cols-3 gap-4">
-                          <div className="flex items-center space-x-2">
-                            {selectedSummary.treasurerApproved ? (
-                              <CheckCircle className="h-5 w-5 text-green-500" />
-                            ) : (
-                              <XCircle className="h-5 w-5 text-red-500" />
-                            )}
-                            <span>Tesoureiro</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            {selectedSummary.accountantApproved ? (
-                              <CheckCircle className="h-5 w-5 text-green-500" />
-                            ) : (
-                              <XCircle className="h-5 w-5 text-red-500" />
-                            )}
-                            <span>Contador</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            {selectedSummary.directorApproved ? (
-                              <CheckCircle className="h-5 w-5 text-green-500" />
-                            ) : (
-                              <XCircle className="h-5 w-5 text-red-500" />
-                            )}
-                            <span>Dirigente</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="launches">
-                    <Table>
-                      <TableHeader>
+                {/* Aba de Lançamentos */}
+                <TabsContent value="launches" className="mt-4">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Valor</TableHead>
+                        <TableHead>Contribuinte/Fornecedor</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {launches.length === 0 ? (
                         <TableRow>
-                          <TableHead>Data</TableHead>
-                          <TableHead>Tipo</TableHead>
-                          <TableHead>Descrição</TableHead>
-                          <TableHead>Valor</TableHead>
-                          <TableHead>Status</TableHead>
+                          <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                            Nenhum lançamento encontrado para este resumo.
+                          </TableCell>
                         </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {launches.map((launch) => (
+                      ) : (
+                        launches.map((launch) => (
                           <TableRow key={launch.id}>
                             <TableCell>
                               {format(new Date(launch.date), 'dd/MM/yyyy', { locale: ptBR })}
@@ -694,33 +754,33 @@ export default function CongregationSummary() {
                                  launch.type === 'DIZIMO' ? 'Dízimo' : 'Saída'}
                               </Badge>
                             </TableCell>
-                            <TableCell>{launch.description || '-'}</TableCell>
                             <TableCell>
-                              {launch.type === 'ENTRADA' ? (
-                                <div>
-                                  <div>Oferta: R$ {launch.offerValue?.toFixed(2) || '0,00'}</div>
-                                  <div>Votos: R$ {launch.votesValue?.toFixed(2) || '0,00'}</div>
-                                  <div>EBD: R$ {launch.ebdValue?.toFixed(2) || '0,00'}</div>
-                                  <div>Campanha: R$ {launch.campaignValue?.toFixed(2) || '0,00'}</div>
-                                </div>
-                              ) : (
-                                <div>R$ {launch.value?.toFixed(2) || '0,00'}</div>
-                              )}
+                              R$ {(
+                                (launch.offerValue || launch.votesValue || launch.ebdValue || launch.campaignValue || launch.value) || 0
+                              ).toFixed(2)}
                             </TableCell>
                             <TableCell>
-                              <Badge variant={launch.status === 'NORMAL' ? 'default' : 'destructive'}>
-                                {launch.status === 'NORMAL' ? 'Normal' : 'Cancelado'}
-                              </Badge>
+                              {launch.contributor?.name || launch.supplier?.name || '-'}
                             </TableCell>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
-          )}
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </TabsContent>
+                </div>
+              </Tabs>
+              
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleUpdateSummary}>
+                  Salvar
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </div>

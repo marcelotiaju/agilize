@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth"
 import prisma from "@/lib/prisma"
 import{ authOptions }from "../auth/[...nextauth]/route";
 import Congregations from "@/app/congregations/page";
+import path from 'path';
+import fs from 'fs';
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -57,7 +59,21 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    return NextResponse.json(contributors)
+    const UPLOADS_DIR = path.join(__dirname, '../../../../../public/uploads');
+
+    const contributorsWithPhotos = contributors.map(c => {
+
+      const fileName = `${c.photoUrl}`;
+      const filePath = path.join(UPLOADS_DIR, fileName);
+      const fileExists = fs.existsSync(filePath);
+
+      return {
+            ...c,
+            photoExists: fileExists
+          };
+    });
+
+    return NextResponse.json(contributorsWithPhotos)
   } catch (error) {
     return NextResponse.json({ error: "Erro ao buscar contribuintes" }, { status: 500 })
   }
