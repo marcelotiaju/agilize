@@ -711,7 +711,12 @@ export default function CongregationSummary() {
                               type="checkbox"
                               id="directorApproved"
                               checked={editFormData.directorApproved}
-                              disabled={!session.user.canApproveDirector || !editFormData.accountantApproved || !editFormData.treasurerApproved}
+                              disabled={
+                                // Se o usuário não tem permissão DE DIRETOR OU
+                                !session.user.canApproveDirector || 
+                                // Se nenhuma das aprovações necessárias (Contador OU Tesoureiro) foi dada.
+                                !(editFormData.accountantApproved || editFormData.treasurerApproved)
+                              }
                               onChange={(e) => setEditFormData(prev => ({ ...prev, directorApproved: e.target.checked }))}
                             />
                             <Label htmlFor="directorApproved">Dirigente</Label>
@@ -729,7 +734,7 @@ export default function CongregationSummary() {
                         <TableHead>Data</TableHead>
                         <TableHead>Tipo</TableHead>
                         <TableHead>Valor</TableHead>
-                        <TableHead>Contribuinte/Fornecedor</TableHead>
+                        <TableHead>Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -745,22 +750,30 @@ export default function CongregationSummary() {
                             <TableCell>
                               {format(new Date(launch.date), 'dd/MM/yyyy', { locale: ptBR })}
                             </TableCell>
-                            <TableCell>
-                              <Badge variant={
-                                launch.type === 'ENTRADA' ? 'default' : 
-                                launch.type === 'DIZIMO' ? 'secondary' : 'destructive'
-                              }>
-                                {launch.type === 'ENTRADA' ? 'Entrada' : 
-                                 launch.type === 'DIZIMO' ? 'Dízimo' : 'Saída'}
-                              </Badge>
-                            </TableCell>
+                          <TableCell>
+                            <div className={`w-full py-1 px-0 rounded text-center text-white font-medium ${
+                              launch.type === 'ENTRADA' ? 'bg-green-500' : 
+                              launch.type === 'DIZIMO' ? 'bg-blue-500' : 'bg-red-500'
+                            }`}>
+                              {launch.type === 'ENTRADA' ? 'Outras Receitas' : 
+                               launch.type === 'DIZIMO' ? 'Dízimo' : 'Saída'}
+                            </div>
+                          </TableCell>
                             <TableCell>
                               R$ {(
                                 (launch.offerValue || launch.votesValue || launch.ebdValue || launch.campaignValue || launch.value) || 0
                               ).toFixed(2)}
                             </TableCell>
                             <TableCell>
-                              {launch.contributor?.name || launch.supplier?.name || '-'}
+                              <Badge className={`w-full py-1.5 px-1 rounded text-center ${launch.status === 'EXPORTED' ? 'text-black' : 'text-white'} font-medium`} variant={
+                                launch.status === 'NORMAL' ? 'default' :
+                                launch.status === 'APPROVED' ? 'default' :
+                                launch.status === 'EXPORTED' ? 'secondary' : 'destructive'
+                              }>
+                                {launch.status === 'NORMAL' ? 'Normal' : 
+                                launch.status === 'APPROVED' ? 'Aprovado' :
+                                launch.status === 'EXPORTED' ? 'Exportado' : 'Cancelado'}
+                              </Badge>
                             </TableCell>
                           </TableRow>
                         ))
