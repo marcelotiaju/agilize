@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -13,34 +13,31 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
-  @@index([userId])
 }
 
 model Session {
   id           String   @id @default(cuid())
   sessionToken String   @unique
   userId       String
-  expires      DateTime @db.DateTime(0)
+  expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
 }
 
 model VerificationToken {
   identifier String
   token      String   @unique
-  expires    DateTime @db.DateTime(0)
+  expires    DateTime
 
   @@unique([identifier, token])
 }
@@ -49,13 +46,13 @@ model User {
   id                   String             @id @default(cuid())
   name                 String?
   email                String             @unique
-  emailVerified        DateTime?          @db.DateTime(0)
-  image                String?            @db.Text
+  emailVerified        DateTime?
+  image                String?
   cpf                  String             @unique
   phone                String?
   password             String
-  validFrom            DateTime           @db.DateTime(0)
-  validTo              DateTime           @db.DateTime(0)
+  validFrom            DateTime
+  validTo              DateTime
   historyDays          Int                @default(30)
   canExport            Boolean            @default(false)
   canDelete            Boolean            @default(false)
@@ -77,8 +74,8 @@ model User {
   accounts             Account[]
   sessions             Session[]
   congregations        UserCongregation[]
-  createdAt            DateTime           @default(now()) @db.DateTime(0)
-  updatedAt            DateTime           @updatedAt @db.DateTime(0)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
 }
 
 model Congregation {
@@ -100,8 +97,8 @@ model Congregation {
   users                  UserCongregation[]
   launches               Launch[]
   contributors           Contributor[]
-  createdAt              DateTime              @default(now()) @db.DateTime(0)
-  updatedAt              DateTime              @updatedAt @db.DateTime(0)
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
   CongregationSummary    CongregationSummary[]
 }
 
@@ -113,8 +110,6 @@ model UserCongregation {
   congregation   Congregation @relation(fields: [congregationId], references: [id], onDelete: Cascade)
 
   @@unique([userId, congregationId])
-  @@index([userId])
-  @@index([congregationId])
 }
 
 model Launch {
@@ -122,7 +117,7 @@ model Launch {
   congregationId   String
   congregation     Congregation         @relation(fields: [congregationId], references: [id], onDelete: Cascade)
   type             LaunchType
-  date             DateTime             @db.DateTime(0)
+  date             DateTime
   talonNumber      String?
   offerValue       Float?
   votesValue       Float?
@@ -131,24 +126,19 @@ model Launch {
   value            Float?
   description      String?              @db.VarChar(255)
   status           LaunchStatus         @default(NORMAL)
-  contributorId    String?
+  contributorId    String? 
   contributor      Contributor?         @relation(fields: [contributorId], references: [id])
   contributorName  String?
-  supplierId       String?
+  supplierId       String? 
   supplier         Supplier?            @relation(fields: [supplierId], references: [id])
   supplierName     String?
-  classificationId String?
+  classificationId String? 
   classification   Classification?      @relation(fields: [classificationId], references: [id])
   summaryId        String?
   summary          CongregationSummary? @relation(fields: [summaryId], references: [id])
-  createdAt        DateTime             @default(now()) @db.DateTime(0)
-  updatedAt        DateTime             @updatedAt @db.DateTime(0)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
 
-  @@index([congregationId])
-  @@index([summaryId])
-  @@index([contributorId])
-  @@index([supplierId])
-  @@index([classificationId])
 }
 
 model Contributor {
@@ -160,13 +150,13 @@ model Contributor {
   cpf                    String?
   ecclesiasticalPosition String?
   tipo                   ContributorType?
-  photoUrl               String?          @db.Text
-  createdAt              DateTime         @default(now()) @db.DateTime(0)
-  updatedAt              DateTime         @updatedAt @db.DateTime(0)
+
+  photoUrl               String?
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
   Launch                 Launch[]
 
   @@unique([congregationId, code, name], name: "unique_contributor_code_name")
-  @@index([congregationId])
 }
 
 model Supplier {
@@ -175,8 +165,8 @@ model Supplier {
   razaoSocial String
   tipoPessoa  PessoaType?
   cpfCnpj     String?
-  createdAt   DateTime    @default(now()) @db.DateTime(0)
-  updatedAt   DateTime    @updatedAt @db.DateTime(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
   Launch      Launch[]
 }
 
@@ -185,44 +175,43 @@ model Classification {
   code        String   @unique
   shortCode   String   @unique
   description String
-  createdAt   DateTime @default(now()) @db.DateTime(0)
-  updatedAt   DateTime @updatedAt @db.DateTime(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   Launch      Launch[]
 }
 
 model CongregationSummary {
-  id                 String        @id @default(cuid())
+  id                 String       @id @default(cuid())
   congregationId     String
-  congregation       Congregation  @relation(fields: [congregationId], references: [id], onDelete: Cascade)
-  date               DateTime      @default(now()) @db.DateTime(0)
-  startDate          DateTime      @db.DateTime(0)
-  endDate            DateTime      @db.DateTime(0)
-  launchCount        Int           @default(0)
-  entryCount         Int           @default(0)
-  titheCount         Int           @default(0)
-  exitCount          Int           @default(0)
-  entryTotal         Float         @default(0)
-  titheTotal         Float         @default(0)
-  exitTotal          Float         @default(0)
-  titheValue         Float         @default(0)
-  offerValue         Float         @default(0)
-  votesValue         Float         @default(0)
-  campaignValue      Float         @default(0)
-  ebdValue           Float         @default(0)
-  exitValue          Float         @default(0)
-  depositValue       Float         @default(0)
-  cashValue          Float         @default(0)
-  totalValue         Float         @default(0)
-  treasurerApproved  Boolean       @default(false)
-  accountantApproved Boolean       @default(false)
-  directorApproved   Boolean       @default(false)
+  congregation       Congregation @relation(fields: [congregationId], references: [id], onDelete: Cascade)
+  date               DateTime     @default(now())
+  startDate          DateTime
+  endDate            DateTime
+  launchCount        Int          @default(0)
+  entryCount         Int          @default(0)
+  titheCount         Int          @default(0)
+  exitCount          Int          @default(0)
+  entryTotal        Float         @default(0)
+  titheTotal        Float         @default(0)
+  exitTotal         Float         @default(0)
+  titheValue         Float        @default(0)
+  offerValue         Float        @default(0)
+  votesValue         Float        @default(0)
+  campaignValue      Float        @default(0)
+  ebdValue           Float        @default(0)
+  exitValue          Float        @default(0)
+  depositValue       Float        @default(0)
+  cashValue          Float        @default(0)
+  totalValue         Float        @default(0)
+  treasurerApproved  Boolean      @default(false)
+  accountantApproved Boolean      @default(false)
+  directorApproved   Boolean      @default(false)
   status             SummaryStatus @default(PENDING)
-  createdAt          DateTime      @default(now()) @db.DateTime(0)
-  updatedAt          DateTime      @updatedAt @db.DateTime(0)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
   Launch             Launch[]
 
   @@unique([congregationId, startDate, endDate])
-  @@index([congregationId])
 }
 
 enum LaunchType {
