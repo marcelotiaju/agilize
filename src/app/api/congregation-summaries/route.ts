@@ -54,8 +54,8 @@ export async function GET(request: NextRequest) {
         congregationId: {
           in: congregationIds // Filtra por qualquer ID dentro da lista
         },
-        startDate: summaryId ? undefined : summaryDateStart, // Filtra por data apenas se não for buscar um único resumo por ID
-        endDate: summaryId ? undefined : summaryDateEnd
+        // startDate: summaryId ? undefined : summaryDateStart, // Filtra por data apenas se não for buscar um único resumo por ID
+        // endDate: summaryId ? undefined : summaryDateEnd
       },
       include: {
         // Incluir relacionamentos necessários (como lançamentos, se necessário)
