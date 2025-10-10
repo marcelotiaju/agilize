@@ -23,6 +23,7 @@
             cpf: credentials.cpf
           }
         })
+        console.log('Usuário Encontrado:', user);
 
         if (!user) {
           return null

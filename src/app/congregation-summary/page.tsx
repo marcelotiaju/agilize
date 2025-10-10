@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Button } from '@/components/ui/button'
@@ -12,12 +12,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Calendar, FileText, Trash2, Plus, Save, Search, List } from 'lucide-react'
+import { Calendar, FileText, Trash2, Plus, Save, Search, List, Check, Edit } from 'lucide-react'
 import { format } from 'date-fns'
 import { id, ptBR } from 'date-fns/locale'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { totalmem } from 'os'
 import { NumericFormat } from 'react-number-format';
+import { toast } from "sonner"
+
+// Definindo o tipo de Congregação para usar no estado
+type Congregation = {
+  id: string;
+  name: string;
+};
 
 type Summary = {
   id: string;
@@ -44,7 +51,7 @@ type Summary = {
 export default function CongregationSummary() {
   const { data: session } = useSession()
   const [congregations, setCongregations] = useState<any[]>([])
-  const [selectedCongregation, setSelectedCongregation] = useState('')
+ const [selectedCongregations, setSelectedCongregations] = useState<string[]>([]) // MUDANÇA: Array de IDs
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [summaries, setSummaries] = useState<Summary[]>([])
@@ -79,26 +86,34 @@ export default function CongregationSummary() {
   })
   const [isLoading, setIsLoading] = useState(false)
 
+    // Memoization para calcular o Saldo Geral e o Total Depositado/Espécie
+  const totalEntradas = useMemo(() => Number(editFormData.entryTotal) + Number(editFormData.titheTotal), [editFormData.entryTotal, editFormData.titheTotal]);
+  const saldoGeral = useMemo(() => totalEntradas - Number(editFormData.exitTotal), [totalEntradas, editFormData.exitTotal]);
+  const totalDepositadoEspecie = useMemo(() => Number(editFormData.depositValue) + Number(editFormData.cashValue), [editFormData.depositValue, editFormData.cashValue]);
+  
   useEffect(() => {
     fetchCongregations()
   }, [])
 
   useEffect(() => {
-    if (selectedCongregation && startDate && endDate) {
-      fetchSummaries()
+    // Busca resumos apenas para a primeira congregação selecionada para simplificar
+    if (selectedCongregations && Array.isArray(selectedCongregations) && selectedCongregations.length > 0 && startDate && endDate) {
+      fetchSummaries(selectedCongregations) 
+    } else {
+      setSummaries([])
     }
-  }, [selectedCongregation, startDate, endDate])
+  }, [selectedCongregations, startDate, endDate])
 
   const fetchCongregations = async () => {
     try {
       const response = await fetch('/api/congregations')
       if (response.ok) {
-        const data = await response.json()
+        const data: Congregation[] = await response.json()
         setCongregations(data)
         
         // Se houver apenas uma congregação, definir como default
         if (data.length === 1) {
-          setSelectedCongregation(data[0].id)
+          setSelectedCongregations([data[0].id])
         }
       }
     } catch (error) {
@@ -106,13 +121,13 @@ export default function CongregationSummary() {
     }
   }
 
-  const fetchSummaries = async () => {
-    if (!selectedCongregation || !startDate || !endDate) return
+  const fetchSummaries = async (congregationIds:string[]) => {
+    if (!congregationIds || !Array.isArray(congregationIds) || congregationIds.length === 0 || !startDate || !endDate) return
     
     setIsLoading(true)
     try {
       const params = new URLSearchParams({
-        congregationId: selectedCongregation,
+        congregationIds: congregationIds.join(','),
         startDate,
         endDate,
         id: selectedSummary?.id || ''
@@ -122,10 +137,17 @@ export default function CongregationSummary() {
       if (response.ok) {
         const data = await response.json()
         setSummaries(data.summaries || [])
-        setLaunches(data.summaries.flatMap(summary => summary.Launch || []) || [])
+        // Simplificação: apenas pega lançamentos do primeiro resumo para visualização
+        // setLaunches(data.summaries.flatMap((summary: Summary) => summary.Launch || []) || [])
+      } else {
+         console.error('Erro na resposta da API:', await response.json());
+         setSummaries([]);
+         setLaunches([]);
       }
     } catch (error) {
       console.error('Erro ao carregar resumos:', error)
+      setSummaries([]);
+      setLaunches([]);
     } finally {
       setIsLoading(false)
     }
@@ -144,36 +166,86 @@ export default function CongregationSummary() {
 //   }
 
   const handleCreateSummary = async () => {
-    try {
-      const response = await fetch('/api/congregation-summaries', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ ...editFormData, congregationId: selectedCongregation })
+    if (selectedCongregations.length === 0) {
+      toast.error("Atenção", {
+        description: (
+          <p className="space-y-1 text-gray-500">
+            {"Selecione pelo menos uma congregação para gerar o resumo."}
+          </p>
+        ),
       })
-
-      if (response.ok) {
-        fetchSummaries()
-        setIsCreateDialogOpen(false)
-        resetForm()
-      } else {
-        const error = await response.json()
-        alert(error.error || 'Erro ao criar resumo')
-      }
-    } catch (error) {
-      console.error('Erro ao criar resumo:', error)
-      alert('Erro ao criar resumo')
+      // alert("Selecione pelo menos uma congregação para gerar o resumo.")
+      return
     }
+
+    setIsLoading(true);
+    let successCount = 0;
+    let errorMessages: string[] = [];
+
+    for (const congregationId of selectedCongregations) {
+        try {
+            const response = await fetch('/api/congregation-summaries', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    ...editFormData, 
+                    congregationId, 
+                    startDate: editFormData.startDate, // Passa as datas dos filtros
+                    endDate: editFormData.endDate     // Passa as datas dos filtros
+                })
+            })
+
+            if (response.ok) {
+                successCount++;
+            } else {
+                const error = await response.json();
+                errorMessages.push(`Congregação ${congregations.find(c => c.id === congregationId)?.name}: ${error.error || 'Erro desconhecido'}`);
+            }
+        } catch (error) {
+            console.error(`Erro ao criar resumo para ${congregationId}:`, error);
+            errorMessages.push(`Congregação ${congregations.find(c => c.id === congregationId)?.name}: Falha na requisição.`);
+        }
+    }
+
+    // Feedback final
+    setIsLoading(false);
+    if (successCount > 0) {
+        toast.success("Sucesso!",{
+            description: (
+              <div className="space-y-1 text-gray-500">
+              {` ${successCount} resumo(s) criado(s) com sucesso.`}
+              </div>
+            ),
+        });
+        // alert(`${successCount} resumo(s) criado(s) com sucesso.`);
+        fetchSummaries(selectedCongregations);
+    }
+
+    if (errorMessages.length > 0) {
+        toast.error( "Atenção - Erros",{
+            description: (
+                <div className="space-y-1">
+                    <p>{`${errorMessages.length} resumo(s) falhou(falharam) ao ser(em) criado(s):`}</p>
+                    <ul className="list-disc ml-4">
+                        {errorMessages.map((msg, index) => <li key={index}>{msg}</li>)}
+                    </ul>
+                </div>
+            ),
+            duration: 8000,
+        });
+    }
+
+    setIsCreateDialogOpen(false)
+    // resetForm() // Não reseta o form, pois ele está sendo usado como filtro
   }
 
-  const handleEditSummary = (summary) => {
+  const handleEditSummary = (summary: Summary) => {
     setSelectedSummary(summary)
     setEditFormData({
       id: summary.id,
-      congregationsId: summary.congregationId,
-      startDate: new Date(summary.startDate),
-      endDate: new Date(summary.endDate),
+      congregationId: summary.congregationId, 
+      startDate: format(new Date(summary.startDate), 'yyyy-MM-dd'), 
+      endDate: format(new Date(summary.endDate), 'yyyy-MM-dd'),
       depositValue: (summary.depositValue ?? 0).toString(), 
       cashValue: (summary.cashValue ?? 0).toString(),
       status: summary.status,
@@ -184,18 +256,33 @@ export default function CongregationSummary() {
       titheTotal: (summary.titheTotal ?? 0).toString(), // Campo corrigido
       exitTotal: (summary.exitTotal ?? 0).toString(),   // Campo corrigido
       offerValue: summary.offerValue ?? 0,
-      votesValue: summary.voteValue ?? 0, // ⭐️ CORRIGIDO: nome da propriedade era 'voteValue'
+      votesValue: summary.votesValue ?? 0, 
       ebdValue: summary.ebdValue ?? 0,
       campaignValue: summary.campaignValue ?? 0,
       totalTithe: summary.totalTithe || 0,
       totalExit: summary.totalExit || 0
     })
+    setLaunches(summary.Launch || []) 
+   // launches.filter(launch => launch.summaryId === summary.id)
     setIsEditDialogOpen(true)
     setActiveTab('summaries')
-    // fetchLaunches(summary.id)
+    //fetchLaunches(summary.id)
   }
 
   const handleUpdateSummary = async () => {
+    // ⭐️ MUDANÇA 1: Validação de Saldo Geral ⭐️
+    if (Math.abs(saldoGeral - totalDepositadoEspecie) > 0.001) { // Tolerância de 1 centavo
+      toast.error("O Saldo Geral não confere!", {
+        description: (
+          <><p className="space-y-1 text-gray-500">
+            {`A soma de Depósito e Espécie (R$ ${totalDepositadoEspecie.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) deve ser igual ao Saldo Geral (R$ ${saldoGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}).`}
+          </p></>
+        ),
+      })
+      // alert(`O Saldo Geral não confere! A soma de Depósito e Espécie (R$ ${totalDepositadoEspecie.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) deve ser igual ao Saldo Geral (R$ ${saldoGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}).`)
+      return;
+    }
+    // ⭐️ FIM MUDANÇA 1 ⭐️
     try {
       const response = await fetch('/api/congregation-summaries', {
         method: 'PUT',
@@ -215,7 +302,14 @@ export default function CongregationSummary() {
 
       if (response.ok) {
         try {
-          fetchSummaries()
+          // fetchSummaries(selectedSummary?.congregationId || selectedCongregations)
+          if (selectedCongregations.length > 0) {
+              // Chama a função com o array de IDs atualmente selecionado
+              fetchSummaries(selectedCongregations);
+          } else if (selectedSummary?.congregationId) {
+              // Fallback: Se não houver seleção, recarrega apenas a congregação que acabou de ser editada
+              fetchSummaries([selectedSummary.congregationId]); 
+          }
           setIsEditDialogOpen(false)
         } catch (error) {
           console.error('Erro ao buscar resumos:', error)
@@ -244,7 +338,7 @@ export default function CongregationSummary() {
         })
 
         if (response.ok) {
-          fetchSummaries()
+          fetchSummaries(selectedCongregations)
         } else {
           const error = await response.json()
           alert(error.error || 'Erro ao excluir resumo')
@@ -256,13 +350,31 @@ export default function CongregationSummary() {
     }
   }
 
-  const resetForm = () => {
-    setEditFormData({
-      congregationId: '',
-      startDate: format(new Date(), 'yyyy-MM-dd'),
-      endDate: format(new Date(), 'yyyy-MM-dd')
-    })
+    // MUDANÇA: Lógica para gerenciar a seleção múltipla
+  const handleCongregationSelection = (id: string, isChecked: boolean) => {
+    if (isChecked) {
+      setSelectedCongregations(prev => [...prev, id])
+    } else {
+      setSelectedCongregations(prev => prev.filter(cId => cId !== id))
+    }
   }
+
+  // MUDANÇA: Lógica para Marcar/Desmarcar Todos
+  const handleSelectAll = (isChecked: boolean) => {
+    if (isChecked) {
+      setSelectedCongregations(congregations.map(c => c.id))
+    } else {
+      setSelectedCongregations([])
+    }
+  }
+
+  // const resetForm = () => {
+  //   setEditFormData({
+  //     congregationId: '',
+  //     startDate: format(new Date(), 'yyyy-MM-dd'),
+  //     endDate: format(new Date(), 'yyyy-MM-dd')
+  //   })
+  // }
 
   if (!session?.user?.canManageSummary) {
     return (
@@ -298,24 +410,35 @@ export default function CongregationSummary() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <Label htmlFor="congregation">Congregação</Label>
-                  <Select
-                    value={selectedCongregation}
-                    onValueChange={setSelectedCongregation}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {congregations.map((congregation) => (
-                        <SelectItem key={congregation.id} value={congregation.id}>
+                {/* MUDANÇA 2: Seleção Múltipla de Congregações */}
+                <div className="col-span-1 md:col-span-4 lg:col-span-1">
+                  <Label htmlFor="congregation">Congregação(ões)</Label>
+                  <div className="space-y-2 mt-2 border p-3 rounded-md max-h-40 overflow-y-auto">
+                    <div className="flex items-center space-x-2 pb-1 border-b">
+                      <Checkbox
+                        id="selectAllCongregations"
+                        checked={selectedCongregations.length === congregations.length && congregations.length > 0}
+                        onCheckedChange={(checked) => handleSelectAll(checked as boolean)}
+                      />
+                      <Label htmlFor="selectAllCongregations" className="font-semibold">
+                        Marcar/Desmarcar Todos
+                      </Label>
+                    </div>
+                    {congregations.map((congregation) => (
+                      <div key={congregation.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`congregation-${congregation.id}`}
+                          checked={selectedCongregations.includes(congregation.id)}
+                          onCheckedChange={(checked) => handleCongregationSelection(congregation.id, checked as boolean)}
+                        />
+                        <Label htmlFor={`congregation-${congregation.id}`}>
                           {congregation.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
+                {/* FIM MUDANÇA 2 */}
                 
                 <div>
                   <Label htmlFor="startDate">Data Início</Label>
@@ -336,8 +459,8 @@ export default function CongregationSummary() {
                     onChange={(e) => setEditFormData({ ...editFormData, endDate: e.target.value })}
                   />
                 </div>
-                
-                <div className="flex items-end">
+
+                <div className="flex items-start md:mt-3">
                   <Button onClick={handleCreateSummary} disabled={isLoading}>
                     {isLoading ? 'Listando...' : 'Gerar Resumo'}
                   </Button>
@@ -358,144 +481,163 @@ export default function CongregationSummary() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {summaries.length === 0 ? (
+             {summaries.length === 0 && !isLoading ? (
                 <div className="text-center py-8 text-gray-500">
                   Nenhum resumo encontrado para os filtros selecionados.
                 </div>
+              ) : isLoading ? (
+                <div className="text-center py-8 text-gray-500">
+                  Carregando resumos...
+                </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Período</TableHead>
-                      <TableHead>Entradas</TableHead>
-                      <TableHead>Dízimos</TableHead>
-                      <TableHead>Saídas</TableHead>
-                      <TableHead>Aprovações</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <>
+                  {/* MUDANÇA 3: Tabela para Desktop */}
+                  <div className="hidden md:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Período</TableHead>
+                          <TableHead>Outras Receitas</TableHead>
+                          <TableHead>Dízimos</TableHead>
+                          <TableHead>Saídas</TableHead>
+                          <TableHead>Aprovações</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {summaries.map((summary) => (
+                          <TableRow key={summary.id}>
+                            <TableCell>
+                              {format(new Date(summary.startDate), 'dd/MM/yyyy', { locale: ptBR })} - {' '}
+                              {format(new Date(summary.endDate), 'dd/MM/yyyy', { locale: ptBR })}
+                            </TableCell>
+                            <TableCell>R$ {(summary.entryTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                            <TableCell>R$ {(summary.titheTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                            <TableCell>R$ {(summary.exitTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                            <TableCell>
+                              <div className="space-y-1">
+                                <div className="flex items-center space-x-2">
+                                  <Checkbox checked={summary.treasurerApproved} disabled />
+                                  <span className="text-sm">Tesoureiro</span>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <Checkbox checked={summary.accountantApproved} disabled />
+                                  <span className="text-sm">Contador</span>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <Checkbox checked={summary.directorApproved} disabled />
+                                  <span className="text-sm">Dirigente</span>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={summary.status === 'APPROVED' ? 'default' : 'secondary'}>
+                                {summary.status === 'APPROVED' ? 'Aprovado' : 'Pendente'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex space-x-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEditSummary(summary)}
+                                >
+                                  Editar
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => handleDeleteSummary(summary.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* MUDANÇA 3: Cards para Mobile */}
+                  <div className="md:hidden space-y-4">
                     {summaries.map((summary) => (
-                      <TableRow key={summary.id}>
-                        <TableCell>
-                          {format(new Date(summary.date), 'dd/MM/yyyy', { locale: ptBR })}
-                        </TableCell>
-                        <TableCell>
-                          {format(new Date(summary.startDate), 'dd/MM/yyyy', { locale: ptBR })} - {' '}
-                          {format(new Date(summary.endDate), 'dd/MM/yyyy', { locale: ptBR })}
-                        </TableCell>
-                        <TableCell>R$ {(summary.entryTotal ?? 0.00).toFixed(2)}</TableCell>
-                        <TableCell>R$ {(summary.titheTotal ?? 0.00).toFixed(2)}</TableCell>
-                        <TableCell>R$ {(summary.exitTotal ?? 0.00).toFixed(2)}</TableCell>
-                        {/* <TableCell>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={editingSummary?.id === summary.id ? formData.depositAmount : summary.depositAmount || ''}
-                            onChange={(e) => {
-                              if (editingSummary?.id === summary.id) {
-                                handleInputChange(e)
-                              } else {
-                                // Atualizar diretamente no backend
-                                fetch(`/api/congregation-summaries`, {
-                                  method: 'PUT',
-                                  headers: {
-                                    'Content-Type': 'application/json'
-                                  },
-                                  body: JSON.stringify({
-                                    id: summary.id,
-                                    depositAmount: e.target.value ? parseFloat(e.target.value) : null
-                                  })
-                                }).then(() => fetchSummaries())
-                              }
-                            }}
-                            disabled={!editingSummary || editingSummary.id !== summary.id}
-                            className="w-24"
-                          />
-                        </TableCell> */}
-                        {/* <TableCell>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={editingSummary?.id === summary.id ? formData.cashAmount : summary.cashAmount || ''}
-                            onChange={(e) => {
-                              if (editingSummary?.id === summary.id) {
-                                handleInputChange(e)
-                              } else {
-                                // Atualizar diretamente no backend
-                                fetch(`/api/congregation-summaries`, {
-                                  method: 'PUT',
-                                  headers: {
-                                    'Content-Type': 'application/json'
-                                  },
-                                  body: JSON.stringify({
-                                    id: summary.id,
-                                    cashAmount: e.target.value ? parseFloat(e.target.value) : null
-                                  })
-                                }).then(() => fetchSummaries())
-                              }
-                            }}
-                            disabled={!editingSummary || editingSummary.id !== summary.id}
-                            className="w-24"
-                          />
-                        </TableCell> */}
-                        <TableCell>
-                          <div className="space-y-1">
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
-                                checked={summary.treasurerApproved}
-                                onCheckedChange={() => handleApprove(summary.id, 'treasurerApproved')}
-                                disabled
-                              />
-                              <span className="text-sm">Tesoureiro</span>
+                      <Card key={summary.id} className="border-l-4">
+                        <CardHeader className="py-3">
+                          <CardTitle className="text-base flex justify-between items-center">
+                              {/* Nome da Congregação (assumindo que você adicione esta informação ao tipo Summary) */}
+                              <span className="text-gray-700 font-semibold">
+                                  {congregations.find(c => c.id === selectedCongregations[0])?.name || "Resumo"}
+                              </span>
+                              <Badge variant={summary.status === 'APPROVED' ? 'default' : 'secondary'}>
+                                  {summary.status === 'APPROVED' ? 'Aprovado' : 'Pendente'}
+                              </Badge>
+                          </CardTitle>
+                          <CardDescription className="text-sm">
+                            {format(new Date(summary.startDate), 'dd/MM/yyyy', { locale: ptBR })} - {' '}
+                            {format(new Date(summary.endDate), 'dd/MM/yyyy', { locale: ptBR })}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-2 text-sm">
+                            <div className="flex justify-between border-t pt-2">
+                                <span>Outras Receitas:</span>
+                                <span className="font-medium text-blue-600">
+                                    R$ {(summary.entryTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
                             </div>
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
-                                checked={summary.accountantApproved}
-                                onCheckedChange={() => handleApprove(summary.id, 'accountantApproved')}
-                                disabled
-                              />
-                              <span className="text-sm">Contador</span>
+                            <div className="flex justify-between">
+                                <span>Dízimos:</span>
+                                <span className="font-medium text-green-600">
+                                    R$ {(summary.titheTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
                             </div>
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
-                                checked={summary.directorApproved}
-                                onCheckedChange={() => handleApprove(summary.id, 'directorApproved')}
-                                disabled
-                              />
-                              <span className="text-sm">Dirigente</span>
+                            <div className="flex justify-between">
+                                <span>Saídas:</span>
+                                <span className="font-medium text-red-600">
+                                    R$ {(summary.exitTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={summary.status === 'APPROVED' ? 'default' : 'secondary'}>
-                            {summary.status === 'APPROVED' ? 'Aprovado' : 'Pendente'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEditSummary(summary)}
-                            >
-                              Editar
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDeleteSummary(summary.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
+                            
+                            <div className="pt-2 border-t">
+                                <h4 className="font-medium mb-1">Aprovações:</h4>
+                                <div className="grid grid-cols-3 gap-2 text-xs">
+                                    <Badge variant={summary.treasurerApproved ? 'default' : 'secondary'} className="justify-center">
+                                        {summary.treasurerApproved ? <Check className='h-3 w-3 mr-1' /> : ''} Tesoureiro
+                                    </Badge>
+                                    <Badge variant={summary.accountantApproved ? 'default' : 'secondary'} className="justify-center">
+                                        {summary.accountantApproved ? <Check className='h-3 w-3 mr-1' /> : ''} Contador
+                                    </Badge>
+                                    <Badge variant={summary.directorApproved ? 'default' : 'secondary'} className="justify-center">
+                                        {summary.directorApproved ? <Check className='h-3 w-3 mr-1' /> : ''} Dirigente
+                                    </Badge>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-between space-x-2 pt-3 border-t">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditSummary(summary)}
+                                // className="w-full"
+                              >
+                              <Edit className="h-4 w-4 mr-1" /> Editar
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleDeleteSummary(summary.id)}
+                                // className="w-full"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" /> Excluir
+                              </Button>
+                            </div>
+                        </CardContent>
+                      </Card>
                     ))}
-                  </TableBody>
-                </Table>
+                  </div>
+                  {/* FIM MUDANÇA 3 */}
+                </>
               )}
             </CardContent>
           </Card>
@@ -530,35 +672,41 @@ export default function CongregationSummary() {
                           <h4 className="font-medium mb-2">Totais</h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div className="flex flex-col gap-4">
-                                  {/* 1. CARD DE ENTRADAS (DETALHADO) */}
+                                  {/* 1. CARD DE OUTRAS RECEITAS (DETALHADO) */}
                                   <div className="bg-blue-50 p-3 rounded-lg">
-                                      <h5 className="font-medium text-blue-700">Entradas</h5>
+                                      <h5 className="font-medium text-blue-700">Outras Receitas</h5>
                                       <div className="text-sm space-y-1">
                                           {/* Detalhes com Título à Esquerda e Valor à Direita */}
                                           <div className="flex justify-between">
                                               <span>Oferta:</span>
-                                              <span className="font-semibold">
-                                                  R$ {Number(editFormData.offerValue ?? 0).toFixed(2)}
+                                              <span>
+                                                  R$ {Number(editFormData.offerValue ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                               </span>
                                           </div>
                                           <div className="flex justify-between">
                                               <span>Votos:</span>
-                                              <span className="font-semibold">
-                                                  R$ {Number(editFormData.votesValue ?? 0).toFixed(2)}
+                                              <span>
+                                                  R$ {Number(editFormData.votesValue ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                               </span>
                                           </div>
                                           <div className="flex justify-between">
                                               <span>EBD:</span>
-                                              <span className="font-semibold">
-                                                  R$ {Number(editFormData.ebdValue ?? 0).toFixed(2)}
+                                              <span>
+                                                  R$ {Number(editFormData.ebdValue ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                               </span>
                                           </div>
                                           <div className="flex justify-between">
                                               <span>Campanha:</span>
-                                              <span className="font-semibold">
-                                                  R$ {Number(editFormData.campaignValue ?? 0).toFixed(2)}
+                                              <span>
+                                                  R$ {Number(editFormData.campaignValue ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                               </span>
                                           </div>
+                                          <div className="flex justify-between font-semibold">
+                                              <span>Total:</span>
+                                              <span className="font-semibold">
+                                                  R$ {Number(editFormData.entryTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                              </span>
+                                          </div>                                          
                                       </div>
                                   </div>
                                   
@@ -566,17 +714,17 @@ export default function CongregationSummary() {
                                   <div className="bg-green-50 p-3 rounded-lg flex justify-between items-center">
                                       <h5 className="font-medium text-green-700">Dízimos</h5>
                                       <div className="text-md font-semibold flex justify-end">
-                                          R$ {Number(editFormData.titheTotal).toFixed(2)}
+                                          R$ {Number(editFormData.titheTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                       </div>
                                   </div>
 
                                   {/* ⭐️ NOVO: CARD TOTAL DE ENTRADAS (Entrada + Dízimo) ⭐️ */}
                                   <div className="bg-blue-100 p-3 rounded-lg border-2 border-blue-300">
                                       <div className="flex justify-between items-center">
-                                          <h5 className="font-bold text-blue-800">Tot Entradas</h5>
+                                          <h5 className="font-bold text-blue-800">Total Entradas</h5>
                                           <div className="text-md font-extrabold text-blue-800">
                                               {/* Calcula Entradas (entryTotal) + Dízimo (titheTotal) */}
-                                              R$ {(Number(editFormData.entryTotal) + Number(editFormData.titheTotal)).toFixed(2)}
+                                              R$ {(Number(editFormData.entryTotal) + Number(editFormData.titheTotal)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                           </div>
                                       </div>
                                   </div>
@@ -586,10 +734,10 @@ export default function CongregationSummary() {
                               <div className="flex flex-col gap-4">
                                   
                                   {/* 3. CARD TOTAL DE SAÍDAS */}
-                                  <div className="bg-red-50 p-3 *:rounded-lg flex justify-between items-center md:mb-39">
+                                  <div className="bg-red-50 p-3 *:rounded-lg flex justify-between items-center md:mb-45">
                                       <h5 className="font-medium text-red-700">Saídas</h5>
                                       <div className="text-md font-semibold ">
-                                          R$ {Number(editFormData.exitTotal).toFixed(2)}
+                                          R$ {Number(editFormData.exitTotal).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                       </div>
                                   </div>
 
@@ -602,7 +750,7 @@ export default function CongregationSummary() {
                                               {/* Calcula (Entrada + Dízimo) - Saída */}
                                               R$ {(
                                                   (Number(editFormData.entryTotal) + Number(editFormData.titheTotal)) - Number(editFormData.exitTotal)
-                                              ).toFixed(2)}
+                                              ).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                           </div>
                                       </div>
                                   </div>
@@ -676,7 +824,7 @@ export default function CongregationSummary() {
                               <h5 className="font-medium text-yellow-700">Total Depósito + Espécie</h5>
                               <div className="text-lg font-semibold text-yellow-800">
                                   {/* Calcula Depósito (depositValue) + Espécie (cashValue) */}
-                                  R$ {(Number(editFormData.depositValue) + Number(editFormData.cashValue)).toFixed(2)}
+                                  R$ {(Number(editFormData.depositValue) + Number(editFormData.cashValue)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </div>
                           </div>
                       </div>
@@ -745,7 +893,7 @@ export default function CongregationSummary() {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        launches.map((launch) => (
+                         launches.map((launch) => (
                           <TableRow key={launch.id}>
                             <TableCell>
                               {format(new Date(launch.date), 'dd/MM/yyyy', { locale: ptBR })}
@@ -761,7 +909,7 @@ export default function CongregationSummary() {
                           </TableCell>
                             <TableCell>
                               R$ {(
-                                (launch.offerValue || launch.votesValue || launch.ebdValue || launch.campaignValue || launch.value) || 0
+                                (launch.offerValue + launch.votesValue + launch.ebdValue + launch.campaignValue + launch.value) || 0
                               ).toFixed(2)}
                             </TableCell>
                             <TableCell>

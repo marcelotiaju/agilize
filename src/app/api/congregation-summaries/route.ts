@@ -12,52 +12,62 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url)
-    const congregationId = searchParams.get('congregationId')
+    const congregationIdsString = searchParams.get('congregationIds') 
 
-    if (!congregationId) {
+    if (!congregationIdsString) {
       return NextResponse.json({ error: "ID da congregação é obrigatório" }, { status: 400 })
+    }
+
+    // Converte a string 'id1,id2,id3' em um array ['id1', 'id2', 'id3']
+    const congregationIds = congregationIdsString.split(',').filter(id => id.trim() !== '');
+
+    if (congregationIds.length === 0) {
+       return NextResponse.json({ error: "IDs das congregações são obrigatórios" }, { status: 400 })
     }
 
     const summaryDateStart = new Date(`${searchParams.get('startDate')}T12:00:00Z`)
     summaryDateStart.setHours(0, 0, 0, 0)
 
+    const summaryDateEnd = new Date(`${searchParams.get('endDate')}T12:00:00Z`)
+    summaryDateEnd.setHours(0, 0, 0, 0)
+
     const summaryId = searchParams.get('summaryId')
  
 
     // Verificar se o usuário tem acesso à congregação
-    const userCongregation = await prisma.userCongregation.findFirst({
+    const userCongregations = await prisma.userCongregation.findMany({
       where: {
         userId: session.user.id,
-        congregationId
+        congregationId: {
+          in: congregationIds // Verifica se o usuário tem acesso a qualquer uma das congregações na lista
+        }
       }
     })
 
-    if (!userCongregation) {
-      return NextResponse.json({ error: "Acesso não autorizado a esta congregação" }, { status: 403 })
+    if (userCongregations.length === 0) {
+      return NextResponse.json({ error: "Acesso não autorizado a estas congregações" }, { status: 403 })
     }
 
-    // Buscar lançamentos do resumo
-    const launches = await prisma.launch.findMany({
-      where: {
-        congregationId,
-        summaryId: summaryId
-      },
-      orderBy: {
-        date: 'asc'
-      }
-    })
-
     const summaries = await prisma.congregationSummary.findMany({
-      where: { congregationId: congregationId },
+      where: {
+        id: summaryId || undefined, // Se summaryId existe, filtra por ID, senão ignora
+        congregationId: {
+          in: congregationIds // Filtra por qualquer ID dentro da lista
+        },
+        startDate: summaryId ? undefined : summaryDateStart, // Filtra por data apenas se não for buscar um único resumo por ID
+        endDate: summaryId ? undefined : summaryDateEnd
+      },
       include: {
-        Launch: true
+        // Incluir relacionamentos necessários (como lançamentos, se necessário)
+        Launch: true, // Ou o nome correto do relacionamento que traz os lançamentos
+        congregation: true // Para poder mostrar o nome da congregação
       },
       orderBy: {
         startDate: 'desc'
       }
     })
-
-    return NextResponse.json({summaries, launches})
+console.log('Resumos encontrados:', summaries)
+    return NextResponse.json({summaries})
   } catch (error) {
     console.error("Erro ao buscar resumos:", error)
     return NextResponse.json({ error: "Erro ao buscar resumos" }, { status: 500 })
@@ -86,6 +96,14 @@ export async function POST(request: NextRequest) {
 
     if (!congregationId || !startDate || !endDate) {
       return NextResponse.json({ error: "Dados incompletos" }, { status: 400 })
+    }
+
+    // ⭐️ NOVO: Validação de Data Futura ⭐️
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Zera hora para comparação de apenas data
+
+    if (summaryDateStart > today || summaryDateEnd > today) {
+        return NextResponse.json({ error: "A data do resumo não pode ser futura." }, { status: 400 });
     }
 
     // Verificar se o usuário tem acesso à congregação
@@ -118,6 +136,11 @@ export async function POST(request: NextRequest) {
         date: 'asc'
       }
     })
+
+    // ⭐️ NOVO: Validação de Resumo Zerado (sem lançamentos) ⭐️
+    if (launches.length === 0) {
+        return NextResponse.json({ error: "Não há lançamentos no período para criar um resumo." }, { status: 400 });
+    }
 
      // Calcular resumo de entradas
     const entradaSummary = {
@@ -264,12 +287,16 @@ export async function PUT(request: NextRequest) {
       status,
     } = body
 
+    if (!id) {
+      return NextResponse.json({ error: "ID do resumo é obrigatório para atualização" }, { status: 400 })
+    }
+    
     //console.log('Atualizando resumo:', body)
     const summary = await prisma.congregationSummary.findUnique({
       where: { id },
       include: { Launch: true }
     })
-console.log('Resumo encontrado:', summary)
+
     if (!summary) {
       return NextResponse.json({ error: "Resumo não encontrado" }, { status: 404 })
     }
@@ -312,8 +339,8 @@ console.log('Resumo encontrado:', summary)
     const updatedSummary = await prisma.congregationSummary.update({
       where: { id },
       data: {
-        depositValue: depositValue !== undefined ? depositValue : summary.depositValue,
-        cashValue: cashValue !== undefined ? cashValue : summary.cashValue,
+        depositValue: depositValue !== undefined ? parseFloat(depositValue) : summary.depositValue,
+        cashValue: cashValue !== undefined ? parseFloat(cashValue) : summary.cashValue,
         treasurerApproved: treasurerApproved,
         accountantApproved: accountantApproved,
         directorApproved: directorApproved,

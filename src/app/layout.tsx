@@ -4,6 +4,7 @@ import "./globals.css"
 import { Providers } from "@/components/providers"
 import { PermissionGuard } from '@/components/auth/PermissionGuard'
 import { AuthRedirector } from "@/components/auth/AuthRedirector";
+import { Toaster } from "../components/ui/sonner"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -20,10 +21,11 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={inter.className}>
-        <Providers>    
+        <Providers>
           <AuthRedirector />
           {children}
         </Providers>
+        <Toaster />
       </body>
     </html>
   )
