@@ -224,7 +224,7 @@ export default function CongregationSummary() {
     if (errorMessages.length > 0) {
         toast.error( "Atenção - Erros",{
             description: (
-                <div className="space-y-1">
+                <div className="space-y-1  text-gray-500">
                     <p>{`${errorMessages.length} resumo(s) falhou(falharam) ao ser(em) criado(s):`}</p>
                     <ul className="list-disc ml-4">
                         {errorMessages.map((msg, index) => <li key={index}>{msg}</li>)}
