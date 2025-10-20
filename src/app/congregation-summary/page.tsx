@@ -18,7 +18,7 @@ import { id, ptBR } from 'date-fns/locale'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { totalmem } from 'os'
 import { NumericFormat } from 'react-number-format';
-import { toast } from "sonner"
+//import { toast } from "sonner"
 
 // Definindo o tipo de Congregação para usar no estado
 type Congregation = {
@@ -167,14 +167,14 @@ export default function CongregationSummary() {
 
   const handleCreateSummary = async () => {
     if (selectedCongregations.length === 0) {
-      toast.error("Atenção", {
-        description: (
-          <p className="space-y-1 text-gray-500">
-            {"Selecione pelo menos uma congregação para gerar o resumo."}
-          </p>
-        ),
-      })
-      // alert("Selecione pelo menos uma congregação para gerar o resumo.")
+//      toast.error("Atenção", {
+//        description: (
+//          <p className="space-y-1 text-gray-500">
+//            {"Selecione pelo menos uma congregação para gerar o resumo."}
+//          </p>
+//        ),
+//      })
+      alert("Selecione pelo menos uma congregação para gerar o resumo.")
       return
     }
 
@@ -210,29 +210,30 @@ export default function CongregationSummary() {
     // Feedback final
     setIsLoading(false);
     if (successCount > 0) {
-        toast.success("Sucesso!",{
-            description: (
-              <div className="space-y-1 text-gray-500">
-              {` ${successCount} resumo(s) criado(s) com sucesso.`}
-              </div>
-            ),
-        });
-        // alert(`${successCount} resumo(s) criado(s) com sucesso.`);
+    //    toast.success("Sucesso!",{
+    //        description: (
+    //          <div className="space-y-1 text-gray-500">
+    //          {` ${successCount} resumo(s) criado(s) com sucesso.`}
+    //          </div>
+    //        ),
+    //    });
+         alert(`${successCount} resumo(s) criado(s) com sucesso.`);
         fetchSummaries(selectedCongregations);
     }
 
     if (errorMessages.length > 0) {
-        toast.error( "Atenção - Erros",{
-            description: (
-                <div className="space-y-1  text-gray-500">
-                    <p>{`${errorMessages.length} resumo(s) falhou(falharam) ao ser(em) criado(s):`}</p>
-                    <ul className="list-disc ml-4">
-                        {errorMessages.map((msg, index) => <li key={index}>{msg}</li>)}
-                    </ul>
-                </div>
-            ),
-            duration: 8000,
-        });
+    //    toast.error( "Atenção - Erros",{
+    //        description: (
+    //            <div className="space-y-1  text-gray-500">
+    //                <p>{`${errorMessages.length} resumo(s) falhou(falharam) ao ser(em) criado(s):`}</p>
+    //                <ul className="list-disc ml-4">
+    //                    {errorMessages.map((msg, index) => <li key={index}>{msg}</li>)}
+    //                </ul>
+    //            </div>
+    //        ),
+    //        duration: 8000,
+    //    });
+	alert(`${errorMessages.length} resumo(s) falhou(falharam) ao ser(em) criado)s):`);
     }
 
     setIsCreateDialogOpen(false)
@@ -272,14 +273,14 @@ export default function CongregationSummary() {
   const handleUpdateSummary = async () => {
     // ⭐️ MUDANÇA 1: Validação de Saldo Geral ⭐️
     if (Math.abs(saldoGeral - totalDepositadoEspecie) > 0.001) { // Tolerância de 1 centavo
-      toast.error("O Saldo Geral não confere!", {
-        description: (
-          <><p className="space-y-1 text-gray-500">
-            {`A soma de Depósito e Espécie (R$ ${totalDepositadoEspecie.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) deve ser igual ao Saldo Geral (R$ ${saldoGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}).`}
-          </p></>
-        ),
-      })
-      // alert(`O Saldo Geral não confere! A soma de Depósito e Espécie (R$ ${totalDepositadoEspecie.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) deve ser igual ao Saldo Geral (R$ ${saldoGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}).`)
+    //  toast.error("O Saldo Geral não confere!", {
+    //    description: (
+    //      <><p className="space-y-1 text-gray-500">
+    //        {`A soma de Depósito e Espécie (R$ ${totalDepositadoEspecie.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) deve ser igual ao Saldo Geral (R$ ${saldoGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}).`}
+    //      </p></>
+    //    ),
+    //  })
+       alert(`O Saldo Geral não confere! A soma de Depósito e Espécie (R$ ${totalDepositadoEspecie.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) deve ser igual ao Saldo Geral (R$ ${saldoGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}).`)
       return;
     }
     // ⭐️ FIM MUDANÇA 1 ⭐️

@@ -112,10 +112,10 @@ export default function Launches() {
     description: '',
     contributorId: '',
     contributorName: '',
-    isContributorRegistered: true,
+    isContributorRegistered: false,
     supplierId: '',
     supplierName: '',
-    isSupplierRegistered: true,
+    isSupplierRegistered: false,
     classificationId: '',
   })
 
@@ -475,10 +475,10 @@ export default function Launches() {
       description: '',
       contributorId: '',
       contributorName: '',
-      isContributorRegistered: true,
+      isContributorRegistered: false,
       supplierId: '',
       supplierName: '',
-      isSupplierRegistered: true,
+      isSupplierRegistered: false,
       classificationId: '',
     })
     setError(null)
