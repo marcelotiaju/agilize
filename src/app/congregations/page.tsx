@@ -421,7 +421,7 @@ export default function Congregations() {
                           </div>
                       </TabsContent>
                       <TabsContent value="saida" className="space-y-4 mt-4">
-                          <div>
+                          {/*<div>
                               <Label htmlFor="saidaAccountPlan">Plano de Contas</Label>
                               <Input
                                   id="saidaAccountPlan"
@@ -430,7 +430,7 @@ export default function Congregations() {
                                   onChange={handleInputChange}
                                   placeholder=""
                               />
-                          </div>
+                          </div>*/}
                           <div>
                               <Label htmlFor="saidaFinancialEntity">Entidade Financeira</Label>
                               <Input
@@ -564,7 +564,7 @@ export default function Congregations() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
+              <Table className="min-w-full">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Código</TableHead>

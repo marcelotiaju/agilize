@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
         "Numero do Documento": launch.talonNumber,
         "Data de Emissao": formatDate(launch.date),
         "Data de Vencimento": "",
-        "Codigo da Conta a Pagar": "",
+        //"Codigo da Conta a Pagar": "",
         "Codigo do Caixa": launch.type === "ENTRADA" ? launch.congregation?.entradaFinancialEntity : launch.type === "DIZIMO" ? launch.congregation?.dizimoFinancialEntity : launch.type === "SAIDA" ? launch.congregation?.saidaFinancialEntity : "",
         "Código da Congregação": launch.congregation.code,
         "Codigo da Forma de Pagamento": launch.type === "ENTRADA" ? launch.congregation?.entradaPaymentMethod : launch.type === "DIZIMO" ? launch.congregation?.dizimoPaymentMethod : launch.type === "SAIDA" ? launch.congregation?.saidaPaymentMethod : "",

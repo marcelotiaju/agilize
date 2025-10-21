@@ -83,7 +83,7 @@ export function SearchableSelect({
           <Search className="ml-auto h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{label}</DialogTitle>
           <div className="relative mt-4">
