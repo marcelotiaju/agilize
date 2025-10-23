@@ -59,7 +59,7 @@ export default function SignInForm() {
   return (
     <Card>
       <CardHeader>
-        <Image
+        <Image loading="lazy"
           src="/images/Logo.png" // Caminho relativo a partir da pasta `public`
           alt="Logo do Agilize"
           width={400} // Largura da imagem
