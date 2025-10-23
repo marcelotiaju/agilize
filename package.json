@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "NODE_OPTIONS=--max-old-space-size=6144 next build",
+    "build": "cross-env NODE_OPTIONS=--max-old-space-size=8192 next build",
     "start": "next start",
     "seed": "tsx prisma/seed.ts",
     "pm2": "pm2 start npm --name 'agilize' -- start"
@@ -46,6 +46,7 @@
     "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "cross-env": "^10.1.0",
     "prisma": "^6.17.1",
     "tailwindcss": "^4",
     "tsx": "^4.20.6",

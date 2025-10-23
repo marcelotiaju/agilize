@@ -48,6 +48,11 @@
   resolved "https://registry.npmmirror.com/@date-fns/tz/-/tz-1.4.1.tgz"
   integrity sha512-P5LUNhtbj6YfI3iJjw5EL9eUAG6OitD0W3fWQcpQjDRc/QIsL0tRNuO1PcDvPccWL1fSTXXdE1ds+l95DV/OFA==
 
+"@epic-web/invariant@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.npmmirror.com/@epic-web/invariant/-/invariant-1.0.0.tgz"
+  integrity sha512-lrTPqgvfFQtR/eY/qkIzp98OGdNJu0m5ji3q/nJI8v3SXkRKEnWiOxMmbvcSoAIzv/cGiuvRy57k4suKQSAdwA==
+
 "@esbuild/linux-x64@0.25.10":
   version "0.25.10"
   resolved "https://registry.npmmirror.com/@esbuild/linux-x64/-/linux-x64-0.25.10.tgz"
@@ -95,12 +100,24 @@
   resolved "https://registry.npmmirror.com/@img/sharp-libvips-linux-x64/-/sharp-libvips-linux-x64-1.2.3.tgz"
   integrity sha512-3JU7LmR85K6bBiRzSUc/Ff9JBVIFVvq6bomKE0e63UXGeRw2HPVEjoJke1Yx+iU4rL7/7kUjES4dZ/81Qjhyxg==
 
+"@img/sharp-libvips-linuxmusl-x64@1.2.3":
+  version "1.2.3"
+  resolved "https://registry.npmmirror.com/@img/sharp-libvips-linuxmusl-x64/-/sharp-libvips-linuxmusl-x64-1.2.3.tgz"
+  integrity sha512-U5PUY5jbc45ANM6tSJpsgqmBF/VsL6LnxJmIf11kB7J5DctHgqm0SkuXzVWtIY90GnJxKnC/JT251TDnk1fu/g==
+
 "@img/sharp-linux-x64@0.34.4":
   version "0.34.4"
   resolved "https://registry.npmmirror.com/@img/sharp-linux-x64/-/sharp-linux-x64-0.34.4.tgz"
   integrity sha512-ZfGtcp2xS51iG79c6Vhw9CWqQC8l2Ot8dygxoDoIQPTat/Ov3qAa8qpxSrtAEAJW+UjTXc4yxCjNfxm4h6Xm2A==
   optionalDependencies:
     "@img/sharp-libvips-linux-x64" "1.2.3"
+
+"@img/sharp-linuxmusl-x64@0.34.4":
+  version "0.34.4"
+  resolved "https://registry.npmmirror.com/@img/sharp-linuxmusl-x64/-/sharp-linuxmusl-x64-0.34.4.tgz"
+  integrity sha512-lU0aA5L8QTlfKjpDCEFOZsTYGn3AEiO6db8W5aQDxj0nQkVrZWmN3ZP9sYKWJdtq3PWPhUNlqehWyXpYDcI9Sg==
+  optionalDependencies:
+    "@img/sharp-libvips-linuxmusl-x64" "1.2.3"
 
 "@isaacs/fs-minipass@^4.0.0":
   version "4.0.1"
@@ -152,6 +169,11 @@
   version "15.5.6"
   resolved "https://registry.npmmirror.com/@next/swc-linux-x64-gnu/-/swc-linux-x64-gnu-15.5.6.tgz"
   integrity sha512-3QnHGFWlnvAgyxFxt2Ny8PTpXtQD7kVEeaFat5oPAHHI192WKYB+VIKZijtHLGdBBvc16tiAkPTDmQNOQ0dyrA==
+
+"@next/swc-linux-x64-musl@15.5.6":
+  version "15.5.6"
+  resolved "https://registry.npmmirror.com/@next/swc-linux-x64-musl/-/swc-linux-x64-musl-15.5.6.tgz"
+  integrity sha512-OsGX148sL+TqMK9YFaPFPoIaJKbFJJxFzkXZljIgA9hjMjdruKht6xDCEv1HLtlLNfkx3c5w2GLKhj7veBQizQ==
 
 "@npmcli/fs@^1.0.0":
   version "1.1.1"
@@ -605,6 +627,11 @@
   resolved "https://registry.npmmirror.com/@tailwindcss/oxide-linux-x64-gnu/-/oxide-linux-x64-gnu-4.1.14.tgz"
   integrity sha512-02c6JhLPJj10L2caH4U0zF8Hji4dOeahmuMl23stk0MU1wfd1OraE7rOloidSF8W5JTHkFdVo/O7uRUJJnUAJg==
 
+"@tailwindcss/oxide-linux-x64-musl@4.1.14":
+  version "4.1.14"
+  resolved "https://registry.npmmirror.com/@tailwindcss/oxide-linux-x64-musl/-/oxide-linux-x64-musl-4.1.14.tgz"
+  integrity sha512-TNGeLiN1XS66kQhxHG/7wMeQDOoL0S33x9BgmydbrWAb9Qw0KYdd8o1ifx4HOGDWhVmJ+Ul+JQ7lyknQFilO3Q==
+
 "@tailwindcss/oxide@4.1.14":
   version "4.1.14"
   resolved "https://registry.npmmirror.com/@tailwindcss/oxide/-/oxide-4.1.14.tgz"
@@ -1004,6 +1031,23 @@ crc-32@~1.2.0, crc-32@~1.2.1:
   version "1.2.2"
   resolved "https://registry.npmmirror.com/crc-32/-/crc-32-1.2.2.tgz"
   integrity sha512-ROmzCKrTnOwybPcJApAA6WBWij23HVfGVNKqqrZpuyZOHqK2CwHSvpGuyt/UNNvaIjEd8X5IFGp4Mh+Ie1IHJQ==
+
+cross-env@^10.1.0:
+  version "10.1.0"
+  resolved "https://registry.npmmirror.com/cross-env/-/cross-env-10.1.0.tgz"
+  integrity sha512-GsYosgnACZTADcmEyJctkJIoqAhHjttw7RsFrVoJNXbsWWqaq6Ym+7kZjq6mS45O0jij6vtiReppKQEtqWy6Dw==
+  dependencies:
+    "@epic-web/invariant" "^1.0.0"
+    cross-spawn "^7.0.6"
+
+cross-spawn@^7.0.6:
+  version "7.0.6"
+  resolved "https://registry.npmmirror.com/cross-spawn/-/cross-spawn-7.0.6.tgz"
+  integrity sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==
+  dependencies:
+    path-key "^3.1.0"
+    shebang-command "^2.0.0"
+    which "^2.0.1"
 
 csstype@^3.0.2:
   version "3.1.3"
@@ -1520,6 +1564,11 @@ lightningcss-linux-x64-gnu@1.30.1:
   resolved "https://registry.npmmirror.com/lightningcss-linux-x64-gnu/-/lightningcss-linux-x64-gnu-1.30.1.tgz"
   integrity sha512-piWx3z4wN8J8z3+O5kO74+yr6ze/dKmPnI7vLqfSqI8bccaTGY5xiSGVIJBDd5K5BHlvVLpUB3S2YCfelyJ1bw==
 
+lightningcss-linux-x64-musl@1.30.1:
+  version "1.30.1"
+  resolved "https://registry.npmmirror.com/lightningcss-linux-x64-musl/-/lightningcss-linux-x64-musl-1.30.1.tgz"
+  integrity sha512-rRomAK7eIkL+tHY0YPxbc5Dra2gXlI63HL+v1Pdi1a3sC+tJTcFrHX+E86sulgAXeI7rSzDYhPSeHHjqFhqfeQ==
+
 lightningcss@1.30.1:
   version "1.30.1"
   resolved "https://registry.npmmirror.com/lightningcss/-/lightningcss-1.30.1.tgz"
@@ -1908,6 +1957,11 @@ path-is-absolute@^1.0.0:
   resolved "https://registry.npmmirror.com/path-is-absolute/-/path-is-absolute-1.0.1.tgz"
   integrity sha512-AVbw3UJ2e9bq64vSaS9Am0fje1Pa8pbGqTTsmXfaIiMpnr5DlDhfJOuLj9Sf95ZPVDAUerDfEk88MPmPe7UCQg==
 
+path-key@^3.1.0:
+  version "3.1.1"
+  resolved "https://registry.npmmirror.com/path-key/-/path-key-3.1.1.tgz"
+  integrity sha512-ojmeN0qd+y0jszEtoY48r0Peq5dwMEkIlCOu6Q5f41lfkswXuKtYrhgoTpLnyIcHm24Uhqx+5Tqm2InSwLhE6Q==
+
 pathe@^2.0.3:
   version "2.0.3"
   resolved "https://registry.npmmirror.com/pathe/-/pathe-2.0.3.tgz"
@@ -2233,6 +2287,18 @@ sharp@^0.34.3:
     "@img/sharp-win32-ia32" "0.34.4"
     "@img/sharp-win32-x64" "0.34.4"
 
+shebang-command@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.npmmirror.com/shebang-command/-/shebang-command-2.0.0.tgz"
+  integrity sha512-kHxr2zZpYtdmrN1qDjrrX/Z1rR1kG8Dx+gkpK1G4eXmvXswmcE1hTWBWYUzlraYw1/yZp6YuDY77YtvbN0dmDA==
+  dependencies:
+    shebang-regex "^3.0.0"
+
+shebang-regex@^3.0.0:
+  version "3.0.0"
+  resolved "https://registry.npmmirror.com/shebang-regex/-/shebang-regex-3.0.0.tgz"
+  integrity sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==
+
 signal-exit@^3.0.7:
   version "3.0.7"
   resolved "https://registry.npmmirror.com/signal-exit/-/signal-exit-3.0.7.tgz"
@@ -2534,7 +2600,7 @@ victory-vendor@^37.0.2:
     d3-time "^3.0.0"
     d3-timer "^3.0.1"
 
-which@^2.0.2:
+which@^2.0.1, which@^2.0.2:
   version "2.0.2"
   resolved "https://registry.npmmirror.com/which/-/which-2.0.2.tgz"
   integrity sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA==
