@@ -53,8 +53,9 @@ export async function POST(request: NextRequest) {
       }
 
       const [usulogin,usunome,senha,email,celular,dtvalidadeinicio,dtvalidadefim,diashistorico,Paginainicial,
-            Lancar_entrada,Lancar_dizimo,Lancar_saida,Aprovar_entrada,Aprovar_dizimo,Aprovar_saida,Cadastro_incluir,
-            Cadastro_Edita,Cadastro_Excluir,Dados_Exportacao,Dados_Exclusao] = columns
+            Lancar_entrada,Lancar_dizimo,Lancar_saida,Aprovar_entrada,Aprovar_dizimo,Aprovar_saida,
+            Lancar_missao,Lancar_circulo,Aprovar_missao,Aprovar_circulo,
+            Cadastro_incluir,Cadastro_Edita,Cadastro_Excluir,Dados_Exportacao,Dados_Exclusao] = columns
 
       if (!usulogin || !usunome || !email || !dtvalidadeinicio || !dtvalidadefim) {
         errors.push(`Linha ${i + 2}: nome,email,cpf,validade_inicio,validade_fim são obrigatórios`)
@@ -95,6 +96,10 @@ export async function POST(request: NextRequest) {
             canLaunchEntry: stringToBoolean(Lancar_entrada),
             canLaunchTithe: stringToBoolean(Lancar_dizimo),
             canLaunchExpense: stringToBoolean(Lancar_saida),
+            canLaunchMission: stringToBoolean(Lancar_missao),
+            canLaunchCircle: stringToBoolean(Lancar_circulo),
+            canApproveMission: stringToBoolean(Aprovar_missao),
+            canApproveCircle: stringToBoolean(Aprovar_circulo),
             canApproveEntry: stringToBoolean(Aprovar_entrada),
             canApproveTithe: stringToBoolean(Aprovar_dizimo),
             canApproveExpense: stringToBoolean(Aprovar_saida),

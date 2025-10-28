@@ -23,9 +23,18 @@ interface Congregation {
   name: string
   regionalName?: string
   createdAt: string
-  entradaAccountPlan?: string
-  entradaFinancialEntity?: string
-  entradaPaymentMethod?: string
+  entradaOfferAccountPlan?: string
+  entradaOfferFinancialEntity?: string
+  entradaOfferPaymentMethod?: string
+  entradaEbdAccountPlan?: string
+  entradaEbdFinancialEntity?: string
+  entradaEbdPaymentMethod?: string
+  entradaCampaignAccountPlan?: string
+  entradaCampaignFinancialEntity?: string
+  entradaCampaignPaymentMethod?: string
+  entradaVotesAccountPlan?: string
+  entradaVotesFinancialEntity?: string
+  entradaVotesPaymentMethod?: string
   // Campos para Dízimo
   dizimoAccountPlan?: string
   dizimoFinancialEntity?: string
@@ -35,7 +44,14 @@ interface Congregation {
   saidaFinancialEntity?: string
   saidaPaymentMethod?: string
   matriculaEnergisa?: String
-matriculaIgua?: String
+  matriculaIgua?: String
+  // Campos Missao e Circulo podem ser adicionados aqui
+  missionAccountPlan?: string
+  missionFinancialEntity?: string
+  missionPaymentMethod?: string
+  circleAccountPlan?: string
+  circleFinancialEntity?: string
+  circlePaymentMethod?: string
 }
 
 export default function Congregations() {
@@ -55,9 +71,18 @@ export default function Congregations() {
     name: '',
     regionalName: '',
     // Campos para Entrada
-    entradaAccountPlan: '',
-    entradaFinancialEntity: '',
-    entradaPaymentMethod: '',
+    entradaOfferAccountPlan: '',
+    entradaOfferFinancialEntity: '',
+    entradaOfferPaymentMethod: '',
+    entradaEbdAccountPlan: '',
+    entradaEbdFinancialEntity: '',
+    entradaEbdPaymentMethod: '',
+    entradaCampaignAccountPlan: '',
+    entradaCampaignFinancialEntity: '',
+    entradaCampaignPaymentMethod: '',
+    entradaVotesAccountPlan: '',
+    entradaVotesFinancialEntity: '',
+    entradaVotesPaymentMethod: '',
     // Campos para Dízimo
     dizimoAccountPlan: '',
     dizimoFinancialEntity: '',
@@ -67,7 +92,14 @@ export default function Congregations() {
     saidaFinancialEntity: '',
     saidaPaymentMethod: '',
     matriculaEnergisa: '',
-    matriculaIgua: ''
+    matriculaIgua: '',
+    // Campos Missao e Circulo podem ser adicionados aqui
+    missionAccountPlan: '',
+    missionFinancialEntity: '',
+    missionPaymentMethod: '',
+    circleAccountPlan: '',
+    circleFinancialEntity: '',
+    circlePaymentMethod: '',
   })
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const [importing, setImporting] = useState(false)
@@ -145,9 +177,18 @@ export default function Congregations() {
       name: congregation.name,
       regionalName: congregation.regionalName || '',
       // Campos para Entrada
-      entradaAccountPlan: congregation.entradaAccountPlan || '',
-      entradaFinancialEntity: congregation.entradaFinancialEntity || '',
-      entradaPaymentMethod: congregation.entradaPaymentMethod || '',
+      entradaOfferAccountPlan: congregation.entradaOfferAccountPlan || '',
+      entradaOfferFinancialEntity: congregation.entradaOfferFinancialEntity || '',
+      entradaOfferPaymentMethod: congregation.entradaOfferPaymentMethod || '',
+      entradaEbdAccountPlan: congregation.entradaEbdAccountPlan || '',
+      entradaEbdFinancialEntity: congregation.entradaEbdFinancialEntity || '',
+      entradaEbdPaymentMethod: congregation.entradaEbdPaymentMethod || '',      
+      entradaCampaignAccountPlan: congregation.entradaCampaignAccountPlan || '',
+      entradaCampaignFinancialEntity: congregation.entradaCampaignFinancialEntity || '',
+      entradaCampaignPaymentMethod: congregation.entradaCampaignPaymentMethod || '',      
+      entradaVotesAccountPlan: congregation.entradaVotesAccountPlan || '',
+      entradaVotesFinancialEntity: congregation.entradaVotesFinancialEntity || '',
+      entradaVotesPaymentMethod: congregation.entradaVotesPaymentMethod || '',      
       // Campos para Dízimo
       dizimoAccountPlan: congregation.dizimoAccountPlan || '',
       dizimoFinancialEntity: congregation.dizimoFinancialEntity || '',
@@ -156,9 +197,16 @@ export default function Congregations() {
       saidaAccountPlan: congregation.saidaAccountPlan || '',
       saidaFinancialEntity: congregation.saidaFinancialEntity || '',
       saidaPaymentMethod: congregation.saidaPaymentMethod || '',
-            // Novos campos
+      // Novos campos
       matriculaEnergisa: congregation.matriculaEnergisa || '',
-      matriculaIgua: congregation.matriculaIgua || ''
+      matriculaIgua: congregation.matriculaIgua || '',
+      // Campos Missao e Circulo podem ser adicionados aqui
+      missionAccountPlan: congregation.missionAccountPlan || '',
+      missionFinancialEntity: congregation.missionFinancialEntity || '',
+      missionPaymentMethod: congregation.missionPaymentMethod || '',
+      circleAccountPlan: congregation.circleAccountPlan || '',
+      circleFinancialEntity: congregation.circleFinancialEntity || '',
+      circlePaymentMethod: congregation.circlePaymentMethod || '',
     })
     setIsDialogOpen(true)
   }
@@ -204,9 +252,18 @@ export default function Congregations() {
       name: '',
       regionalName: '',
       // Campos para Entrada
-      entradaAccountPlan: '',
-      entradaFinancialEntity: '',
-      entradaPaymentMethod: '',
+      entradaOfferAccountPlan: '',
+      entradaOfferFinancialEntity: '',
+      entradaOfferPaymentMethod: '',
+      entradaEbdAccountPlan: '',
+      entradaEbdFinancialEntity: '',
+      entradaEbdPaymentMethod: '',      
+      entradaCampaignAccountPlan: '',
+      entradaCampaignFinancialEntity: '',
+      entradaCampaignPaymentMethod: '',      
+      entradaVotesAccountPlan: '',
+      entradaVotesFinancialEntity: '',
+      entradaVotesPaymentMethod: '',      
       // Campos para Dízimo
       dizimoAccountPlan: '',
       dizimoFinancialEntity: '',
@@ -218,6 +275,13 @@ export default function Congregations() {
       // Novos campos
       matriculaEnergisa: '',
       matriculaIgua: '',
+      // Campos Missao e Circulo podem ser adicionados aqui
+      missionAccountPlan: '',
+      missionFinancialEntity: '',
+      missionPaymentMethod: '',
+      circleAccountPlan: '',
+      circleFinancialEntity: '',
+      circlePaymentMethod: '',
     })
   }
 
@@ -292,7 +356,7 @@ export default function Congregations() {
                     Nova Congregação
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className="sm:max-w-[425px] h-160">
                   <DialogHeader>
                     <DialogTitle>
                       {editingCongregation ? 'Editar Congregação' : 'Nova Congregação'}
@@ -302,8 +366,8 @@ export default function Congregations() {
                     </DialogDescription>
                   </DialogHeader>
                   <form onSubmit={handleSubmit}>
-                    <div className="grid gap-4 py-4">
-                      <div className="grid grid-cols-4 items-center gap-4">
+                    <div className="grid gap-4 py-2">
+                      <div className="grid grid-cols-4 items-center gap-2">
                         <Label htmlFor="code" className="text-right">
                           Código
                         </Label>
@@ -350,43 +414,151 @@ export default function Congregations() {
                     </div>
 
                     <Tabs defaultValue="dizimo" className="w-full mt-4 space-x-10">
-                      <TabsList className="grid w-full grid-cols-4">
+                      <TabsList className="grid w-full grid-cols-3">
                           <TabsTrigger value="dizimo">Dízimo</TabsTrigger>
+                          <TabsTrigger value="mission">Missao</TabsTrigger>
+                          <TabsTrigger value="circulo">Circulo</TabsTrigger>
                           <TabsTrigger value="entrada">Out Receitas</TabsTrigger>
                           <TabsTrigger value="saida">Saída</TabsTrigger>
                           <TabsTrigger value="outros">Outros</TabsTrigger>
                       </TabsList>
-                      <TabsContent value="entrada" className="space-y-4 mt-4">
-                          <div>
-                              <Label htmlFor="entradaAccountPlan">Plano de Contas</Label>
-                              <Input
-                                  id="entradaAccountPlan"
-                                  name="entradaAccountPlan"
-                                  value={formData.entradaAccountPlan}
-                                  onChange={handleInputChange}
-                                  placeholder=""
-                              />
-                          </div>
-                          <div>
-                              <Label htmlFor="entradaFinancialEntity">Entidade Financeira</Label>
-                              <Input
-                                  id="entradaFinancialEntity"
-                                  name="entradaFinancialEntity"
-                                  value={formData.entradaFinancialEntity}
-                                  onChange={handleInputChange}
-                                  placeholder=""
-                              />
-                          </div>
-                          <div>
-                              <Label htmlFor="entradaPaymentMethod">Método de Pagamento</Label>
-                              <Input
-                                  id="entradaPaymentMethod"
-                                  name="entradaPaymentMethod"
-                                  value={formData.entradaPaymentMethod}
-                                  onChange={handleInputChange}
-                                  placeholder=""
-                              />
-                          </div>                          
+                      <TabsContent value="entrada" className="space-y-4 mt-6">
+                        <Tabs defaultValue="oferta" className="w-full space-x-10">
+                          <TabsList className="grid w-full grid-cols-4">
+                              <TabsTrigger value="oferta">Oferta</TabsTrigger>
+                              <TabsTrigger value="ebd">EBD</TabsTrigger>
+                              <TabsTrigger value="campaign">Campanha</TabsTrigger>
+                              <TabsTrigger value="votos">Votos</TabsTrigger>
+                          </TabsList>
+                          <TabsContent value="oferta" className="space-y-4 mt-4">
+                            <div>
+                                <Label htmlFor="entradaOfferAccountPlan">Plano de Contas</Label>
+                                <Input
+                                    id="entradaOfferAccountPlan"
+                                    name="entradaOfferAccountPlan"
+                                    value={formData.entradaOfferAccountPlan}
+                                    onChange={handleInputChange}
+                                    placeholder=""
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="entradaOfferFinancialEntity">Entidade Financeira</Label>
+                                <Input
+                                    id="entradaOfferFinancialEntity"
+                                    name="entradaOfferFinancialEntity"
+                                    value={formData.entradaOfferFinancialEntity}
+                                    onChange={handleInputChange}
+                                    placeholder=""
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="entradaOfferPaymentMethod">Método de Pagamento</Label>
+                                <Input
+                                    id="entradaOfferPaymentMethod"
+                                    name="entradaOfferPaymentMethod"
+                                    value={formData.entradaOfferPaymentMethod}
+                                    onChange={handleInputChange}
+                                    placeholder=""
+                                />
+                            </div>     
+                          </TabsContent>      
+                          <TabsContent value="ebd" className="space-y-4 mt-4">
+                            <div>
+                                <Label htmlFor="entradaEbdAccountPlan">Plano de Contas</Label>
+                                <Input
+                                    id="entradaEbdAccountPlan"
+                                    name="entradaEbdAccountPlan"
+                                    value={formData.entradaEbdAccountPlan}
+                                    onChange={handleInputChange}
+                                    placeholder=""
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="entradaEbdFinancialEntity">Entidade Financeira</Label>
+                                <Input
+                                    id="entradaEbdFinancialEntity"
+                                    name="entradaEbdFinancialEntity"
+                                    value={formData.entradaEbdFinancialEntity}
+                                    onChange={handleInputChange}
+                                    placeholder=""
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="entradaEbdPaymentMethod">Método de Pagamento</Label>
+                                <Input
+                                    id="entradaEbdPaymentMethod"
+                                    name="entradaEbdPaymentMethod"
+                                    value={formData.entradaEbdPaymentMethod}
+                                    onChange={handleInputChange}
+                                    placeholder=""
+                                />
+                            </div>
+                          </TabsContent>                              
+                          <TabsContent value="campaign" className="space-y-4 mt-4">
+                            <div>
+                                <Label htmlFor="entradaCampaignAccountPlan">Plano de Contas</Label>
+                                <Input
+                                    id="entradaCampaignAccountPlan"
+                                    name="entradaCampaignAccountPlan"
+                                    value={formData.entradaCampaignAccountPlan}
+                                    onChange={handleInputChange}
+                                    placeholder=""
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="entradaCampaignFinancialEntity">Entidade Financeira</Label>
+                                <Input
+                                    id="entradaCampaignFinancialEntity"
+                                    name="entradaCampaignFinancialEntity"
+                                    value={formData.entradaCampaignFinancialEntity}
+                                    onChange={handleInputChange}
+                                    placeholder=""
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="entradaCampaignPaymentMethod">Método de Pagamento</Label>
+                                <Input
+                                    id="entradaCampaignPaymentMethod"
+                                    name="entradaCampaignPaymentMethod"
+                                    value={formData.entradaCampaignPaymentMethod}
+                                    onChange={handleInputChange}
+                                    placeholder=""
+                                />
+                            </div>     
+                          </TabsContent>        
+                          <TabsContent value="votos" className="space-y-4 mt-4">
+                            <div>
+                                <Label htmlFor="entradaVotesAccountPlan">Plano de Contas</Label>
+                                <Input
+                                    id="entradaVotesAccountPlan"
+                                    name="entradaVotesAccountPlan"
+                                    value={formData.entradaVotesAccountPlan}
+                                    onChange={handleInputChange}
+                                    placeholder=""
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="entradaVotesFinancialEntity">Entidade Financeira</Label>
+                                <Input
+                                    id="entradaVotesFinancialEntity"
+                                    name="entradaVotesFinancialEntity"
+                                    value={formData.entradaVotesFinancialEntity}
+                                    onChange={handleInputChange}
+                                    placeholder=""
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="entradaVotesPaymentMethod">Método de Pagamento</Label>
+                                <Input
+                                    id="entradaVotesPaymentMethod"
+                                    name="entradaVotesPaymentMethod"
+                                    value={formData.entradaVotesPaymentMethod}
+                                    onChange={handleInputChange}
+                                    placeholder=""
+                                />
+                            </div>     
+                          </TabsContent>
+                        </Tabs>        
                       </TabsContent>
                       <TabsContent value="dizimo" className="space-y-4 mt-4">
                           <div>
@@ -420,6 +592,71 @@ export default function Congregations() {
                               />
                           </div>
                       </TabsContent>
+                      <TabsContent value="mission" className="space-y-4 mt-4">
+                          <div>
+                              <Label htmlFor="missionAccountPlan">Plano de Contas</Label>
+                              <Input
+                                  id="missionAccountPlan"
+                                  name="missionAccountPlan"
+                                  value={formData.missionAccountPlan}
+                                  onChange={handleInputChange}
+                                  placeholder=""
+                              />
+                          </div>
+                          <div>
+                              <Label htmlFor="missionFinancialEntity">Entidade Financeira</Label>
+                              <Input
+                                  id="missionFinancialEntity"
+                                  name="missionFinancialEntity"
+                                  value={formData.missionFinancialEntity}
+                                  onChange={handleInputChange}
+                                  placeholder=""
+                              />
+                          </div>                          
+                          <div>
+                              <Label htmlFor="missionPaymentMethod">Método de Pagamento</Label>
+                              <Input
+                                  id="missionPaymentMethod"
+                                  name="missionPaymentMethod"
+                                  value={formData.missionPaymentMethod}
+                                  onChange={handleInputChange}
+                                  placeholder=""
+                              />
+                          </div>
+                      </TabsContent>
+                      <TabsContent value="circulo" className="space-y-4 mt-4">
+                          <div>
+                              <Label htmlFor="circleAccountPlan">Plano de Contas</Label>
+                              <Input
+                                  id="circleAccountPlan"
+                                  name="circleAccountPlan"
+                                  value={formData.circleAccountPlan}
+                                  onChange={handleInputChange}
+                                  placeholder=""
+                              />
+                          </div>
+                          <div>
+                              <Label htmlFor="circleFinancialEntity">Entidade Financeira</Label>
+                              <Input
+                                  id="circleFinancialEntity"
+                                  name="circleFinancialEntity"
+                                  value={formData.circleFinancialEntity}
+                                  onChange={handleInputChange}
+                                  placeholder=""
+                              />
+                          </div>                          
+                          <div>
+                              <Label htmlFor="circlePaymentMethod">Método de Pagamento</Label>
+                              <Input
+                                  id="circlePaymentMethod"
+                                  name="circlePaymentMethod"
+                                  value={formData.circlePaymentMethod}
+                                  onChange={handleInputChange}
+                                  placeholder=""
+                              />
+                          </div>
+                      </TabsContent>
+
                       <TabsContent value="saida" className="space-y-4 mt-4">
                           {/*<div>
                               <Label htmlFor="saidaAccountPlan">Plano de Contas</Label>
@@ -477,7 +714,7 @@ export default function Congregations() {
                       </TabsContent>                      
                       
                       </Tabs>
-                      <DialogFooter>
+                      <DialogFooter className='mt-2'>
                         <Button type="submit">
                         {editingCongregation ? 'Atualizar' : 'Salvar'}
                         </Button>
@@ -564,65 +801,97 @@ export default function Congregations() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Table className="min-w-full">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Código</TableHead>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Nome Regional</TableHead>
-                    {/* <TableHead>Configurações</TableHead> */}
-                    <TableHead>Data de Criação</TableHead>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredCongregations.map((congregation) => (
-                    <TableRow key={congregation.id}>
-                      <TableCell>
-                        <Badge variant="outline">{congregation.code}</Badge>
-                      </TableCell>
-                      <TableCell className="font-medium">{congregation.name}</TableCell>
-                      <TableCell className="font-medium">{congregation.regionalName}</TableCell>
-                      {/* <TableCell>
-                        <div className="space-y-1">
-                          <Badge variant="outline" className="text-xs">
-                            Entrada: {congregation.entradaAccountPlan || 'Não configurado'}
-                          </Badge>
-                          <Badge variant="outline" className="text-xs">
-                            Dízimo: {congregation.dizimoAccountPlan || 'Não configurado'}
-                          </Badge>
-                          <Badge variant="outline" className="text-xs">
-                            Saída: {congregation.saidaAccountPlan || 'Não configurado'}
-                          </Badge>
-                        </div>
-                      </TableCell> */}
-                      <TableCell>
-                        {format(new Date(congregation.createdAt), 'dd/MM/yyyy', { locale: ptBR })}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(congregation)}
-                            disabled={!canEdit}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDelete(congregation.id)}
-                            disabled={!canExclude}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+              {/* Desktop / tablet table */}
+              <div className="hidden md:block overflow-x-auto">
+                <Table className="min-w-full table-fixed">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-24">Código</TableHead>
+                      <TableHead className="">Nome</TableHead>
+                      <TableHead className="hidden lg:table-cell">Nome Regional</TableHead>
+                      <TableHead className="hidden lg:table-cell w-32">Data de Criação</TableHead>
+                      <TableHead className="w-24">Ações</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredCongregations.map((congregation) => (
+                      <TableRow key={congregation.id}>
+                        <TableCell className="truncate">
+                          <Badge variant="outline">{congregation.code}</Badge>
+                        </TableCell>
+                        <TableCell className="font-medium truncate">{congregation.name}</TableCell>
+                        <TableCell className="font-medium truncate hidden lg:table-cell">{congregation.regionalName}</TableCell>
+                        <TableCell className="truncate hidden lg:table-cell">
+                          {format(new Date(congregation.createdAt), 'dd/MM/yyyy', { locale: ptBR })}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEdit(congregation)}
+                              disabled={!canEdit}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDelete(congregation.id)}
+                              disabled={!canExclude}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile: stacked cards */}
+              <div className="md:hidden space-y-3">
+                {filteredCongregations.map((congregation) => (
+                  <div
+                    key={congregation.id}
+                    className="bg-white border rounded-lg p-3 shadow-sm"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="min-w-0">
+                        <div className="flex items-center space-x-3">
+                          <Badge variant="outline">{congregation.code}</Badge>
+                          <p className="font-medium truncate">{congregation.name}</p>
+                        </div>
+                        {congregation.regionalName && (
+                          <p className="text-sm text-muted-foreground truncate mt-1">{congregation.regionalName}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {format(new Date(congregation.createdAt), 'dd/MM/yyyy', { locale: ptBR })}
+                        </p>
+                      </div>
+                      <div className="flex items-start space-x-2 ml-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(congregation)}
+                          disabled={!canEdit}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(congregation.id)}
+                          disabled={!canExclude}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </div>

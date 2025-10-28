@@ -62,9 +62,13 @@ model User {
   canLaunchEntry       Boolean            @default(false)
   canLaunchTithe       Boolean            @default(false)
   canLaunchExpense     Boolean            @default(false)
+  canLaunchMission     Boolean            @default(false)
+  canLaunchCircle      Boolean            @default(false)
   canApproveEntry      Boolean            @default(false)
   canApproveTithe      Boolean            @default(false)
   canApproveExpense    Boolean            @default(false)
+  canApproveMission    Boolean            @default(false)
+  canApproveCircle     Boolean            @default(false)
   canCreate            Boolean            @default(false)
   canEdit              Boolean            @default(false)
   canExclude           Boolean            @default(false)
@@ -82,27 +86,41 @@ model User {
 }
 
 model Congregation {
-  id                     String                @id @default(cuid())
-  code                   String                @unique
-  name                   String
-  regionalName           String?
-  entradaAccountPlan     String?
-  entradaFinancialEntity String?
-  entradaPaymentMethod   String?
-  dizimoAccountPlan      String?
-  dizimoFinancialEntity  String?
-  dizimoPaymentMethod    String?
-  saidaAccountPlan       String?
-  saidaFinancialEntity   String?
-  saidaPaymentMethod     String?
-  matriculaEnergisa      String?
-  matriculaIgua          String?
-  users                  UserCongregation[]
-  launches               Launch[]
-  contributors           Contributor[]
-  createdAt              DateTime              @default(now()) @db.DateTime(0)
-  updatedAt              DateTime              @updatedAt @db.DateTime(0)
-  CongregationSummary    CongregationSummary[]
+  id                             String                @id @default(cuid())
+  code                           String                @unique
+  name                           String
+  regionalName                   String?
+  entradaOfferAccountPlan        String?
+  entradaOfferFinancialEntity    String?
+  entradaOfferPaymentMethod      String?
+  entradaEbdAccountPlan          String?
+  entradaEbdFinancialEntity      String?
+  entradaEbdPaymentMethod        String?
+  entradaCampaignAccountPlan     String?
+  entradaCampaignFinancialEntity String?
+  entradaCampaignPaymentMethod   String?
+  entradaVotesAccountPlan        String?
+  entradaVotesFinancialEntity    String?
+  entradaVotesPaymentMethod      String?
+  dizimoAccountPlan              String?
+  dizimoFinancialEntity          String?
+  dizimoPaymentMethod            String?
+  saidaFinancialEntity           String?
+  saidaPaymentMethod             String?
+  missionAccountPlan             String?
+  missionFinancialEntity         String?
+  missionPaymentMethod           String?
+  circleAccountPlan              String?
+  circleFinancialEntity          String?
+  circlePaymentMethod            String?
+  matriculaEnergisa              String?
+  matriculaIgua                  String?
+  users                          UserCongregation[]
+  launches                       Launch[]
+  contributors                   Contributor[]
+  createdAt                      DateTime              @default(now()) @db.DateTime(0)
+  updatedAt                      DateTime              @updatedAt @db.DateTime(0)
+  CongregationSummary            CongregationSummary[]
 }
 
 model UserCongregation {
@@ -209,6 +227,10 @@ model CongregationSummary {
   votesValue         Float         @default(0)
   campaignValue      Float         @default(0)
   ebdValue           Float         @default(0)
+  missionValue       Float         @default(0)
+  missionTotal       Float         @default(0)
+  circleValue        Float         @default(0)
+  circleTotal        Float         @default(0)
   exitValue          Float         @default(0)
   depositValue       Float         @default(0)
   cashValue          Float         @default(0)
@@ -229,6 +251,8 @@ enum LaunchType {
   ENTRADA
   DIZIMO
   SAIDA
+  MISSAO
+  CIRCULO
 }
 
 enum LaunchStatus {

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import{ authOptions }from "../auth/[...nextauth]/route";
 import { getServerSession } from "next-auth";
+import { zonedTimeToUtc, utcToZonedTime } from 'date-fns-tz';
+import { startOfDay, endOfDay } from 'date-fns';
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -18,6 +20,7 @@ export async function GET(request: NextRequest) {
     const searchTerm = searchParams.get('searchTerm') || ''
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
+    const timezone = searchParams.get('timezone') || 'America/Sao_Paulo'
 
     const skip = (page - 1) * limit
 
@@ -39,10 +42,23 @@ export async function GET(request: NextRequest) {
       where.congregationId = congregationId
     }
 
+    // Handle date filtering with proper timezone awareness
     if (startDate && endDate) {
+      // Convert the dates to the user's timezone and get start/end of day
+      const startZoned = utcToZonedTime(new Date(startDate), timezone)
+      const endZoned = utcToZonedTime(new Date(endDate), timezone)
+      
+      // Get start of day and end of day in the user's timezone
+      const startOfDayZoned = startOfDay(startZoned)
+      const endOfDayZoned = endOfDay(endZoned)
+      
+      // Convert back to UTC for database query
+      const startUtc = zonedTimeToUtc(startOfDayZoned, timezone)
+      const endUtc = zonedTimeToUtc(endOfDayZoned, timezone)
+
       where.date = {
-        gte: new Date(startDate as string),
-        lte: new Date(endDate as string)
+        gte: startUtc,
+        lte: endUtc
       }
     }
 
@@ -189,6 +205,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Classificação é obrigatória para lançamentos do tipo Saída" }, { status: 400 })
     }
 
+    // Validação para classificação obrigatória em saídas
+    if (!congregationId) {
+      return NextResponse.json({ error: "Congregação é obrigatória" }, { status: 400 })
+    }
+
     // Validação para contribuinte obrigatório em dízimos
     if (type === "DIZIMO" && !contributorId && !contributorName) {
       return NextResponse.json({ error: "Nome do contribuinte é obrigatório para lançamentos do tipo Dízimo" }, { status: 400 })
@@ -245,7 +266,7 @@ export async function POST(request: NextRequest) {
         votesValue: type === "ENTRADA" ? parseFloat(votesValue) : null,
         ebdValue: type === "ENTRADA" ? parseFloat(ebdValue) : null,
         campaignValue: type === "ENTRADA" ? parseFloat(campaignValue) || 0 : null, 
-        value: type === "DIZIMO" || type === "SAIDA" ? parseFloat(value) : null,
+        value: type === "DIZIMO" || type === "SAIDA" || type === "MISSAO" || type === "CIRCULO" ? parseFloat(value) : null,
         description,
         status: "NORMAL",
         // Lógica ajustada para o Dízimo

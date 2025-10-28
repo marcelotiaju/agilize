@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import prisma from "@/lib/prisma"
+import { zonedTimeToUtc, utcToZonedTime } from 'date-fns-tz';
+import { startOfDay, endOfDay } from 'date-fns';
+import { start } from "repl";
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -13,6 +16,9 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const congregationIdsString = searchParams.get('congregationIds') 
+    const startSummaryDate = searchParams.get('startSummaryDate')
+    const endSummaryDate = searchParams.get('endSummaryDate')
+    const timezone = searchParams.get('timezone') || 'America/Sao_Paulo'
 
     if (!congregationIdsString) {
       return NextResponse.json({ error: "ID da congregação é obrigatório" }, { status: 400 })
@@ -33,7 +39,7 @@ export async function GET(request: NextRequest) {
 
     const summaryId = searchParams.get('summaryId')
  
-
+    let where: any = {}
     // Verificar se o usuário tem acesso à congregação
     const userCongregations = await prisma.userCongregation.findMany({
       where: {
@@ -48,12 +54,43 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Acesso não autorizado a estas congregações" }, { status: 403 })
     }
 
+    // Handle date filtering with proper timezone awareness
+    //if (startSummaryDate && endSummaryDate) {
+      // Convert the dates to the user's timezone and get start/end of day
+      const startZoned = utcToZonedTime(new Date(startSummaryDate), timezone)
+      const endZoned = utcToZonedTime(new Date(endSummaryDate), timezone)
+      
+      // Get start of day and end of day in the user's timezone
+      const startOfDayZoned = startOfDay(startZoned)
+      const endOfDayZoned = endOfDay(endZoned)
+      
+      // Convert back to UTC for database query
+      const startUtc = zonedTimeToUtc(startOfDayZoned, timezone)
+      const endUtc = zonedTimeToUtc(endOfDayZoned, timezone)
+
+      //where.startDate = {
+      //  gte: startUtc
+      //}
+
+      //where.endDate = {
+      //  lte: endUtc
+     // }
+   // }
+
     const summaries = await prisma.congregationSummary.findMany({
       where: {
         id: summaryId || undefined, // Se summaryId existe, filtra por ID, senão ignora
         congregationId: {
           in: congregationIds // Filtra por qualquer ID dentro da lista
         },
+        startDate: {
+          gte: startUtc,
+          lte: endUtc
+        },
+        endDate: {
+          gte: startUtc,
+          lte: endUtc
+        }
         // startDate: summaryId ? undefined : summaryDateStart, // Filtra por data apenas se não for buscar um único resumo por ID
         // endDate: summaryId ? undefined : summaryDateEnd
       },
@@ -66,7 +103,7 @@ export async function GET(request: NextRequest) {
         startDate: 'desc'
       }
     })
-console.log('Resumos encontrados:', summaries)
+//console.log('Resumos encontrados:', summaries)
     return NextResponse.json({summaries})
   } catch (error) {
     console.error("Erro ao buscar resumos:", error)
@@ -89,14 +126,28 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { congregationId, startDate, endDate } = body
 
-    const summaryDateStart = new Date(`${body.startDate}T12:00:00Z`)
-    const summaryDateEnd = new Date(`${body.endDate}T12:00:00Z`)
-    summaryDateStart.setHours(0, 0, 0, 0)
-    summaryDateEnd.setHours(0, 0, 0, 0)
-
     if (!congregationId || !startDate || !endDate) {
       return NextResponse.json({ error: "Dados incompletos" }, { status: 400 })
     }
+    const timezone = body.timezone || 'America/Sao_Paulo'
+
+    const summaryDateStart = new Date(`${body.startDate}T12:00:00Z`)
+    summaryDateStart.setHours(0, 0, 0, 0)
+    const summaryDateEnd = new Date(`${body.endDate}T12:00:00Z`)
+    summaryDateStart.setHours(0, 0, 0, 0)
+
+    const startZoned = utcToZonedTime(new Date(summaryDateStart), timezone)
+    const endZoned = utcToZonedTime(new Date(summaryDateEnd), timezone)
+      
+    // Get start of day and end of day in the user's timezone
+    const startOfDayZoned = startOfDay(startZoned)
+    const endOfDayZoned = endOfDay(endZoned)
+    
+    // Convert back to UTC for database query
+    const startUtc = zonedTimeToUtc(startOfDayZoned, timezone)
+    const endUtc = zonedTimeToUtc(endOfDayZoned, timezone)
+
+console.log('Criando resumo para congregação:', congregationId, 'Período:', summaryDateStart, 'a', summaryDateEnd)
 
     // ⭐️ NOVO: Validação de Data Futura ⭐️
     const today = new Date();
@@ -117,17 +168,18 @@ export async function POST(request: NextRequest) {
     if (!userCongregation) {
       return NextResponse.json({ error: "Acesso não autorizado a esta congregação" }, { status: 403 })
     }
-    console.log('Buscando lançamentos para congregação:', congregationId)
-    console.log('Período:', summaryDateStart, 'a', summaryDateEnd)
+    //console.log('Buscando lançamentos para congregação:', congregationId)
+    //console.log('Período:', summaryDateStart, 'a', summaryDateEnd)
     // Buscar lançamentos no período
     const launches = await prisma.launch.findMany({
       where: {
         congregationId,
         date: {
-          gte: summaryDateStart,
-          lte: summaryDateEnd
+          gte: startUtc,
+          lte: endUtc
         },
-        status: "NORMAL"
+        status: "NORMAL",
+        summaryId: null // Apenas lançamentos que ainda não foram resumidos
       },
       include: {
         congregation: true
@@ -136,7 +188,7 @@ export async function POST(request: NextRequest) {
         date: 'asc'
       }
     })
-
+console.log(`Lançamentos encontrados para resumo: ${launches.length}`)
     // ⭐️ NOVO: Validação de Resumo Zerado (sem lançamentos) ⭐️
     if (launches.length === 0) {
         return NextResponse.json({ error: "Não há lançamentos no período para criar um resumo." }, { status: 400 });
@@ -149,6 +201,8 @@ export async function POST(request: NextRequest) {
       votos: 0,
       campanha: 0,
       ebd: 0,
+      mission: 0,
+      circle: 0,
       total: 0
     }
 
@@ -178,8 +232,11 @@ export async function POST(request: NextRequest) {
         entradaSummary.ebd += launch.ebdValue || 0
         entradaSummary.total += (launch.value || 0) + (launch.offerValue || 0) + (launch.votesValue || 0) + (launch.campaignValue || 0) + (launch.ebdValue || 0)
       } else if (launch.type === "DIZIMO") {
-        // ⭐️ CORRIGIDO: Garante que o dízimo seja contabilizado.
         entradaSummary.dizimo += launch.value || 0
+      } else if (launch.type === "MISSAO") {
+        entradaSummary.mission += launch.value || 0
+      } else if (launch.type === "CIRCULO") {
+        entradaSummary.circle += launch.value || 0
       } else if (launch.type === "SAIDA") {
         saidaSummary.saida += launch.value || 0
         saidaSummary.total += launch.value || 0
@@ -201,23 +258,25 @@ export async function POST(request: NextRequest) {
     const existingSummary = await prisma.congregationSummary.findFirst({
       where: {
         congregationId,
-        startDate: summaryDateStart,
-        endDate: summaryDateEnd
+        startDate: startUtc,
+        endDate: endUtc
       }
     })
-
+console.log('Resumo existente:', existingSummary)
     if (existingSummary) {
       return NextResponse.json({ error: "Já existe um resumo para este período" }, { status: 400 })
     }
     const summary = await prisma.congregationSummary.create({
       data: {
         congregationId,
-        startDate: summaryDateStart,
-        endDate: summaryDateEnd,
+        startDate: startUtc,
+        endDate: endUtc,
         launchCount: launches.length,
         entryCount: entradaSummary.total,
         exitCount: saidaSummary.total,
         entryTotal: entradaSummary.total,
+        missionTotal: entradaSummary.mission,
+        circleTotal: entradaSummary.circle,
         titheTotal: entradaSummary.dizimo,
         exitTotal: saidaSummary.total,
         depositValue: 0,
@@ -228,6 +287,8 @@ export async function POST(request: NextRequest) {
         votesValue: entradaSummary.votos,
         ebdValue: entradaSummary.ebd,
         campaignValue: entradaSummary.campanha,
+        missionValue: entradaSummary.mission,
+        circleValue: entradaSummary.circle,
         exitValue: saidaSummary.saida,
         status: "PENDING"
       }
@@ -238,8 +299,8 @@ export async function POST(request: NextRequest) {
         where: {
             congregationId: summary.congregationId,
             date: {
-                gte: summary.startDate,
-                lte: summary.endDate,
+                gte: startUtc,
+                lte: endUtc,
             },
             summaryId: null, // Opcional: só atualiza lançamentos que ainda não têm um resumo (mais seguro)
             status: 'NORMAL', // Não atualiza lançamentos cancelados
@@ -258,8 +319,8 @@ export async function POST(request: NextRequest) {
       launches,
       summary,
       period: {
-        startDate,
-        endDate
+        startUtc,
+        endUtc
       }
     })
   } catch (error) {

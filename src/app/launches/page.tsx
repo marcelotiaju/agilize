@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useReducer } from 'react'
 import { useSession } from 'next-auth/react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,8 +13,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Plus, Edit, Trash2, Search, Check, X, AlertCircle, MoreVertical, CalendarIcon, DollarSign, User } from 'lucide-react'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { format } from 'date-fns'
+import { zonedTimeToUtc } from 'date-fns-tz'
 import { ptBR } from 'date-fns/locale'
 import { Checkbox } from '@/components/ui/checkbox'
 import { PermissionGuard } from '@/components/auth/PermissionGuard'
@@ -28,7 +28,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 
+// Get the user's timezone
+const USER_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 export default function Launches() {
   const { data: session } = useSession()
@@ -51,8 +54,11 @@ export default function Launches() {
   const [totalCount, setTotalCount] = useState(0)
   const [selectedCongregation, setSelectedCongregation] = useState('all')
 
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  // Por padrão, definir data inicial e final como data atual
+  const [startDate, setStartDate] = useState<Date | undefined>(new Date());
+  const [endDate, setEndDate] = useState<Date | undefined>(new Date());
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
   
   const [value, setValue] = useReducer((prev, next) => moneyFormatter.format(next), "")
   
@@ -75,7 +81,7 @@ export default function Launches() {
     campaignValue: number,
     value?: number
     description?: string
-    status?: string
+    status: string
     exported?: boolean
     congregation?: { id: string; name: string }
     contributorId?: string
@@ -87,16 +93,21 @@ export default function Launches() {
     classificationId?: string
     classification?: { id: string; name: string }
     approved?: boolean
+    summaryId?: string
   }
 
   // Permissões
   const canLaunchEntry = session?.user?.canLaunchEntry
   const canLaunchTithe = session?.user?.canLaunchTithe
   const canLaunchExpense = session?.user?.canLaunchExpense
+  const canLaunchMission = session?.user?.canLaunchMission
+  const canLaunchCircle = session?.user?.canLaunchCircle
   const canApproveEntry = session?.user?.canApproveEntry
   const canApproveTithe = session?.user?.canApproveTithe
   const canApproveExpense = session?.user?.canApproveExpense
-  const canEdit = session?.user?.canEdit
+  const canApproveMission = session?.user?.canApproveMission
+  const canApproveCircle = session?.user?.canApproveCircle
+  //const canEdit = session?.user?.canEdit
 
   const [editingLaunch, setEditingLaunch] = useState<Launch | null>(null)
   const [formData, setFormData] = useState({
@@ -117,6 +128,20 @@ export default function Launches() {
     supplierName: '',
     isSupplierRegistered: false,
     classificationId: '',
+    summaryId: '',
+    // Fields for Outras Receitas sub-tabs
+    offerAccountPlan: '',
+    offerFinancialEntity: '',
+    offerPaymentMethod: '',
+    ebdAccountPlan: '',
+    ebdFinancialEntity: '',
+    ebdPaymentMethod: '',
+    campaignAccountPlan: '',
+    campaignFinancialEntity: '',
+    campaignPaymentMethod: '',
+    votesAccountPlan: '',
+    votesFinancialEntity: '',
+    votesPaymentMethod: '',
   })
 
   useEffect(() => {
@@ -125,7 +150,7 @@ export default function Launches() {
     fetchContributors()
     fetchSuppliers()
     fetchClassifications()
-  }, [currentPage, itemsPerPage, searchTerm, selectedCongregation])
+  }, [currentPage, itemsPerPage, searchTerm, selectedCongregation, startDate, endDate])
 
   useEffect(() => {
     // Se houver apenas uma congregação, definir como default
@@ -160,12 +185,25 @@ export default function Launches() {
 
   const fetchLaunches = async () => {
     try {
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: itemsPerPage.toString(),
-        searchTerm,
-        ...(selectedCongregation !== 'all' && { congregationId: selectedCongregation })
-      })
+      const params = new URLSearchParams()
+      params.append('page', currentPage.toString())
+      params.append('limit', itemsPerPage.toString())
+      if (searchTerm) params.append('searchTerm', searchTerm)
+      if (selectedCongregation !== 'all') params.append('congregationId', selectedCongregation)
+       params.append('timezone', USER_TIMEZONE)
+
+      if (startDate) {
+        const s = new Date(startDate)
+        s.setHours(0, 0, 0, 0)
+         const startUtc = zonedTimeToUtc(s, USER_TIMEZONE)
+        params.append('startDate', startUtc.toISOString())
+      }
+      if (endDate) {
+        const e = new Date(endDate)
+        e.setHours(23, 59, 59, 999)
+         const endUtc = zonedTimeToUtc(e, USER_TIMEZONE)
+        params.append('endDate', endUtc.toISOString())
+      }
 
       const response = await fetch(`/api/launches?${params.toString()}`)
       if (response.ok) {
@@ -356,7 +394,7 @@ export default function Launches() {
       offerValue: launch.offerValue?.toString() || '',
       votesValue: launch.votesValue?.toString() || '',
       ebdValue: launch.ebdValue?.toString() || '',
-      campaignValue: launch.campaignValue?.toString() || '', // Novo campo
+      campaignValue: launch.campaignValue?.toString() || '',  
       value: launch.value?.toString() || '',
       description: launch.description || '',
       contributorId: launch.contributorId?.toString() || '',
@@ -540,10 +578,16 @@ export default function Launches() {
         <div className="flex justify-between items-start mb-1">
           <div className={`px-3 py-1 rounded text-white text-sm font-medium ${
             launch.type === 'ENTRADA' ? 'bg-green-500' : 
-            launch.type === 'DIZIMO' ? 'bg-blue-500' : 'bg-red-500'
+            launch.type === 'DIZIMO' ? 'bg-blue-500' : 
+            launch.type === 'SAIDA'? 'bg-red-500' :
+            launch.type === 'MISSAO'? 'bg-orange-500' :
+            launch.type === 'CIRCULO'? 'bg-yellow-500' : ''
           }`}>
             {launch.type === 'ENTRADA' ? 'Outras Receitas' : 
-             launch.type === 'DIZIMO' ? 'Dízimo' : 'Saída'}
+              launch.type === 'DIZIMO' ? 'Dízimo' : 
+              launch.type === 'SAIDA' ? 'Saída' :
+              launch.type === 'MISSAO' ? 'Missão' :
+              launch.type === 'CIRCULO' ? 'Círculo de Oração' : ''}
           </div>
           <Badge variant={
             launch.status === 'NORMAL' ? 'default' :
@@ -615,12 +659,12 @@ export default function Launches() {
             
             <div className="flex space-x-2 pt-0">
               <Tooltip>
-                <TooltipTrigger asChild>
+                  <TooltipTrigger asChild>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handleEdit(launch)}
-                    disabled={!canEdit}
+                   // disabled={!canEdit}
                     className="flex-1"
                   >
                     <Edit className="h-4 w-4 mr-1" />
@@ -635,7 +679,9 @@ export default function Launches() {
                 <>
                   {(launch.type === 'ENTRADA' && canApproveEntry) ||
                    (launch.type === 'DIZIMO' && canApproveTithe) ||
-                   (launch.type === 'SAIDA' && canApproveExpense) ? (
+                   (launch.type === 'SAIDA' && canApproveExpense) ||
+                   (launch.type === 'MISSAO' && canApproveMission) ||
+                   (launch.type === 'CIRCULO' && canApproveCircle) ? (
                     <>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -662,7 +708,9 @@ export default function Launches() {
                 <>
                   {(launch.type === 'ENTRADA' && canApproveEntry) ||
                    (launch.type === 'DIZIMO' && canApproveTithe) ||
-                   (launch.type === 'SAIDA' && canApproveExpense) ? (
+                   (launch.type === 'SAIDA' && canApproveExpense) ||
+                   (launch.type === 'MISSAO' && canApproveMission) ||
+                   (launch.type === 'CIRCULO' && canApproveCircle) ? (
                     <>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -686,7 +734,7 @@ export default function Launches() {
               )}
               
 
-              {launch.status =='NORMAL' && (canLaunchEntry || canLaunchExpense || canLaunchTithe)  ? (
+              {launch.status =='NORMAL' && (canLaunchEntry || canLaunchExpense || canLaunchTithe || canLaunchMission|| canLaunchCircle)  ? (
               <>           
                 <Tooltip>
                     <TooltipTrigger asChild>
@@ -723,9 +771,13 @@ export default function Launches() {
         canLaunchEntry: canLaunchEntry,
         canLaunchTithe: canLaunchTithe,
         canLaunchExpense: canLaunchExpense,
+        canLaunchMission: canLaunchMission,
+        canLaunchCircle: canLaunchCircle,
         canApproveEntry: canApproveEntry,
         canApproveTithe: canApproveTithe,
         canApproveExpense: canApproveExpense,
+        canApproveMission: canApproveMission,
+        canApproveCircle: canApproveCircle,
       }}
     >
 
@@ -742,7 +794,7 @@ export default function Launches() {
             <div className="flex space-x-2">
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button onClick={resetForm} disabled={!canLaunchEntry && !canLaunchTithe && !canLaunchExpense}>
+                <Button onClick={resetForm} disabled={!canLaunchEntry && !canLaunchTithe && !canLaunchExpense && !canLaunchMission && !canLaunchCircle}>
                   <Plus className="mr-2 h-4 w-4" />
                   Novo
                 </Button>
@@ -752,15 +804,22 @@ export default function Launches() {
                   <DialogTitle>
                     {editingLaunch ? 'Editar' : 'Novo'}
                   </DialogTitle>
-                  <DialogDescription>
-                    {/* Preencha os dados do lançamento financeiro */}
+                  <DialogDescription asChild>
                     {editingLaunch && editingLaunch.status !== 'NORMAL' && (
                       <div className="mt-2 p-2 bg-yellow-50 text-red-800 rounded-md flex items-center">
                         <AlertCircle className="h-4 w-4 mr-2" />
                         Este lançamento não pode ser editado porque está com status "{editingLaunch.status === 'CANCELED' ? 'CANCELADO' : editingLaunch.status === 'APPROVED' ? 'APROVADO': editingLaunch.status === 'EXPORTED' ? 'EXPORTADO' : ''  }"
                       </div>
                     )}
-                  </DialogDescription>
+                    </DialogDescription>
+                    <DialogDescription asChild>
+                    {editingLaunch && editingLaunch.summaryId != null && (
+                      <div className="mt-2 p-2 bg-yellow-50 text-red-800 rounded-md flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-2" />
+                        Este lançamento faz parte de um resumo e não pode ser alterado."
+                      </div>
+                    )}
+                    </DialogDescription>
                 </DialogHeader>
                 
                 {error && (
@@ -795,11 +854,12 @@ export default function Launches() {
                         label="Buscar Congregação"
                         placeholder="Selecione a Congregação"
                         value={formData.congregationId}
-                        disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}  
+                        disabled={editingLaunch ? (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null) : false}  
                         onChange={(value) => handleSelectChange('congregationId', value)}
                         name="congregationId"
                         data={congregations.map(s => ({ id: s.id, name: s.name }))}
                         searchKeys={['name']}
+                        required
                       />                      
                     </div>
                     
@@ -809,13 +869,15 @@ export default function Launches() {
                         <Select
                           value={formData.type}
                           onValueChange={(value) => handleSelectChange('type', value)}
-                          disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}   
+                          disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}   
                         >
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             {canLaunchTithe && <SelectItem value="DIZIMO">Dízimos</SelectItem>}
+                            {canLaunchMission && <SelectItem value="MISSAO">Missão</SelectItem>}
+                            {canLaunchCircle && <SelectItem value="CIRCULO">Círculo de Oração</SelectItem>}
                             {canLaunchEntry && <SelectItem value="ENTRADA">Outras Receitas</SelectItem>}
                             {canLaunchExpense && <SelectItem value="SAIDA">Saídas</SelectItem>}
                           </SelectContent>
@@ -829,7 +891,7 @@ export default function Launches() {
                             key={formData.classificationId}
                             value={formData.classificationId}
                             onValueChange={(value) => handleSelectChange('classificationId', value)}
-                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}   
+                            disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}   
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Selecione uma classificação" />
@@ -855,7 +917,7 @@ export default function Launches() {
                           type="date"
                           value={formData.date}
                           onChange={handleInputChange}
-                          disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}   
+                          disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}   
                         />
                       </div>
                       
@@ -869,7 +931,7 @@ export default function Launches() {
                           pattern="[0-9]*"
                           value={formData.talonNumber}
                           onChange={handleInputChange}
-                          disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                        
+                          disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}                        
                         />
                       </div>
                     </div>
@@ -906,7 +968,7 @@ export default function Launches() {
                             prefix="R$ "
                             decimalScale={2}
                             fixedDecimalScale={true}
-                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}     
+                            disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}     
                           />
                         </div>
                     
@@ -938,7 +1000,7 @@ export default function Launches() {
                             prefix="R$ "
                             decimalScale={2}
                             fixedDecimalScale={true}
-                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}   
+                            disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}   
                           />
                         </div>
                         
@@ -970,7 +1032,7 @@ export default function Launches() {
                             prefix="R$ "
                             decimalScale={2}
                             fixedDecimalScale={true}
-                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                                
+                            disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}                                
                           />                          
                         </div>
                         
@@ -1002,7 +1064,7 @@ export default function Launches() {
                             prefix="R$ "
                             decimalScale={2}
                             fixedDecimalScale={true}
-                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                                     
+                            disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}                                     
                           />                             
                         </div>
                       </div>
@@ -1041,7 +1103,7 @@ export default function Launches() {
                             prefix="R$ "
                             decimalScale={2}
                             fixedDecimalScale={true}
-                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                                 
+                            disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}                                 
                           />                              
                         </div>
                       </div>
@@ -1050,7 +1112,7 @@ export default function Launches() {
                           id="isContributorRegistered"
                           name="isContributorRegistered"
                           checked={formData.isContributorRegistered}
-                          disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                         
+                          disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}                         
                           onCheckedChange={(checked) => 
                             setFormData(prev => ({ ...prev, isContributorRegistered: checked }))
                           }
@@ -1066,7 +1128,7 @@ export default function Launches() {
                             label="Buscar Contribuinte"
                             placeholder="Selecione o contribuinte"
                             value={formData.contributorId}
-                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}   
+                            disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}   
                             onChange={(value) => handleSelectChange('contributorId', value)}
                             name="contributorId"
                             data={contributors.filter(f => (f.congregationId == formData.congregationId)).map(c => ({ key: c.id, id: c.id, name: c.name, document: c.cpf, cargo: c.ecclesiasticalPosition, photoUrl: c.photoUrl, photoExists: c.photoExists }))}
@@ -1081,7 +1143,7 @@ export default function Launches() {
                             name="contributorName"
                             value={formData.contributorName}
                             onChange={handleInputChange}
-                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}   
+                            disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}   
                             required
                           />
                         </div>
@@ -1090,7 +1152,7 @@ export default function Launches() {
                   )}
                   
                   {/* Campos específicos para Saída */}
-                  {formData.type === 'SAIDA' && (
+                  {['SAIDA', 'MISSAO', 'CIRCULO'].includes(formData.type) && (
                     <div className="space-y-4">
                       <div  className='grid grid-cols-2'>
                         <div>
@@ -1121,50 +1183,54 @@ export default function Launches() {
                             prefix="R$ "
                             decimalScale={2}
                             fixedDecimalScale={true}
-                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                                
+                            disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}                                
                           />                                  
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="isSupplierRegistered"
-                          name="isSupplierRegistered"
-                          checked={formData.isSupplierRegistered}
-                          disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                          
-                          onCheckedChange={(checked) => 
-                            setFormData(prev => ({ ...prev, isSupplierRegistered: checked }))
-                          }
-                        />
-                        <Label htmlFor="isSupplierRegistered">Fornecedor cadastrado</Label>
-                      </div>
-                      
-                      {formData.isSupplierRegistered ? (
-                        <div>
-                          <Label htmlFor="supplierId">Fornecedor</Label>
-                          <SearchableSelect
-                            key={formData.supplierId}
-                            label="Buscar Fornecedor"
-                            placeholder="Selecione o fornecedor"
-                            value={formData.supplierId}
-                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}  
-                            onChange={(value) => handleSelectChange('supplierId', value)}
-                            name="supplierId"
-                            data={suppliers.map(s => ({ key: s.id, id: s.id, name: s.razaoSocial, document: s.cpfcnpj }))}
-                            searchKeys={['name', 'document']}
-                          />
-                        </div>
-                      ) : (
-                        <div>
-                          <Label htmlFor="supplierName">Nome do Fornecedor</Label>
-                          <Input
-                            id="supplierName"
-                            name="supplierName"
-                            value={formData.supplierName}
-                            onChange={handleInputChange}
-                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                        
-                          />
-                        </div>
-                      )}
+                        {/* Apenas para SAIDA mostramos seleção de fornecedor; Missão/Círculo não têm fornecedor */}
+                        {formData.type === 'SAIDA' && (
+                          <>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="isSupplierRegistered"
+                                name="isSupplierRegistered"
+                                checked={formData.isSupplierRegistered}
+                                disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}                          
+                                onCheckedChange={(checked) => 
+                                  setFormData(prev => ({ ...prev, isSupplierRegistered: checked }))
+                                }
+                              />
+                              <Label htmlFor="isSupplierRegistered">Fornecedor cadastrado</Label>
+                            </div>
+                            {formData.isSupplierRegistered ? (
+                              <div>
+                                <Label htmlFor="supplierId">Fornecedor</Label>
+                                <SearchableSelect
+                                  key={formData.supplierId}
+                                  label="Buscar Fornecedor"
+                                  placeholder="Selecione o fornecedor"
+                                  value={formData.supplierId}
+                                  disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}  
+                                  onChange={(value) => handleSelectChange('supplierId', value)}
+                                  name="supplierId"
+                                  data={suppliers.map(s => ({ key: s.id, id: s.id, name: s.razaoSocial, document: s.cpfcnpj }))}
+                                  searchKeys={['name', 'document']}
+                                />
+                              </div>
+                            ) : (
+                              <div>
+                                <Label htmlFor="supplierName">Nome do Fornecedor</Label>
+                                <Input
+                                  id="supplierName"
+                                  name="supplierName"
+                                  value={formData.supplierName}
+                                  onChange={handleInputChange}
+                                  disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}                        
+                                />
+                              </div>
+                            )}
+                          </>
+                        )}
                     </div>
                   )}
 
@@ -1175,12 +1241,12 @@ export default function Launches() {
                       name="description"
                       value={formData.description}
                       onChange={handleInputChange}
-                      disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                      
+                      disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}                      
                     />
                   </div>
                   
                   <DialogFooter>
-                    <Button type="submit" disabled={editingLaunch && editingLaunch.status !== 'NORMAL' || salvando}>
+                    <Button type="submit" disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null) || salvando}>
                       {editingLaunch ? 'Atualizar' : 'Salvar'}
                     </Button>
                   </DialogFooter>
@@ -1191,14 +1257,64 @@ export default function Launches() {
           </div>
           {/* Filtros */}
           <div className="mb-6 flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Pesquisar em todos os campos..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+            <div className="relative flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Pesquisar em todos os campos..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+
+              {/* Data Inicial */}
+              <div className="w-full sm:w-44">
+                <Label className="sr-only">Data Inicial</Label>
+                <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {startDate ? format(startDate, 'dd/MM/yyyy') : 'Data Inicial'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={startDate}
+                      onSelect={(d) => { 
+                        setStartDate(d); 
+                        setStartDateOpen(false);
+                        setCurrentPage(1); 
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Data Final */}
+              <div className="w-full sm:w-44">
+                <Label className="sr-only">Data Final</Label>
+                <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {endDate ? format(endDate, 'dd/MM/yyyy') : 'Data Final'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={endDate}
+                      onSelect={(d) => { 
+                        setEndDate(d);
+                        setEndDateOpen(false);
+                        setCurrentPage(1); 
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
 
             {/* <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-4 mb-4"> */}
@@ -1314,10 +1430,16 @@ export default function Launches() {
                           <TableCell>
                             <div className={`w-full py-1 px-0 rounded text-center text-white font-medium ${
                               launch.type === 'ENTRADA' ? 'bg-green-500' : 
-                              launch.type === 'DIZIMO' ? 'bg-blue-500' : 'bg-red-500'
+                              launch.type === 'DIZIMO' ? 'bg-blue-500' : 
+                              launch.type === 'SAIDA'? 'bg-red-500' :
+                              launch.type === 'MISSAO'? 'bg-orange-500' :
+                              launch.type === 'CIRCULO'? 'bg-yellow-500' : ''
                             }`}>
                               {launch.type === 'ENTRADA' ? 'Outras Receitas' : 
-                               launch.type === 'DIZIMO' ? 'Dízimo' : 'Saída'}
+                               launch.type === 'DIZIMO' ? 'Dízimo' : 
+                               launch.type === 'SAIDA' ? 'Saída' :
+                               launch.type === 'MISSAO' ? 'Missão' :
+                               launch.type === 'CIRCULO' ? 'Círculo de Oração' : ''}
                             </div>
                           </TableCell>
                           <TableCell>
@@ -1357,15 +1479,17 @@ export default function Launches() {
                             <div className="flex space-x-2">
                               {(launch.type === 'ENTRADA' && canLaunchEntry) ||
                                    (launch.type === 'DIZIMO' && canLaunchTithe) ||
-                                   (launch.type === 'SAIDA' && canLaunchExpense) ? (
+                                   (launch.type === 'SAIDA' && canLaunchExpense) ||
+                                   (launch.type === 'MISSAO' && canLaunchMission) ||
+                                   (launch.type === 'CIRCULO' && canLaunchCircle) ? (
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
                                     variant="outline"
                                     size="sm"
                                     onClick={() => handleEdit(launch)}
-                                    //disabled={launch.status !== 'NORMAL' || !canEdit}
-                                    disabled={!canLaunchEntry || !canLaunchTithe || !canLaunchExpense}
+                                    //disabled={launch.status !== 'NORMAL'}
+                                    //disabled={!canLaunchEntry || !canLaunchTithe || !canLaunchExpense || !canLaunchMission || !canLaunchCircle}
                                   >
                                     <Edit className="h-4 w-4" />
                                   </Button>
@@ -1380,7 +1504,9 @@ export default function Launches() {
                                 <>
                                   {(launch.type === 'ENTRADA' && canApproveEntry) ||
                                    (launch.type === 'DIZIMO' && canApproveTithe) ||
-                                   (launch.type === 'SAIDA' && canApproveExpense) ? (
+                                   (launch.type === 'SAIDA' && canApproveExpense) ||
+                                   (launch.type === 'MISSAO' && canApproveMission) ||
+                                   (launch.type === 'CIRCULO' && canApproveCircle) ? (
                                     <>
                                       <Tooltip>
                                         <TooltipTrigger asChild>
@@ -1405,10 +1531,12 @@ export default function Launches() {
                                 <>
                                   {(launch.type === 'ENTRADA' && canApproveEntry) ||
                                    (launch.type === 'DIZIMO' && canApproveTithe) ||
-                                   (launch.type === 'SAIDA' && canApproveExpense) ? (
+                                   (launch.type === 'SAIDA' && canApproveExpense) ||
+                                   (launch.type === 'MISSAO' && canApproveMission) ||
+                                   (launch.type === 'CIRCULO' && canApproveCircle) ? (
                                     <>
                                       <Tooltip>
-                                        <TooltipTrigger>
+                                        <TooltipTrigger asChild>
                                           <Button
                                             variant="outline"
                                             size="sm"
@@ -1426,7 +1554,7 @@ export default function Launches() {
                                 </>
                               )}
 
-                              {launch.status =='NORMAL' && (canLaunchEntry || canLaunchExpense || canLaunchTithe)  ? (
+                              {launch.status =='NORMAL' && (canLaunchEntry || canLaunchExpense || canLaunchTithe || canLaunchMission || canLaunchCircle )  ? (
                               <>           
                               <Tooltip>
                                 <TooltipTrigger asChild>

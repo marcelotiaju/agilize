@@ -1,7 +1,7 @@
 // src/components/ui/searchable-select.tsx
 "use client";
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Badge, Church, Search, User, X ,church} from 'lucide-react';
+import { Church, Search, User, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from './card';
 
@@ -20,18 +20,27 @@ interface SearchableSelectProps {
   label: string;
   placeholder: string;
   value: string;
+  disabled?: boolean;
+  required?: boolean;
   onChange: (value: string, name: string) => void;
   name: string;
-  data: { id: string; name: string; document?: string, cargo: string; photoExists: boolean }[];
+  data: { 
+    id: string; 
+    name: string; 
+    document?: string;
+    cargo?: string;
+    photoExists?: boolean;
+    photoUrl?: string;
+  }[];
   searchKeys: ('name' | 'document')[];
-  photoUrl?: string;
-  photoExists?: boolean;
 }
 
 export function SearchableSelect({
   label,
   placeholder,
   value,
+  disabled,
+  required,
   onChange,
   name,
   data,
@@ -72,23 +81,43 @@ export function SearchableSelect({
     setSearchTerm(''); // Limpa a busca ao fechar
   };
 
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Ensure search input gets focus when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 0);
+    }
+  }, [isOpen]);
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button
           variant="outline"
+          disabled={disabled}
+          required={required}
           className={cn("w-full justify-start", !value && "text-muted-foreground")}
         >
           {selectedItem ? selectedItem.name : placeholder}
           <Search className="ml-auto h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] max-h-[80vh] overflow-y-auto">
+      <DialogContent 
+        className="sm:max-w-[425px] max-h-[80vh] overflow-y-auto"
+        onOpenAutoFocus={(e) => {
+          e.preventDefault(); // Prevent default focus handling
+          searchInputRef.current?.focus();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>{label}</DialogTitle>
           <div className="relative mt-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
+              ref={searchInputRef}
               placeholder="Buscar por nome ou documento..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -96,7 +125,7 @@ export function SearchableSelect({
             />
           </div>
         </DialogHeader>
-        <div className="mt-4 max-h-60 overflow-y-auto space-y-2">
+        <div className="mt-0 h-110 overflow-y-auto space-y-2">
           {filteredData.length > 0 ? (
             filteredData.map((item) => (
           //     <Button

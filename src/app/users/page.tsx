@@ -35,9 +35,13 @@ interface UserData {
   canLaunchEntry: boolean
   canLaunchTithe: boolean
   canLaunchExpense: boolean
+  canLaunchMission: boolean
+  canLaunchCircle: boolean
   canApproveEntry: boolean
   canApproveTithe: boolean
   canApproveExpense: boolean
+  canApproveMission: boolean
+  canApproveCircle: boolean
   canCreate: boolean
   canEdit: boolean
   canExclude: boolean
@@ -93,10 +97,14 @@ export default function Users() {
     canLaunchEntry: false,
     canLaunchTithe: false,
     canLaunchExpense: false,
+    canLaunchMission: false,
+    canLaunchCircle: false,
     // Permissões de Aprovação
     canApproveEntry: false,
     canApproveTithe: false,
     canApproveExpense: false,
+    canApproveMission: false,
+    canApproveCircle: false,
     // Permissões de CRUD
     canCreate: false,
     canEdit: false,
@@ -242,10 +250,14 @@ export default function Users() {
       canLaunchEntry: user.canLaunchEntry || false,
       canLaunchTithe: user.canLaunchTithe || false,
       canLaunchExpense: user.canLaunchExpense || false,
+      canLaunchMission: user.canLaunchMission || false,
+      canLaunchCircle: user.canLaunchCircle || false,
       // Permissões de Aprovação
       canApproveEntry: user.canApproveEntry || false,
       canApproveTithe: user.canApproveTithe || false,
       canApproveExpense: user.canApproveExpense || false,
+      canApproveMission: user.canApproveMission || false,
+      canApproveCircle: user.canApproveCircle || false,
       // Permissões de CRUD
       canCreate: user.canCreate || false,
       canEdit: user.canEdit || false,
@@ -364,9 +376,13 @@ export default function Users() {
       canLaunchEntry: false,
       canLaunchTithe: false,
       canLaunchExpense: false,
+      canLaunchMission: false,
+      canLaunchCircle: false,
       canApproveEntry: false,
       canApproveTithe: false,
       canApproveExpense: false,
+      canApproveMission: false,
+      canApproveCircle: false,
       canCreate: false,
       canEdit: false,
       canExclude: false,
@@ -638,6 +654,7 @@ const resetImportForm = () => {
                                   <SelectItem value="/congregations">Congregações</SelectItem>
                                   <SelectItem value="/export">Exportar Dados</SelectItem>
                                   <SelectItem value="/delete-history">Excluir Histórico</SelectItem>
+                                  <SelectItem value="/congregation-summary">Resumo Diario</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
@@ -682,6 +699,31 @@ const resetImportForm = () => {
                               />
                               <Label htmlFor="canLaunchExpense">Lançar Saída</Label>
                             </div>
+
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="canLaunchMission"
+                                name="canLaunchMission"
+                                checked={formData.canLaunchMission}
+                                onCheckedChange={(checked) => 
+                                  setFormData(prev => ({ ...prev, canLaunchMission: checked }))
+                                }
+                              />
+                              <Label htmlFor="canLaunchMission">Lançar Missao</Label>
+                            </div>
+
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="canLaunchCircle"
+                                name="canLaunchCircle"
+                                checked={formData.canLaunchCircle}
+                                onCheckedChange={(checked) => 
+                                  setFormData(prev => ({ ...prev, canLaunchCircle: checked }))
+                                }
+                              />
+                              <Label htmlFor="canLaunchCircle">Lançar Circulo de Oracao</Label>
+                            </div>
+
                           </div>
                         </div>
                       </TabsContent>
@@ -722,6 +764,30 @@ const resetImportForm = () => {
                                 }
                               />
                               <Label htmlFor="canApproveExpense">Aprovar Saída</Label>
+                            </div>
+
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="canApproveMission"
+                                name="canApproveMission"
+                                checked={formData.canApproveMission}
+                                onCheckedChange={(checked) => 
+                                  setFormData(prev => ({ ...prev, canApproveMission: checked }))
+                                }
+                              />
+                              <Label htmlFor="canApproveMission">Aprovar Missao</Label>
+                            </div>
+
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="canApproveCircle"
+                                name="canApproveCircle"
+                                checked={formData.canApproveCircle}
+                                onCheckedChange={(checked) => 
+                                  setFormData(prev => ({ ...prev, canApproveCircle: checked }))
+                                }
+                              />
+                              <Label htmlFor="canApproveCircle">Aprovar Circulo de Oracao</Label>
                             </div>
                           </div>
                         </div>
