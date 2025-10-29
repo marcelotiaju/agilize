@@ -1,14 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /*compiler: {
+  compiler: {
     removeConsole: process.env.NODE_ENV === 'production' ? {exclude: ['error']} : false,
   },
   reactStrictMode: true, 
   typescript: {
      ignoreBuildErrors: true,
   },
-       experimental: {
+  /*   experimental: {
         cpus: 1,
         webpackBuildWorker: true,
         workerThreads: false,
