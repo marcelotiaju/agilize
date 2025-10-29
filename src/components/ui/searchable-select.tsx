@@ -62,7 +62,7 @@ export function SearchableSelect({
   const selectedItem = useMemo(() => {
     return data.find((item) => item.id === value);
   }, [data, value]);
-  
+
   const filteredData = useMemo(() => {
     const term = searchTerm.toLowerCase();
     if (!term) {

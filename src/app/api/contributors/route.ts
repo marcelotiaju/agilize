@@ -59,11 +59,15 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    const UPLOADS_DIR = path.join(__dirname, '../../../../../public/uploads');
+    // Caminho absoluto para o diretório de uploads
+    const UPLOADS_DIR = path.join(process.cwd(), 'public/uploads');
 
     const contributorsWithPhotos = contributors.map(c => {
-
-      const fileName = `${c.photoUrl}`;
+      if (!c.photoUrl) {
+        return { ...c, photoExists: false };
+      }
+      
+      const fileName = c.photoUrl;
       const filePath = path.join(UPLOADS_DIR, fileName);
       const fileExists = fs.existsSync(filePath);
 
@@ -135,7 +139,7 @@ export async function POST(request: NextRequest) {
 
     const contributor = await prisma.contributor.create({
       data: {
-        congregationId: body.congregationCode,
+        congregationId,
         code,
         name,
         cpf,
