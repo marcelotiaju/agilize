@@ -102,11 +102,13 @@ export default function Launches() {
   const canLaunchExpense = session?.user?.canLaunchExpense
   const canLaunchMission = session?.user?.canLaunchMission
   const canLaunchCircle = session?.user?.canLaunchCircle
+  const canLaunchServiceOffer = session?.user?.canLaunchServiceOffer
   const canApproveEntry = session?.user?.canApproveEntry
   const canApproveTithe = session?.user?.canApproveTithe
   const canApproveExpense = session?.user?.canApproveExpense
   const canApproveMission = session?.user?.canApproveMission
   const canApproveCircle = session?.user?.canApproveCircle
+  const canApproveServiceOffer = session?.user?.canApproveServiceOffer
   //const canEdit = session?.user?.canEdit
 
   const [editingLaunch, setEditingLaunch] = useState<Launch | null>(null)
@@ -318,41 +320,49 @@ export default function Launches() {
     e.preventDefault()
     setError(null)
     setSalvando(true)
-      // Validações específicas
-      if (formData.type === 'DIZIMO' && !formData.contributorName && !formData.contributorId) {
-        setError('Nome do contribuinte é obrigatório para lançamentos do tipo Dízimo')
-        setSalvando(false)
-        return
-      }
-      
-      if (formData.type === 'SAIDA' && !formData.classificationId) {
-        setError('Classificação é obrigatória para lançamentos do tipo Saída')
-        setSalvando(false)
-        return
-      }
-
-        // --- Início da validação de valor ---
-        const values = {
-          offerValue: parseFloat(formData.offerValue),
-          votesValue: parseFloat(formData.votesValue),
-          ebdValue: parseFloat(formData.ebdValue),
-          campaignValue: parseFloat(formData.campaignValue),
-          value: parseFloat(formData.value),
-        }
+    // Validações específicas
+    if (formData.type === 'DIZIMO' && !formData.contributorName && !formData.contributorId) {
+      setError('Nome do contribuinte é obrigatório para lançamentos do tipo Dízimo')
+      setSalvando(false)
+      return
+    }
     
-        if (formData.type === 'ENTRADA') {
-          if (!values.offerValue && !values.votesValue && !values.ebdValue && !values.campaignValue) {
-            setError('Pelo menos um dos campos de valor (Oferta, Voto, EBD) deve ser preenchido para Entradas.')
-            setSalvando(false)
-            return
-          }
-        } else if (formData.type === 'DIZIMO' || formData.type === 'SAIDA') {
-          if (!values.value) {
-            setError(`O campo Valor deve ser preenchido para ${formData.type === 'DIZIMO' ? 'Dízimos' : 'Saídas'}.`)
-            setSalvando(false)
-            return
-          }
-        }
+    if (formData.type === 'SAIDA' && !formData.classificationId) {
+      setError('Classificação é obrigatória para lançamentos do tipo Saída')
+      setSalvando(false)
+      return
+    }
+
+    // --- Início da validação de valor ---
+    const values = {
+      votesValue: parseFloat(formData.votesValue),
+      ebdValue: parseFloat(formData.ebdValue),
+      campaignValue: parseFloat(formData.campaignValue),
+      value: parseFloat(formData.value),
+    }
+    
+    if (formData.type === 'ENTRADA') {
+      // Em Outras Receitas (ENTRADA) não consideramos mais "offerValue"
+     if (!values.votesValue && !values.ebdValue && !values.campaignValue) {
+        setError('Pelo menos um dos campos de valor (Voto, EBD, Campanha) deve ser preenchido para Entradas.')
+        setSalvando(false)
+        return
+      }
+    } else if (formData.type === 'DIZIMO' || formData.type === 'SAIDA') {
+      if (!values.value) {
+        setError(`O campo Valor deve ser preenchido para ${formData.type === 'DIZIMO' ? 'Dízimos' : 'Saídas'}.`)
+        setSalvando(false)
+        return
+      }
+    } else if (formData.type === 'OFERTA_CULTO') {
+       // Oferta do Culto exige offerValue
+      const offer = parseFloat(formData.offerValue as any)
+      if (!offer) {
+        setError('O campo "Oferta do Culto" (Valor) é obrigatório.')
+        setSalvando(false)
+        return
+      }
+    }
 
         try {
 
@@ -522,34 +532,6 @@ export default function Launches() {
     setError(null)
   }
 
-
-// Filtrar lançamentos com base no termo de pesquisa e congregação selecionada
-// const filteredLaunches = useMemo(() => {
-//   if (!searchTerm) return launches
-//   return launches.filter(launch => { 
-//     const matchesCongregation = selectedCongregation === 'all' || 
-//         launch.congregationId === selectedCongregation
-
-//     // const matchesSearch = searchTerm === '' || 
-//     //   Object.values(launch).some(value => 
-//     //     value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-//     //   )
-
-//       launch.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-//       launch.talonNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-//       (launch.supplierName && launch.supplierName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-//       (launch.contributorName && launch.contributorName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-//       (launch.supplier?.id && launch.supplier.razaoSocial.toLowerCase().includes(searchTerm.toLowerCase())) ||
-//       (launch.contributor?.id && launch.contributor.name.toLowerCase().includes(searchTerm.toLowerCase())) 
-//       //  return matchesSearch && matchesCongregation
-//     })
-    
-//   //   const matchesCongregation = selectedCongregation === 'all' || 
-//   //     launch.congregationId === selectedCongregation
-    
-//   // })
-// }, [launches, searchTerm, selectedCongregation])
-
   // Formatar valor com separador de milhar
   const formatCurrency = (value) => {
     if (!value) return 'R$ 0,00'
@@ -567,11 +549,7 @@ export default function Launches() {
     !formData.congregationId || c.congregationId === formData.congregationId
   )
 
-  // const filteredSuppliers = suppliers.filter(s =>
-  //   !formData.congregationId || s.congregationId === formData.congregationId
-  // )
-
-    // Componente para cards em dispositivos móveis
+ // Componente para cards em dispositivos móveis
   const LaunchCard = ({ launch }) => (
     <Card key={launch.id} className="mb-2">
       <CardContent className="p-4 pt-0.5">
@@ -581,12 +559,14 @@ export default function Launches() {
             launch.type === 'DIZIMO' ? 'bg-blue-500' : 
             launch.type === 'SAIDA'? 'bg-red-500' :
             launch.type === 'MISSAO'? 'bg-orange-500' :
+            launch.type === 'OFERTA_CULTO'? 'bg-purple-500' :
             launch.type === 'CIRCULO'? 'bg-yellow-500' : ''
           }`}>
             {launch.type === 'ENTRADA' ? 'Outras Receitas' : 
               launch.type === 'DIZIMO' ? 'Dízimo' : 
               launch.type === 'SAIDA' ? 'Saída' :
               launch.type === 'MISSAO' ? 'Missão' :
+              launch.type === 'OFERTA_CULTO' ? 'Oferta do Culto' :
               launch.type === 'CIRCULO' ? 'Círculo de Oração' : ''}
           </div>
           <Badge variant={
@@ -609,11 +589,12 @@ export default function Launches() {
           <div className="text-sm font-normal">
             {launch.type === 'ENTRADA' ? (
               <div className="space-y-1 grid grid-cols-2 gap-0">
-                {launch.offerValue > 0 ? <div>Oferta: {formatCurrency(launch.offerValue)}</div> : null}
                 {launch.votesValue > 0 ? <div>Votos: {formatCurrency(launch.votesValue)}</div> : null}
                 {launch.ebdValue > 0 ? <div>EBD: {formatCurrency(launch.ebdValue)}</div> : null}
                 {launch.campaignValue > 0 ? <div>Campanha: {formatCurrency(launch.campaignValue)}</div> : null}
               </div>
+            ) : launch.type === 'OFERTA_CULTO' ? (
+              <div>Oferta do Culto: {formatCurrency(launch.offerValue)}</div>
             ) : (
               <div>{formatCurrency(launch.value)}</div>
             )}
@@ -627,17 +608,6 @@ export default function Launches() {
           )}
         </div>
         
-        {/* <Collapsible open={expandedCard === launch.id} onOpenChange={() => setExpandedCard(expandedCard === launch.id ? null : launch.id)}>
-          <CollapsibleTrigger asChild>
-            <Button variant="outline" size="sm" className="w-full">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="mt-3 space-y-2"> */}
-            {/* <div className="flex justify-between">
-              <span className="text-sm text-gray-500">Congregação:</span>
-              <span className="text-sm font-medium">{launch.congregation.name}</span>
-            </div> */}
             {launch.talonNumber && (
               <div className="flex justify-start">
                 <span className="text-sm font-normal">Talão:</span>
@@ -678,6 +648,7 @@ export default function Launches() {
               {launch.status === 'NORMAL' && (
                 <>
                   {(launch.type === 'ENTRADA' && canApproveEntry) ||
+                   (launch.type === 'OFERTA_CULTO' && canApproveServiceOffer) ||
                    (launch.type === 'DIZIMO' && canApproveTithe) ||
                    (launch.type === 'SAIDA' && canApproveExpense) ||
                    (launch.type === 'MISSAO' && canApproveMission) ||
@@ -707,6 +678,7 @@ export default function Launches() {
               {launch.status === 'APPROVED' && (
                 <>
                   {(launch.type === 'ENTRADA' && canApproveEntry) ||
+                   (launch.type === 'OFERTA_CULTO' && canApproveServiceOffer) ||
                    (launch.type === 'DIZIMO' && canApproveTithe) ||
                    (launch.type === 'SAIDA' && canApproveExpense) ||
                    (launch.type === 'MISSAO' && canApproveMission) ||
@@ -734,7 +706,7 @@ export default function Launches() {
               )}
               
 
-              {launch.status =='NORMAL' && (canLaunchEntry || canLaunchExpense || canLaunchTithe || canLaunchMission|| canLaunchCircle)  ? (
+              {launch.status =='NORMAL' && (canLaunchEntry || canLaunchExpense || canLaunchTithe || canLaunchMission|| canLaunchCircle || canLaunchServiceOffer)  ? (
               <>           
                 <Tooltip>
                     <TooltipTrigger asChild>
@@ -773,11 +745,13 @@ export default function Launches() {
         canLaunchExpense: canLaunchExpense,
         canLaunchMission: canLaunchMission,
         canLaunchCircle: canLaunchCircle,
+        canLaunchServiceOffer: canLaunchServiceOffer,
         canApproveEntry: canApproveEntry,
         canApproveTithe: canApproveTithe,
         canApproveExpense: canApproveExpense,
         canApproveMission: canApproveMission,
         canApproveCircle: canApproveCircle,
+        canApproveServiceOffer: canApproveServiceOffer,
       }}
     >
 
@@ -833,22 +807,6 @@ export default function Launches() {
                   <div className="space-y-2">
                     <div>
                       <Label htmlFor="congregationId">Congregação</Label>
-                      {/* <Select
-                        value={formData.congregationId}
-                        onValueChange={(value) => handleSelectChange('congregationId', value)}
-                        disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}   
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {congregations.map((congregation) => (
-                            <SelectItem key={congregation.id} value={congregation.id}>
-                              {congregation.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select> */}
                       <SearchableSelect
                         // key={formData.congregationId}
                         label="Buscar Congregação"
@@ -876,6 +834,7 @@ export default function Launches() {
                           </SelectTrigger>
                           <SelectContent>
                             {canLaunchTithe && <SelectItem value="DIZIMO">Dízimos</SelectItem>}
+                            {canLaunchServiceOffer && <SelectItem value="OFERTA_CULTO">Oferta do Culto</SelectItem>}
                             {canLaunchMission && <SelectItem value="MISSAO">Missão</SelectItem>}
                             {canLaunchCircle && <SelectItem value="CIRCULO">Círculo de Oração</SelectItem>}
                             {canLaunchEntry && <SelectItem value="ENTRADA">Outras Receitas</SelectItem>}
@@ -941,48 +900,7 @@ export default function Launches() {
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <Label htmlFor="offerValue">Valor Oferta</Label>
-                          {/* <Input
-                            id="offerValue"
-                            name="offerValue"
-                            type="text"
-                            inputMode="decimal"
-                            value={formData.offerValue}
-                            onChange={handleInputChange}
-                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                           
-                          /> */}
-                          <NumericFormat
-                            id="offerValue"
-                            name="offerValue"
-                            className="col-span-3 h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                            value={formData.offerValue || ''}
-                            onValueChange={(values) => {
-                              const { floatValue } = values;
-                              setFormData({
-                                ...formData,
-                                offerValue: floatValue,
-                              });
-                            }}
-                            thousandSeparator="."
-                            decimalSeparator=","
-                            prefix="R$ "
-                            decimalScale={2}
-                            fixedDecimalScale={true}
-                            disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}     
-                          />
-                        </div>
-                    
-                        <div>
                           <Label htmlFor="votesValue">Valor Voto</Label>
-                          {/* <Input
-                            id="votesValue"
-                            name="votesValue"
-                            type="text"
-                            inputMode="decimal"
-                            value={formData.votesValue}
-                            onChange={handleInputChange}
-                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                              
-                          /> */}
                           <NumericFormat
                             id="votesValue"
                             name="votesValue"
@@ -1006,15 +924,6 @@ export default function Launches() {
                         
                         <div>
                           <Label htmlFor="ebdValue">Valor EBD</Label>
-                          {/* <Input
-                            id="ebdValue"
-                            name="ebdValue"
-                            type="text"
-                            inputMode="decimal"
-                            value={formData.ebdValue}
-                            onChange={handleInputChange}
-                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                              
-                          /> */}
                           <NumericFormat
                             id="ebdValue"
                             name="ebdValue"
@@ -1038,15 +947,6 @@ export default function Launches() {
                         
                         <div>
                           <Label htmlFor="campaignValue">Valor Campanha</Label>
-                          {/* <Input
-                            id="campaignValue"
-                            name="campaignValue"
-                            type="text"
-                            inputMode="decimal"
-                            value={formData.campaignValue}
-                            onChange={handleInputChange}
-                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                           
-                          /> */}
                           <NumericFormat
                             id="campaignValue"
                             name="campaignValue"
@@ -1077,15 +977,6 @@ export default function Launches() {
                       <div  className='grid grid-cols-2'>
                         <div>
                           <Label htmlFor="value">Valor</Label>
-                          {/* <Input
-                            id="value"
-                            name="value"
-                            type="text"
-                            inputMode="decimal"
-                            value={formData.value}
-                            onChange={handleInputChange}
-                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                         
-                          /> */}
                           <NumericFormat
                             id="value"
                             name="value"
@@ -1107,6 +998,7 @@ export default function Launches() {
                           />                              
                         </div>
                       </div>
+
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           id="isContributorRegistered"
@@ -1150,6 +1042,36 @@ export default function Launches() {
                       )}
                     </div>
                   )}
+
+                  {/* Campos específicos para Oferta do Culto */}
+                  {formData.type === 'OFERTA_CULTO' && (
+                    <div className="space-y-4">
+                      <div  className='grid grid-cols-2'>
+                        <div>
+                          <Label htmlFor="offerValue">Valor da Oferta</Label>
+                          <NumericFormat
+                            id="offerValue"
+                            name="offerValue"
+                            className="col-span-3 h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            value={formData.offerValue || ''}
+                            onValueChange={(values) => {
+                              const { floatValue } = values;
+                              setFormData({
+                                ...formData,
+                                offerValue: floatValue,
+                              });
+                            }}
+                            thousandSeparator="."
+                            decimalSeparator=","
+                            prefix="R$ "
+                            decimalScale={2}
+                            fixedDecimalScale={true}
+                            disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}                                 
+                          />                              
+                        </div>
+                      </div>
+                    </div>
+                  )}                  
                   
                   {/* Campos específicos para Saída */}
                   {['SAIDA', 'MISSAO', 'CIRCULO'].includes(formData.type) && (
@@ -1157,15 +1079,6 @@ export default function Launches() {
                       <div  className='grid grid-cols-2'>
                         <div>
                           <Label htmlFor="value">Valor</Label>
-                          {/* <Input
-                            id="value"
-                            name="value"
-                            type="text"
-                            inputMode="decimal"
-                            value={formData.value}
-                            onChange={handleInputChange}
-                            disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}                          
-                          /> */}
                           <NumericFormat
                             id="value"
                             name="value"
@@ -1317,62 +1230,6 @@ export default function Launches() {
               </div>
             </div>
 
-            {/* <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-4 mb-4"> */}
-            {/* Seus filtros existentes, como Status e Tipo, permanecem aqui */}
-
-            {/* Seletor de Data de Início */}
-            {/* <div className="flex-1">
-              <Label htmlFor="startDate" className="block text-sm font-medium text-gray-700">
-                Data de Início
-              </Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className="w-full justify-start text-left font-normal"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "dd/MM/yyyy") : <span>Selecione a data</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={startDate}
-                    onSelect={setStartDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            {/* Seletor de Data de Fim */}
-            {/* <div className="flex-1">
-              <Label htmlFor="endDate" className="block text-sm font-medium text-gray-700">
-                Data de Fim
-              </Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className="w-full justify-start text-left font-normal"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "dd/MM/yyyy") : <span>Selecione a data</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={endDate}
-                    onSelect={setEndDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>  */}
-
-            
             <div className="w-full sm:w-64">
               <Select
                 value={selectedCongregation}
@@ -1393,22 +1250,11 @@ export default function Launches() {
             </div>
           </div>
 
-          {/* {error && (
-            <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md flex items-center">
-              <AlertCircle className="h-4 w-4 mr-2" />
-              {error}
-            </div>
-          )} */}
-
           {/* Lista para Desktop */}
           <div className="hidden lg:block">
             <Card>
               <CardHeader>
                 <CardTitle>Lançamentos Recentes</CardTitle>
-                {/* <CardDescription>Lista de lançamentos financeiros</CardDescription> */}
-                {/* <CardDescription>
-                  {totalItems} lançamentos encontrados
-              </CardDescription> */}
               </CardHeader>
             <CardContent>
                 <div className="overflow-x-auto">
@@ -1433,12 +1279,14 @@ export default function Launches() {
                               launch.type === 'DIZIMO' ? 'bg-blue-500' : 
                               launch.type === 'SAIDA'? 'bg-red-500' :
                               launch.type === 'MISSAO'? 'bg-orange-500' :
+                              launch.type === 'OFERTA_CULTO'? 'bg-purple-500' :
                               launch.type === 'CIRCULO'? 'bg-yellow-500' : ''
                             }`}>
                               {launch.type === 'ENTRADA' ? 'Outras Receitas' : 
                                launch.type === 'DIZIMO' ? 'Dízimo' : 
                                launch.type === 'SAIDA' ? 'Saída' :
                                launch.type === 'MISSAO' ? 'Missão' :
+                                launch.type === 'OFERTA_CULTO' ? 'Oferta do Culto' :
                                launch.type === 'CIRCULO' ? 'Círculo de Oração' : ''}
                             </div>
                           </TableCell>
@@ -1448,11 +1296,12 @@ export default function Launches() {
                           <TableCell>
                             {launch.type === 'ENTRADA' ? (
                               <div className="space-y-1">
-                                {launch.offerValue ? <div>Oferta: {formatCurrency(launch.offerValue)}</div> : null}
                                 {launch.votesValue ? <div>Votos: {formatCurrency(launch.votesValue)}</div> : null}
                                 {launch.ebdValue ? <div>EBD: {formatCurrency(launch.ebdValue)}</div> : null}
                                 {launch.campaignValue ? <div>Campanha: {formatCurrency(launch.campaignValue)}</div> : null}
                               </div>
+                            ) : launch.type === 'OFERTA_CULTO' ? (
+                              <div>Oferta do Culto: {formatCurrency(launch.offerValue)}</div>
                             ) : (
                               <div>{formatCurrency(launch.value)}</div>
                             )}
@@ -1478,6 +1327,7 @@ export default function Launches() {
                           <TableCell>
                             <div className="flex space-x-2">
                               {(launch.type === 'ENTRADA' && canLaunchEntry) ||
+                                   (launch.type === 'OFERTA_CULTO' && canLaunchServiceOffer) ||
                                    (launch.type === 'DIZIMO' && canLaunchTithe) ||
                                    (launch.type === 'SAIDA' && canLaunchExpense) ||
                                    (launch.type === 'MISSAO' && canLaunchMission) ||
@@ -1503,6 +1353,7 @@ export default function Launches() {
                               {launch.status === 'NORMAL' && (
                                 <>
                                   {(launch.type === 'ENTRADA' && canApproveEntry) ||
+                                   (launch.type === 'OFERTA_CULTO' && canApproveServiceOffer) ||
                                    (launch.type === 'DIZIMO' && canApproveTithe) ||
                                    (launch.type === 'SAIDA' && canApproveExpense) ||
                                    (launch.type === 'MISSAO' && canApproveMission) ||
@@ -1530,6 +1381,7 @@ export default function Launches() {
                               {launch.status === 'APPROVED' && (
                                 <>
                                   {(launch.type === 'ENTRADA' && canApproveEntry) ||
+                                   (launch.type === 'OFERTA_CULTO' && canApproveServiceOffer) ||
                                    (launch.type === 'DIZIMO' && canApproveTithe) ||
                                    (launch.type === 'SAIDA' && canApproveExpense) ||
                                    (launch.type === 'MISSAO' && canApproveMission) ||
@@ -1554,7 +1406,7 @@ export default function Launches() {
                                 </>
                               )}
 
-                              {launch.status =='NORMAL' && (canLaunchEntry || canLaunchExpense || canLaunchTithe || canLaunchMission || canLaunchCircle )  ? (
+                              {launch.status =='NORMAL' && (canLaunchEntry || canLaunchExpense || canLaunchTithe || canLaunchMission || canLaunchCircle || canLaunchServiceOffer )  ? (
                               <>           
                               <Tooltip>
                                 <TooltipTrigger asChild>

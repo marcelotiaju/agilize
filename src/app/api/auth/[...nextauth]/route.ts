@@ -1,11 +1,11 @@
-    // app/lib/authOptions.ts
-  import NextAuth, { NextAuthOptions } from 'next-auth';
-  import CredentialsProvider from 'next-auth/providers/credentials';
-  import prisma from "@/lib/prisma"
-  import bcrypt from "bcrypt"
+// app/lib/authOptions.ts
+import NextAuth, { NextAuthOptions } from 'next-auth';
+import CredentialsProvider from 'next-auth/providers/credentials';
+import prisma from "@/lib/prisma"
+import bcrypt from "bcrypt"
 
 
-  export const authOptions : NextAuthOptions = {
+export const authOptions : NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -53,11 +53,14 @@
           canLaunchExpense: user.canLaunchExpense,
           canLaunchMission: user.canLaunchMission,
           canLaunchCircle: user.canLaunchCircle,
+          // novas permissões
+          canLaunchServiceOffer: user.canLaunchServiceOffer,
           canApproveEntry: user.canApproveEntry,
           canApproveTithe: user.canApproveTithe,
           canApproveExpense: user.canApproveExpense,
           canApproveMission: user.canApproveMission,
           canApproveCircle: user.canApproveCircle,
+          canApproveServiceOffer: user.canApproveServiceOffer,
           canCreate: user.canCreate,
           canEdit: user.canEdit,
           canExclude: user.canExclude,
@@ -72,8 +75,6 @@
     })
   ],
   secret: process.env.SECRET,
-  //currentSecret,
-  //process.env.SECRET,
   session: {
   },
   callbacks: {
@@ -95,11 +96,13 @@
           canLaunchExpense: user.canLaunchExpense,
           canLaunchMission: user.canLaunchMission,
           canLaunchCircle: user.canLaunchCircle,
+          canLaunchServiceOffer: user.canLaunchServiceOffer,
           canApproveEntry: user.canApproveEntry,
           canApproveTithe: user.canApproveTithe,
           canApproveExpense: user.canApproveExpense,
           canApproveMission: user.canApproveMission,
           canApproveCircle: user.canApproveCircle,
+          canApproveServiceOffer: user.canApproveServiceOffer,
           canCreate: user.canCreate,
           canEdit: user.canEdit,
           canExclude: user.canExclude,
@@ -135,11 +138,13 @@
         canLaunchExpense: typeof token.canLaunchExpense === "boolean" ? token.canLaunchExpense : undefined,
         canLaunchMission: typeof token.canLaunchMission === "boolean" ? token.canLaunchMission : undefined,
         canLaunchCircle: typeof token.canLaunchCircle === "boolean" ? token.canLaunchCircle : undefined,
+        canLaunchServiceOffer: typeof token.canLaunchServiceOffer === "boolean" ? token.canLaunchServiceOffer : undefined,
         canApproveEntry: typeof token.canApproveEntry === "boolean" ?  token.canApproveEntry : undefined,
         canApproveTithe: typeof token.canApproveTithe === "boolean" ? token.canApproveTithe : undefined,
         canApproveExpense: typeof token.canApproveExpense === "boolean" ? token.canApproveExpense : undefined,
         canApproveMission: typeof token.canApproveMission === "boolean" ? token.canApproveMission : undefined,
         canApproveCircle: typeof token.canApproveCircle === "boolean" ? token.canApproveCircle : undefined,
+        canApproveServiceOffer: typeof token.canApproveServiceOffer === "boolean" ? token.canApproveServiceOffer : undefined,
         canCreate: typeof token.canCreate === "boolean" ? token.canCreate : undefined,
         canEdit: typeof token.canEdit === "boolean" ? token.canEdit : undefined,
         canExclude: typeof token.canExclude === "boolean" ?  token.canExclude : undefined,

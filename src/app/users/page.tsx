@@ -37,11 +37,15 @@ interface UserData {
   canLaunchExpense: boolean
   canLaunchMission: boolean
   canLaunchCircle: boolean
+  // Nova permissão: Oferta do Culto
+  canLaunchServiceOffer: boolean
   canApproveEntry: boolean
   canApproveTithe: boolean
   canApproveExpense: boolean
   canApproveMission: boolean
   canApproveCircle: boolean
+  // Nova permissão de aprovação: Oferta do Culto
+  canApproveServiceOffer: boolean
   canCreate: boolean
   canEdit: boolean
   canExclude: boolean
@@ -99,12 +103,16 @@ export default function Users() {
     canLaunchExpense: false,
     canLaunchMission: false,
     canLaunchCircle: false,
+    // Nova permissão: Oferta do Culto
+    canLaunchServiceOffer: false,
     // Permissões de Aprovação
     canApproveEntry: false,
     canApproveTithe: false,
     canApproveExpense: false,
     canApproveMission: false,
     canApproveCircle: false,
+    // Nova permissão de aprovação: Oferta do Culto
+    canApproveServiceOffer: false,
     // Permissões de CRUD
     canCreate: false,
     canEdit: false,
@@ -252,12 +260,16 @@ export default function Users() {
       canLaunchExpense: user.canLaunchExpense || false,
       canLaunchMission: user.canLaunchMission || false,
       canLaunchCircle: user.canLaunchCircle || false,
+     // Permissão Oferta do Culto
+     canLaunchServiceOffer: user.canLaunchServiceOffer || false,
       // Permissões de Aprovação
       canApproveEntry: user.canApproveEntry || false,
       canApproveTithe: user.canApproveTithe || false,
       canApproveExpense: user.canApproveExpense || false,
       canApproveMission: user.canApproveMission || false,
       canApproveCircle: user.canApproveCircle || false,
+     // Permissão de aprovação Oferta do Culto
+     canApproveServiceOffer: user.canApproveServiceOffer || false,
       // Permissões de CRUD
       canCreate: user.canCreate || false,
       canEdit: user.canEdit || false,
@@ -378,11 +390,13 @@ export default function Users() {
       canLaunchExpense: false,
       canLaunchMission: false,
       canLaunchCircle: false,
+      canLaunchServiceOffer: false,
       canApproveEntry: false,
       canApproveTithe: false,
       canApproveExpense: false,
       canApproveMission: false,
       canApproveCircle: false,
+      canApproveServiceOffer: false,
       canCreate: false,
       canEdit: false,
       canExclude: false,
@@ -391,7 +405,6 @@ export default function Users() {
       canApproveTreasury: false,
       canApproveAccountant: false,
       canApproveDirector: false
-      
     })
   }
 
@@ -709,7 +722,7 @@ const resetImportForm = () => {
                                   setFormData(prev => ({ ...prev, canLaunchMission: checked }))
                                 }
                               />
-                              <Label htmlFor="canLaunchMission">Lançar Missao</Label>
+                              <Label htmlFor="canLaunchMission">Lançar Missão</Label>
                             </div>
 
                             <div className="flex items-center space-x-2">
@@ -721,9 +734,20 @@ const resetImportForm = () => {
                                   setFormData(prev => ({ ...prev, canLaunchCircle: checked }))
                                 }
                               />
-                              <Label htmlFor="canLaunchCircle">Lançar Circulo de Oracao</Label>
+                              <Label htmlFor="canLaunchCircle">Lançar Círculo de Oracao</Label>
                             </div>
 
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="canLaunchServiceOffer"
+                                name="canLaunchServiceOffer"
+                                checked={formData.canLaunchServiceOffer}
+                                onCheckedChange={(checked) =>
+                                  setFormData(prev => ({ ...prev, canLaunchServiceOffer: checked }))
+                                }
+                              />
+                              <Label htmlFor="canLaunchServiceOffer">Lançar Oferta do Culto</Label>
+                            </div>
                           </div>
                         </div>
                       </TabsContent>
@@ -775,7 +799,7 @@ const resetImportForm = () => {
                                   setFormData(prev => ({ ...prev, canApproveMission: checked }))
                                 }
                               />
-                              <Label htmlFor="canApproveMission">Aprovar Missao</Label>
+                              <Label htmlFor="canApproveMission">Aprovar Missão</Label>
                             </div>
 
                             <div className="flex items-center space-x-2">
@@ -788,6 +812,18 @@ const resetImportForm = () => {
                                 }
                               />
                               <Label htmlFor="canApproveCircle">Aprovar Circulo de Oracao</Label>
+                            </div>
+                            
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="canApproveServiceOffer"
+                                name="canApproveServiceOffer"
+                                checked={formData.canApproveServiceOffer}
+                                onCheckedChange={(checked) =>
+                                  setFormData(prev => ({ ...prev, canApproveServiceOffer: checked }))
+                                }
+                              />
+                              <Label htmlFor="canApproveServiceOffer">Aprovar Oferta do Culto</Label>
                             </div>
                           </div>
                         </div>

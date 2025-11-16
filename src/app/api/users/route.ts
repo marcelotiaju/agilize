@@ -9,14 +9,14 @@ export async function GET(request: NextRequest) {
     console.log('API: Buscando usuários...')
     const session = await getServerSession(authOptions)
 
-  if (!session) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-  }
+    if (!session) {
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+    }
 
-  // if (!session.user.canEdit) {
-  //   return NextResponse.json({ error: "Sem permissão para visualizar usuário" }, { status: 403 })
-  // }
-    
+    // if (!session.user.canEdit) {
+    //   return NextResponse.json({ error: "Sem permissão para visualizar usuário" }, { status: 403 })
+    // }
+      
     const users = await prisma.user.findMany({
       include: {
         congregations: {
@@ -49,27 +49,19 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, email, cpf, phone, password, validFrom, validTo, historyDays, canExport, 
-      canDelete,
-      canLaunchEntry,
-      canLaunchTithe,
-      canLaunchExpense,
-      canLaunchMission,
-      canLaunchCircle,
-      canApproveEntry,
-      canApproveTithe,
-      canApproveExpense,
-      canApproveMission,
-      canApproveCircle,      
-      canCreate,
-      canEdit,
-      canExclude,
-      defaultPage,
-      canManageSummary,
-      canApproveTreasury,
-      canApproveAccountant,
-      canApproveDirector
-     } = await request.json()
+    const {
+      name, email, cpf, phone, password, validFrom, validTo, historyDays,
+      canExport, canDelete,
+      canLaunchEntry, canLaunchTithe, canLaunchExpense, canLaunchMission, canLaunchCircle,
+      // Nova permissão: Oferta do Culto
+      canLaunchServiceOffer,
+      // Permissões de Aprovação
+      canApproveEntry, canApproveTithe, canApproveExpense, canApproveMission, canApproveCircle,
+      // Nova permissão de aprovação: Oferta do Culto
+      canApproveServiceOffer,
+      canCreate, canEdit, canExclude, defaultPage,
+      canManageSummary, canApproveTreasury, canApproveAccountant, canApproveDirector
+    } = await request.json()
 
     // Validações básicas
     if (!email || !cpf || !password) {
@@ -112,11 +104,15 @@ export async function POST(request: NextRequest) {
         canLaunchExpense: canLaunchExpense || false,
         canLaunchMission: canLaunchMission || false,
         canLaunchCircle: canLaunchCircle || false,
+        // Persistir nova permissão
+        canLaunchServiceOffer: canLaunchServiceOffer || false,
         canApproveEntry: canApproveEntry || false,
         canApproveTithe: canApproveTithe || false,
         canApproveExpense: canApproveExpense || false,
         canApproveMission: canApproveMission || false,
         canApproveCircle: canApproveCircle || false,
+        // Persistir nova permissão de aprovação
+        canApproveServiceOffer: canApproveServiceOffer || false,
         canCreate: canCreate || false,
         canEdit: canEdit || false,
         canExclude: canExclude || false,
@@ -137,26 +133,19 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const { id, name, email, cpf, phone, password, validFrom, validTo, historyDays, canExport, canDelete,
-      canLaunchEntry,
-      canLaunchTithe,
-      canLaunchExpense,
-      canLaunchMission,
-      canLaunchCircle,
-      canApproveEntry,
-      canApproveTithe,
-      canApproveExpense,
-      canApproveMission,
-      canApproveCircle,
-      canCreate,
-      canEdit,
-      canExclude,
-      defaultPage,
-      canManageSummary,
-      canApproveTreasury,
-      canApproveAccountant,
-      canApproveDirector
-     } = await request.json()
+    const {
+      id, name, email, cpf, phone, password, validFrom, validTo, historyDays,
+      canExport, canDelete,
+      canLaunchEntry, canLaunchTithe, canLaunchExpense, canLaunchMission, canLaunchCircle,
+      // Nova permissão: Oferta do Culto
+      canLaunchServiceOffer,
+      // Permissões de Aprovação
+      canApproveEntry, canApproveTithe, canApproveExpense, canApproveMission, canApproveCircle,
+      // Nova permissão de aprovação: Oferta do Culto
+      canApproveServiceOffer,
+      canCreate, canEdit, canExclude, defaultPage,
+      canManageSummary, canApproveTreasury, canApproveAccountant, canApproveDirector
+    } = await request.json()
 
     if (!id) {
       return NextResponse.json({ error: "ID do usuário é obrigatório" }, { status: 400 })
@@ -208,11 +197,15 @@ export async function PUT(request: NextRequest) {
         canLaunchExpense: canLaunchExpense || false,
         canLaunchMission: canLaunchMission || false,
         canLaunchCircle: canLaunchCircle || false,
+        // Atualizar nova permissão
+        canLaunchServiceOffer: canLaunchServiceOffer || false,
         canApproveEntry: canApproveEntry || false,
         canApproveTithe: canApproveTithe || false,
         canApproveExpense: canApproveExpense || false,
         canApproveMission: canApproveMission || false,
         canApproveCircle: canApproveCircle || false,
+        // Atualizar nova permissão de aprovação
+        canApproveServiceOffer: canApproveServiceOffer || false,
         canCreate: canCreate || false,
         canEdit: canEdit || false,
         canExclude: canExclude || false,

@@ -23,9 +23,10 @@ interface Congregation {
   name: string
   regionalName?: string
   createdAt: string
-  entradaOfferAccountPlan?: string
-  entradaOfferFinancialEntity?: string
-  entradaOfferPaymentMethod?: string
+  // Oferta do Culto (antes estava como entradaOffer dentro de Out Receitas)
+  serviceOfferAccountPlan?: string
+  serviceOfferFinancialEntity?: string
+  serviceOfferPaymentMethod?: string
   entradaEbdAccountPlan?: string
   entradaEbdFinancialEntity?: string
   entradaEbdPaymentMethod?: string
@@ -70,10 +71,10 @@ export default function Congregations() {
     code: '',
     name: '',
     regionalName: '',
-    // Campos para Entrada
-    entradaOfferAccountPlan: '',
-    entradaOfferFinancialEntity: '',
-    entradaOfferPaymentMethod: '',
+    // Campos para Oferta do Culto (separado)
+    serviceOfferAccountPlan: '',
+    serviceOfferFinancialEntity: '',
+    serviceOfferPaymentMethod: '',
     entradaEbdAccountPlan: '',
     entradaEbdFinancialEntity: '',
     entradaEbdPaymentMethod: '',
@@ -91,6 +92,7 @@ export default function Congregations() {
     saidaAccountPlan: '',
     saidaFinancialEntity: '',
     saidaPaymentMethod: '',
+    // matriculas agora gerenciadas como listas abaixo
     matriculaEnergisa: '',
     matriculaIgua: '',
     // Campos Missao e Circulo podem ser adicionados aqui
@@ -101,6 +103,9 @@ export default function Congregations() {
     circleFinancialEntity: '',
     circlePaymentMethod: '',
   })
+  // listas para múltiplas matrículas
+  const [matriculaEnergisaList, setMatriculaEnergisaList] = useState<string[]>([])
+  const [matriculaIguaList, setMatriculaIguaList] = useState<string[]>([])
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const [importing, setImporting] = useState(false)
 
@@ -147,12 +152,20 @@ export default function Congregations() {
       const url = '/api/congregations'
       const method = editingCongregation ? 'PUT' : 'POST'
       
+      // Serializar listas de matrícula para string compatível com API/DB
+      const payload = {
+        ...formData,
+        matriculaEnergisa: matriculaEnergisaList.join(','),
+        matriculaIgua: matriculaIguaList.join(','),
+        ...(editingCongregation ? { id: editingCongregation.id } : {})
+      }
+
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(editingCongregation ? { ...formData, id: editingCongregation.id } : formData)
+        body: JSON.stringify(payload)
       })
 
       if (response.ok) {
@@ -176,10 +189,10 @@ export default function Congregations() {
       code: congregation.code,
       name: congregation.name,
       regionalName: congregation.regionalName || '',
-      // Campos para Entrada
-      entradaOfferAccountPlan: congregation.entradaOfferAccountPlan || '',
-      entradaOfferFinancialEntity: congregation.entradaOfferFinancialEntity || '',
-      entradaOfferPaymentMethod: congregation.entradaOfferPaymentMethod || '',
+      // Oferta do Culto — mantém compatibilidade com registros antigos que usam entradaOffer*
+      serviceOfferAccountPlan: (congregation.serviceOfferAccountPlan || (congregation as any).entradaOfferAccountPlan) || '',
+      serviceOfferFinancialEntity: (congregation.serviceOfferFinancialEntity || (congregation as any).entradaOfferFinancialEntity) || '',
+      serviceOfferPaymentMethod: (congregation.serviceOfferPaymentMethod || (congregation as any).entradaOfferPaymentMethod) || '',
       entradaEbdAccountPlan: congregation.entradaEbdAccountPlan || '',
       entradaEbdFinancialEntity: congregation.entradaEbdFinancialEntity || '',
       entradaEbdPaymentMethod: congregation.entradaEbdPaymentMethod || '',      
@@ -208,6 +221,13 @@ export default function Congregations() {
       circleFinancialEntity: congregation.circleFinancialEntity || '',
       circlePaymentMethod: congregation.circlePaymentMethod || '',
     })
+    // popular listas a partir da string armazenada (compatibilidade com DB)
+    setMatriculaEnergisaList(
+      (congregation.matriculaEnergisa || '').split(',').map(s => s.trim()).filter(Boolean)
+    )
+    setMatriculaIguaList(
+      (congregation.matriculaIgua || '').split(',').map(s => s.trim()).filter(Boolean)
+    )
     setIsDialogOpen(true)
   }
 
@@ -251,10 +271,11 @@ export default function Congregations() {
       code: '',
       name: '',
       regionalName: '',
+      // Oferta do Culto
+      serviceOfferAccountPlan: '',
+      serviceOfferFinancialEntity: '',
+      serviceOfferPaymentMethod: '',
       // Campos para Entrada
-      entradaOfferAccountPlan: '',
-      entradaOfferFinancialEntity: '',
-      entradaOfferPaymentMethod: '',
       entradaEbdAccountPlan: '',
       entradaEbdFinancialEntity: '',
       entradaEbdPaymentMethod: '',      
@@ -283,6 +304,8 @@ export default function Congregations() {
       circleFinancialEntity: '',
       circlePaymentMethod: '',
     })
+    setMatriculaEnergisaList([])
+    setMatriculaIguaList([])
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -356,7 +379,7 @@ export default function Congregations() {
                     Nova Congregação
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px] h-160">
+                <DialogContent className="sm:max-w-[425px] max-h-[80vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>
                       {editingCongregation ? 'Editar Congregação' : 'Nova Congregação'}
@@ -414,153 +437,156 @@ export default function Congregations() {
                     </div>
 
                     <Tabs defaultValue="dizimo" className="w-full mt-4 space-x-10">
-                      <TabsList className="grid w-full grid-cols-3">
+                      <TabsList className="grid w-full grid-cols-4">
                           <TabsTrigger value="dizimo">Dízimo</TabsTrigger>
-                          <TabsTrigger value="mission">Missao</TabsTrigger>
-                          <TabsTrigger value="circulo">Circulo</TabsTrigger>
+                          <TabsTrigger value="ofertaCulto">Oferta Culto</TabsTrigger>
+                          <TabsTrigger value="mission">Missão</TabsTrigger>
+                          <TabsTrigger value="circulo">Círculo</TabsTrigger>
                           <TabsTrigger value="entrada">Out Receitas</TabsTrigger>
-                          <TabsTrigger value="saida">Saída</TabsTrigger>
+                          <TabsTrigger value="saida">Saídas</TabsTrigger>
                           <TabsTrigger value="outros">Outros</TabsTrigger>
                       </TabsList>
+
+                      {/* Nova aba dedicada para Oferta do Culto */}
+                      <TabsContent value="ofertaCulto" className="space-y-4 mt-6">
+                        <div>
+                            <Label htmlFor="serviceOfferAccountPlan">Plano de Contas</Label>
+                            <Input
+                                id="serviceOfferAccountPlan"
+                                name="serviceOfferAccountPlan"
+                                value={formData.serviceOfferAccountPlan}
+                                onChange={handleInputChange}
+                                placeholder=""
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="serviceOfferFinancialEntity">Entidade Financeira</Label>
+                            <Input
+                                id="serviceOfferFinancialEntity"
+                                name="serviceOfferFinancialEntity"
+                                value={formData.serviceOfferFinancialEntity}
+                                onChange={handleInputChange}
+                                placeholder=""
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="serviceOfferPaymentMethod">Método de Pagamento</Label>
+                            <Input
+                                id="serviceOfferPaymentMethod"
+                                name="serviceOfferPaymentMethod"
+                                value={formData.serviceOfferPaymentMethod}
+                                onChange={handleInputChange}
+                                placeholder=""
+                            />
+                        </div>
+                      </TabsContent>
+                      
                       <TabsContent value="entrada" className="space-y-4 mt-6">
-                        <Tabs defaultValue="oferta" className="w-full space-x-10">
-                          <TabsList className="grid w-full grid-cols-4">
-                              <TabsTrigger value="oferta">Oferta</TabsTrigger>
+                         <Tabs defaultValue="ebd" className="w-full space-x-10">
+                          <TabsList className="grid w-full grid-cols-3">
                               <TabsTrigger value="ebd">EBD</TabsTrigger>
                               <TabsTrigger value="campaign">Campanha</TabsTrigger>
                               <TabsTrigger value="votos">Votos</TabsTrigger>
                           </TabsList>
-                          <TabsContent value="oferta" className="space-y-4 mt-4">
-                            <div>
-                                <Label htmlFor="entradaOfferAccountPlan">Plano de Contas</Label>
-                                <Input
-                                    id="entradaOfferAccountPlan"
-                                    name="entradaOfferAccountPlan"
-                                    value={formData.entradaOfferAccountPlan}
-                                    onChange={handleInputChange}
-                                    placeholder=""
-                                />
-                            </div>
-                            <div>
-                                <Label htmlFor="entradaOfferFinancialEntity">Entidade Financeira</Label>
-                                <Input
-                                    id="entradaOfferFinancialEntity"
-                                    name="entradaOfferFinancialEntity"
-                                    value={formData.entradaOfferFinancialEntity}
-                                    onChange={handleInputChange}
-                                    placeholder=""
-                                />
-                            </div>
-                            <div>
-                                <Label htmlFor="entradaOfferPaymentMethod">Método de Pagamento</Label>
-                                <Input
-                                    id="entradaOfferPaymentMethod"
-                                    name="entradaOfferPaymentMethod"
-                                    value={formData.entradaOfferPaymentMethod}
-                                    onChange={handleInputChange}
-                                    placeholder=""
-                                />
-                            </div>     
-                          </TabsContent>      
-                          <TabsContent value="ebd" className="space-y-4 mt-4">
-                            <div>
-                                <Label htmlFor="entradaEbdAccountPlan">Plano de Contas</Label>
-                                <Input
-                                    id="entradaEbdAccountPlan"
-                                    name="entradaEbdAccountPlan"
-                                    value={formData.entradaEbdAccountPlan}
-                                    onChange={handleInputChange}
-                                    placeholder=""
-                                />
-                            </div>
-                            <div>
-                                <Label htmlFor="entradaEbdFinancialEntity">Entidade Financeira</Label>
-                                <Input
-                                    id="entradaEbdFinancialEntity"
-                                    name="entradaEbdFinancialEntity"
-                                    value={formData.entradaEbdFinancialEntity}
-                                    onChange={handleInputChange}
-                                    placeholder=""
-                                />
-                            </div>
-                            <div>
-                                <Label htmlFor="entradaEbdPaymentMethod">Método de Pagamento</Label>
-                                <Input
-                                    id="entradaEbdPaymentMethod"
-                                    name="entradaEbdPaymentMethod"
-                                    value={formData.entradaEbdPaymentMethod}
-                                    onChange={handleInputChange}
-                                    placeholder=""
-                                />
-                            </div>
-                          </TabsContent>                              
-                          <TabsContent value="campaign" className="space-y-4 mt-4">
-                            <div>
-                                <Label htmlFor="entradaCampaignAccountPlan">Plano de Contas</Label>
-                                <Input
-                                    id="entradaCampaignAccountPlan"
-                                    name="entradaCampaignAccountPlan"
-                                    value={formData.entradaCampaignAccountPlan}
-                                    onChange={handleInputChange}
-                                    placeholder=""
-                                />
-                            </div>
-                            <div>
-                                <Label htmlFor="entradaCampaignFinancialEntity">Entidade Financeira</Label>
-                                <Input
-                                    id="entradaCampaignFinancialEntity"
-                                    name="entradaCampaignFinancialEntity"
-                                    value={formData.entradaCampaignFinancialEntity}
-                                    onChange={handleInputChange}
-                                    placeholder=""
-                                />
-                            </div>
-                            <div>
-                                <Label htmlFor="entradaCampaignPaymentMethod">Método de Pagamento</Label>
-                                <Input
-                                    id="entradaCampaignPaymentMethod"
-                                    name="entradaCampaignPaymentMethod"
-                                    value={formData.entradaCampaignPaymentMethod}
-                                    onChange={handleInputChange}
-                                    placeholder=""
-                                />
-                            </div>     
-                          </TabsContent>        
-                          <TabsContent value="votos" className="space-y-4 mt-4">
-                            <div>
-                                <Label htmlFor="entradaVotesAccountPlan">Plano de Contas</Label>
-                                <Input
-                                    id="entradaVotesAccountPlan"
-                                    name="entradaVotesAccountPlan"
-                                    value={formData.entradaVotesAccountPlan}
-                                    onChange={handleInputChange}
-                                    placeholder=""
-                                />
-                            </div>
-                            <div>
-                                <Label htmlFor="entradaVotesFinancialEntity">Entidade Financeira</Label>
-                                <Input
-                                    id="entradaVotesFinancialEntity"
-                                    name="entradaVotesFinancialEntity"
-                                    value={formData.entradaVotesFinancialEntity}
-                                    onChange={handleInputChange}
-                                    placeholder=""
-                                />
-                            </div>
-                            <div>
-                                <Label htmlFor="entradaVotesPaymentMethod">Método de Pagamento</Label>
-                                <Input
-                                    id="entradaVotesPaymentMethod"
-                                    name="entradaVotesPaymentMethod"
-                                    value={formData.entradaVotesPaymentMethod}
-                                    onChange={handleInputChange}
-                                    placeholder=""
-                                />
-                            </div>     
-                          </TabsContent>
-                        </Tabs>        
-                      </TabsContent>
-                      <TabsContent value="dizimo" className="space-y-4 mt-4">
+                           <TabsContent value="ebd" className="space-y-4 mt-6">
+                             <div>
+                                 <Label htmlFor="entradaEbdAccountPlan">Plano de Contas</Label>
+                                 <Input
+                                     id="entradaEbdAccountPlan"
+                                     name="entradaEbdAccountPlan"
+                                     value={formData.entradaEbdAccountPlan}
+                                     onChange={handleInputChange}
+                                     placeholder=""
+                                 />
+                             </div>
+                             <div>
+                                 <Label htmlFor="entradaEbdFinancialEntity">Entidade Financeira</Label>
+                                 <Input
+                                     id="entradaEbdFinancialEntity"
+                                     name="entradaEbdFinancialEntity"
+                                     value={formData.entradaEbdFinancialEntity}
+                                     onChange={handleInputChange}
+                                     placeholder=""
+                                 />
+                             </div>
+                             <div>
+                                 <Label htmlFor="entradaEbdPaymentMethod">Método de Pagamento</Label>
+                                 <Input
+                                     id="entradaEbdPaymentMethod"
+                                     name="entradaEbdPaymentMethod"
+                                     value={formData.entradaEbdPaymentMethod}
+                                     onChange={handleInputChange}
+                                     placeholder=""
+                                 />
+                             </div>
+                           </TabsContent>                              
+                           <TabsContent value="campaign" className="space-y-4 mt-6">
+                             <div>
+                                 <Label htmlFor="entradaCampaignAccountPlan">Plano de Contas</Label>
+                                 <Input
+                                     id="entradaCampaignAccountPlan"
+                                     name="entradaCampaignAccountPlan"
+                                     value={formData.entradaCampaignAccountPlan}
+                                     onChange={handleInputChange}
+                                     placeholder=""
+                                 />
+                             </div>
+                             <div>
+                                 <Label htmlFor="entradaCampaignFinancialEntity">Entidade Financeira</Label>
+                                 <Input
+                                     id="entradaCampaignFinancialEntity"
+                                     name="entradaCampaignFinancialEntity"
+                                     value={formData.entradaCampaignFinancialEntity}
+                                     onChange={handleInputChange}
+                                     placeholder=""
+                                 />
+                             </div>
+                             <div>
+                                 <Label htmlFor="entradaCampaignPaymentMethod">Método de Pagamento</Label>
+                                 <Input
+                                     id="entradaCampaignPaymentMethod"
+                                     name="entradaCampaignPaymentMethod"
+                                     value={formData.entradaCampaignPaymentMethod}
+                                     onChange={handleInputChange}
+                                     placeholder=""
+                                 />
+                             </div>     
+                           </TabsContent>        
+                           <TabsContent value="votos" className="space-y-4 mt-6">
+                             <div>
+                                 <Label htmlFor="entradaVotesAccountPlan">Plano de Contas</Label>
+                                 <Input
+                                     id="entradaVotesAccountPlan"
+                                     name="entradaVotesAccountPlan"
+                                     value={formData.entradaVotesAccountPlan}
+                                     onChange={handleInputChange}
+                                     placeholder=""
+                                 />
+                             </div>
+                             <div>
+                                 <Label htmlFor="entradaVotesFinancialEntity">Entidade Financeira</Label>
+                                 <Input
+                                     id="entradaVotesFinancialEntity"
+                                     name="entradaVotesFinancialEntity"
+                                     value={formData.entradaVotesFinancialEntity}
+                                     onChange={handleInputChange}
+                                     placeholder=""
+                                 />
+                             </div>
+                             <div>
+                                 <Label htmlFor="entradaVotesPaymentMethod">Método de Pagamento</Label>
+                                 <Input
+                                     id="entradaVotesPaymentMethod"
+                                     name="entradaVotesPaymentMethod"
+                                     value={formData.entradaVotesPaymentMethod}
+                                     onChange={handleInputChange}
+                                     placeholder=""
+                                 />
+                             </div>     
+                           </TabsContent>
+                         </Tabs>        
+                       </TabsContent>
+                       <TabsContent value="dizimo" className="space-y-4 mt-6">
                           <div>
                               <Label htmlFor="dizimoAccountPlan">Plano de Contas</Label>
                               <Input
@@ -592,7 +618,7 @@ export default function Congregations() {
                               />
                           </div>
                       </TabsContent>
-                      <TabsContent value="mission" className="space-y-4 mt-4">
+                      <TabsContent value="mission" className="space-y-4 mt-6">
                           <div>
                               <Label htmlFor="missionAccountPlan">Plano de Contas</Label>
                               <Input
@@ -624,7 +650,7 @@ export default function Congregations() {
                               />
                           </div>
                       </TabsContent>
-                      <TabsContent value="circulo" className="space-y-4 mt-4">
+                      <TabsContent value="circulo" className="space-y-4 mt-6">
                           <div>
                               <Label htmlFor="circleAccountPlan">Plano de Contas</Label>
                               <Input
@@ -657,7 +683,7 @@ export default function Congregations() {
                           </div>
                       </TabsContent>
 
-                      <TabsContent value="saida" className="space-y-4 mt-4">
+                      <TabsContent value="saida" className="space-y-4 mt-6">
                           {/*<div>
                               <Label htmlFor="saidaAccountPlan">Plano de Contas</Label>
                               <Input
@@ -690,28 +716,61 @@ export default function Congregations() {
                           </div>
                       </TabsContent>
 
-                      <TabsContent value="outros" className="space-y-4 mt-4">
+                      <TabsContent value="outros" className="space-y-4 mt-6">
                           <div>
-                              <Label htmlFor="saidaAccountPlan">Energisa</Label>
-                              <Input
-                                  id="saidaAccountPlan"
-                                  name="saidaAccountPlan"
-                                  value={formData.matriculaEnergisa}
-                                  onChange={handleInputChange}
-                                  placeholder=""
-                              />
+                              <Label>Matriculas Energisa</Label>
+                              <div className="space-y-2">
+                                {matriculaEnergisaList.map((m, idx) => (
+                                  <div key={idx} className="flex items-center space-x-2">
+                                    <Input
+                                      value={m}
+                                      onChange={(e) => {
+                                        const next = [...matriculaEnergisaList]
+                                        next[idx] = e.target.value
+                                        setMatriculaEnergisaList(next)
+                                      }}
+                                      placeholder="Informe uma matrícula"
+                                    />
+                                    <Button variant="ghost" size="sm" onClick={() => {
+                                      setMatriculaEnergisaList(prev => prev.filter((_, i) => i !== idx))
+                                    }}>
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                ))}
+                                <Button type="button" onClick={() => setMatriculaEnergisaList(prev => [...prev, ''])}>
+                                  <Plus className="mr-2 h-4 w-4" /> Adicionar matrícula
+                                </Button>
+                              </div>
                           </div>
+
                           <div>
-                              <Label htmlFor="saidaFinancialEntity">Iguá</Label>
-                              <Input
-                                  id="saidaFinancialEntity"
-                                  name="saidaFinancialEntity"
-                                  value={formData.matriculaIgua}
-                                  onChange={handleInputChange}
-                                  placeholder=""
-                              />
+                              <Label>Matriculas Iguá</Label>
+                              <div className="space-y-2">
+                                {matriculaIguaList.map((m, idx) => (
+                                  <div key={idx} className="flex items-center space-x-2">
+                                    <Input
+                                      value={m}
+                                      onChange={(e) => {
+                                        const next = [...matriculaIguaList]
+                                        next[idx] = e.target.value
+                                        setMatriculaIguaList(next)
+                                      }}
+                                      placeholder="Informe uma matrícula"
+                                    />
+                                    <Button variant="ghost" size="sm" onClick={() => {
+                                      setMatriculaIguaList(prev => prev.filter((_, i) => i !== idx))
+                                    }}>
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                ))}
+                                <Button type="button" onClick={() => setMatriculaIguaList(prev => [...prev, ''])}>
+                                  <Plus className="mr-2 h-4 w-4" /> Adicionar matrícula
+                                </Button>
+                              </div>
                           </div>                                
-                      </TabsContent>                      
+                       </TabsContent>                      
                       
                       </Tabs>
                       <DialogFooter className='mt-2'>
