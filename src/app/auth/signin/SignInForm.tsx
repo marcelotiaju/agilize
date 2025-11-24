@@ -11,7 +11,7 @@ import Link from 'next/link'
 import Image from 'next/image';
 
 export default function SignInForm() {
-  const [cpf, setCpf] = useState('')
+  const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
@@ -26,22 +26,22 @@ export default function SignInForm() {
 
     try {
       const result = await signIn('credentials', {
-        cpf,
+        login,
         password,
         redirect: false,
       })
 
       if (result && result.error) {
         setError('Login ou senha incorretos')
-      } else if (result){
+      } else if (result) {
         const session = await getSession()
         if (session && session.user) {
-          const user = session.user as typeof session.user & { validFrom: string; validTo: string }
-          const validFrom = new Date(user.validFrom)
-          const validTo = new Date(user.validTo)
+          const user = session.user as typeof session.user & { validFrom?: string | Date; validTo?: string | Date }
+          const validFrom = user.validFrom ? new Date(user.validFrom as any) : null
+          const validTo = user.validTo ? new Date(user.validTo as any) : null
           const now = new Date()
 
-          if (now < validFrom || now > validTo) {
+          if ((validFrom && now < validFrom) || (validTo && now > validTo)) {
             setError('Sua conta não está ativa no momento')
             return
           }
@@ -49,7 +49,7 @@ export default function SignInForm() {
           router.push('/')
         }
       }
-    } catch (error) {
+    } catch (err) {
       setError('Ocorreu um erro ao fazer login')
     } finally {
       setIsLoading(false)
@@ -59,16 +59,13 @@ export default function SignInForm() {
   return (
     <Card>
       <CardHeader>
-        <Image loading="lazy"
-          src="/images/Logo.png" // Caminho relativo a partir da pasta `public`
+        <Image 
+          src="/images/Logo.png"
           alt="Logo do Agilize"
-          width={400} // Largura da imagem
-          height={100} // Altura da imagem
+          width={400}
+          height={100}
+          priority
         />
-        {/* <CardTitle>Login</CardTitle>
-        <CardDescription>
-          Digite seu CPF e senha para entrar
-        </CardDescription> */}
       </CardHeader>
       <CardContent>
         {message && (
@@ -79,15 +76,14 @@ export default function SignInForm() {
 
         <form onSubmit={handleSubmit} className="space-y-2">
           <div>
-            <Label htmlFor="cpf">Login</Label>
+            <Label htmlFor="login">Login</Label>
             <Input
-              id="cpf"
-              name="cpf"
+              id="login"
+              name="login"
               type="text"
               required
-              value={cpf}
-              onChange={(e) => setCpf(e.target.value)}
-              // placeholder="000.000.000-00"
+              value={login}
+              onChange={(e) => setLogin(e.target.value)}
             />
           </div>
 
@@ -115,13 +111,6 @@ export default function SignInForm() {
             {isLoading ? 'Entrando...' : 'Entrar'}
           </Button>
         </form>
-
-        {/* <div className="mt-4 text-center text-sm">
-          Não tem uma conta?{' '}
-          <Link href="/auth/register" className="text-blue-600 hover:underline">
-            Registre-se
-          </Link>
-        </div> */}
       </CardContent>
     </Card>
   );

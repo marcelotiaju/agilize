@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
         // { type: { contains: searchTerm } }
       ]
     }
- console.log(`SearchTerm ${searchTerm}`)
+ //console.log(`SearchTerm ${searchTerm}`)
 
     // Adicionar filtro de pesquisa
     // if (searchTerm) {
@@ -153,10 +153,6 @@ export async function POST(request: NextRequest) {
       type,
       date,
       talonNumber,
-      offerValue,
-      votesValue,
-      ebdValue,
-      campaignValue, // Novo campo  ebdValue,
       value,
       description,
       contributorId,
@@ -169,15 +165,15 @@ export async function POST(request: NextRequest) {
     } = body
 
     // Verificar permissões de lançamento
-    if (type === "ENTRADA" && !session.user.canLaunchEntry) {
-      return NextResponse.json({ error: "Sem permissão para lançar entradas" }, { status: 403 })
-    }
-    if (type === "DIZIMO" && !session.user.canLaunchTithe) {
-      return NextResponse.json({ error: "Sem permissão para lançar dízimos" }, { status: 403 })
-    }
-    if (type === "SAIDA" && !session.user.canLaunchExpense) {
-      return NextResponse.json({ error: "Sem permissão para lançar saídas" }, { status: 403 })
-    }
+    // if (type === "ENTRADA" && !session.user.canLaunchEntry) {
+    //   return NextResponse.json({ error: "Sem permissão para lançar entradas" }, { status: 403 })
+    // }
+    // if (type === "DIZIMO" && !session.user.canLaunchTithe) {
+    //   return NextResponse.json({ error: "Sem permissão para lançar dízimos" }, { status: 403 })
+    // }
+    // if (type === "SAIDA" && !session.user.canLaunchExpense) {
+    //   return NextResponse.json({ error: "Sem permissão para lançar saídas" }, { status: 403 })
+    // }
 
     const userCongregation = await prisma.userCongregation.findFirst({
       where: {
@@ -262,11 +258,7 @@ export async function POST(request: NextRequest) {
         type,
         date: launchDate,
         talonNumber,
-        offerValue: type === "ENTRADA" ? parseFloat(offerValue) : null,
-        votesValue: type === "ENTRADA" ? parseFloat(votesValue) : null,
-        ebdValue: type === "ENTRADA" ? parseFloat(ebdValue) : null,
-        campaignValue: type === "ENTRADA" ? parseFloat(campaignValue) || 0 : null, 
-        value: type === "DIZIMO" || type === "SAIDA" || type === "MISSAO" || type === "CIRCULO" ? parseFloat(value) : null,
+        value: parseFloat(value) || null,
         description,
         status: "NORMAL",
         // Lógica ajustada para o Dízimo
@@ -339,17 +331,17 @@ export async function PUT(
     }
 
     // Verificar permissões de aprovação
-    if (approved !== undefined) {
-      if (launch.type === "ENTRADA" && !session.user.canApproveEntry) {
-        return NextResponse.json({ error: "Sem permissão para aprovar entradas" }, { status: 403 })
-      }
-      if (launch.type === "DIZIMO" && !session.user.canApproveTithe) {
-        return NextResponse.json({ error: "Sem permissão para aprovar dízimos" }, { status: 403 })
-      }
-      if (launch.type === "SAIDA" && !session.user.canApproveExpense) {
-        return NextResponse.json({ error: "Sem permissão para aprovar saídas" }, { status: 403 })
-      }
-    }
+    // if (approved !== undefined) {
+    //   if (launch.type === "ENTRADA" && !session.user.canApproveEntry) {
+    //     return NextResponse.json({ error: "Sem permissão para aprovar entradas" }, { status: 403 })
+    //   }
+    //   if (launch.type === "DIZIMO" && !session.user.canApproveTithe) {
+    //     return NextResponse.json({ error: "Sem permissão para aprovar dízimos" }, { status: 403 })
+    //   }
+    //   if (launch.type === "SAIDA" && !session.user.canApproveExpense) {
+    //     return NextResponse.json({ error: "Sem permissão para aprovar saídas" }, { status: 403 })
+    //   }
+    // }
 
     // const updatedLaunch = await prisma.launch.update({
     //   where: { id },
@@ -366,10 +358,6 @@ export async function PUT(
         ...updateData, 
         status, 
         approved,
-        offerValue: updateData.offerValue ? parseFloat(updateData.offerValue) : null,
-        votesValue: updateData.votesValue ? parseFloat(updateData.votesValue) : null,
-        ebdValue: updateData.ebdValue ? parseFloat(updateData.ebdValue) : null,
-        campaignValue: updateData.campaignValue ? parseFloat(updateData.campaignValue) : null,
         value: updateData.value ? parseFloat(updateData.value) : null,
         supplierId: updateData.supplierId ? parseInt(updateData.supplierId) : null,
         contributorId: updateData.contributorId ? parseInt(updateData.contributorId) : null,

@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
 
     // Caminho absoluto para o diretório de uploads
     const UPLOADS_DIR = path.join(process.cwd(), 'public/uploads');
-
+console.log('Uploads Dir:', UPLOADS_DIR);
     const contributorsWithPhotos = contributors.map(c => {
       if (!c.photoUrl) {
         return { ...c, photoExists: false };

@@ -1,7 +1,9 @@
 "use client"
-
-import { useState, useEffect, useMemo } from 'react'
-import { useSession } from 'next-auth/react'
+import { useState, useEffect, useMemo } from "react"
+import { useSession } from "next-auth/react"
+import { format as formatDate } from 'date-fns'
+import { utcToZonedTime } from 'date-fns-tz'
+import { ptBR } from 'date-fns/locale'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,14 +14,11 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { FileText, Trash2, List, Check, Edit, CalendarIcon } from 'lucide-react'
-import { format } from 'date-fns'
-import { id, ptBR } from 'date-fns/locale'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { NumericFormat } from 'react-number-format';
-import { zonedTimeToUtc } from 'date-fns-tz'
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-//import { toast } from "sonner"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 // Definindo o tipo de Congregação para usar no estado
 type Congregation = {
@@ -35,20 +34,19 @@ type Summary = {
   entryTotal: number;
   titheTotal: number;
   exitTotal: number;
+  offerTotal?: number;
+  votesTotal?: number;
+  ebdTotal?: number;
+  campaignTotal?: number;
+  missionTotal?: number;
+  circleTotal?: number;
+  talonNumber: string;
   depositValue?: number;
   cashValue?: number;
   status: string;
   treasurerApproved?: boolean;
   accountantApproved?: boolean;
   directorApproved?: boolean;
-  offerValue?: number;
-  voteValue?: number;
-  ebdValue?: number;
-  campaignValue?: number;
-  missionValue?: number;
-  missionTotal?: number;
-  circleValue?: number;
-  circleTotal?: number;
   launches?: any[];
   // Add other properties as needed
 };
@@ -60,8 +58,8 @@ export default function CongregationSummary() {
   const { data: session } = useSession()
   const [congregations, setCongregations] = useState<any[]>([])
   const [selectedCongregations, setSelectedCongregations] = useState<string[]>([]) // MUDANÇA: Array de IDs
-  const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'))
-  const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'))
+  const [startDate, setStartDate] = useState(formatDate(new Date(), 'yyyy-MM-dd'))
+  const [endDate, setEndDate] = useState(formatDate(new Date(), 'yyyy-MM-dd'))
   const [summaries, setSummaries] = useState<Summary[]>([])
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
@@ -73,31 +71,31 @@ export default function CongregationSummary() {
     id: '',
     congregationId: '',
     date: '',
-    startDate: format(new Date(), 'yyyy-MM-dd'),  
-    endDate: format(new Date(), 'yyyy-MM-dd'),
-    depositValue: '',
-    cashValue: '',
-    treasurerApproved: false,
-    accountantApproved: false,
-    directorApproved: false,
-    status: 'PENDING',
-    // Campos para detalhamento
-    offerValue: '',
-    votesValue: '',
-    ebdValue: '',
-    campaignValue: '',
+    startDate: formatDate(new Date(), 'yyyy-MM-dd'),
+    endDate: formatDate(new Date(), 'yyyy-MM-dd'),
+    talonNumber: '',
+    offerTotal: '',
+    votesTotal: '',
+    ebdTotal: '',
+    campaignTotal: '',
     missionTotal: '',
     circleTotal: '',
     entryTotal: '',
     titheTotal: '',
     exitTotal: '',
     totalTithe: 0,
-    totalExit: 0
+    totalExit: 0,
+    depositValue: '',
+    cashValue: '',
+    treasurerApproved: false,
+    accountantApproved: false,
+    directorApproved: false,
+    status: 'PENDING',
   })
   const [isLoading, setIsLoading] = useState(false)
 
     // Memoization para calcular o Saldo Geral e o Total Depositado/Espécie
-  const totalEntradas = useMemo(() => Number(editFormData.entryTotal) + Number(editFormData.titheTotal) + Number(editFormData.missionTotal) + Number(editFormData.circleTotal), [editFormData.entryTotal, editFormData.titheTotal]);
+  const totalEntradas = useMemo(() => Number(editFormData.titheTotal ?? 0) + Number(editFormData.offerTotal ?? 0) + Number(editFormData.votesTotal ?? 0) + Number(editFormData.ebdTotal ?? 0) + Number(editFormData.campaignTotal ?? 0) + Number(editFormData.missionTotal ?? 0) + Number(editFormData.circleTotal ?? 0), [editFormData.entryTotal, editFormData.titheTotal]);
   const saldoGeral = useMemo(() => totalEntradas - Number(editFormData.exitTotal), [totalEntradas, editFormData.exitTotal]);
   const totalDepositadoEspecie = useMemo(() => Number(editFormData.depositValue) + Number(editFormData.cashValue), [editFormData.depositValue, editFormData.cashValue]);
   
@@ -137,171 +135,121 @@ export default function CongregationSummary() {
     }
   }
 
-  const fetchSummaries = async (congregationIds:string[]) => {
-    if (!congregationIds || !Array.isArray(congregationIds) || congregationIds.length === 0 || !startSummaryDate || !endSummaryDate) return
-
+  const fetchSummaries = async (congregationIds: string[]) => {
+    if (!congregationIds || congregationIds.length === 0) return
     setIsLoading(true)
     try {
-      const params = new URLSearchParams({
-        congregationIds: congregationIds.join(','),
-        id: selectedSummary?.id || ''
-      })
-
+      const params = new URLSearchParams({ congregationIds: congregationIds.join(',') })
       params.append('timezone', USER_TIMEZONE)
-
+      
+      // usar as datas do calendário (Date) e enviar como yyyy-MM-dd no timezone do usuário
       if (startSummaryDate) {
-        const s = new Date(startSummaryDate)
-        s.setHours(0, 0, 0, 0)
-        const startUtc = zonedTimeToUtc(s, USER_TIMEZONE)
-        params.append('startSummaryDate', startUtc.toISOString())
+        params.append('startSummaryDate', formatDate(utcToZonedTime(startSummaryDate, USER_TIMEZONE), 'yyyy-MM-dd'))
       }
       if (endSummaryDate) {
-        const e = new Date(endSummaryDate)
-        e.setHours(23, 59, 59, 999)
-        const endUtc = zonedTimeToUtc(e, USER_TIMEZONE)
-        params.append('endSummaryDate', endUtc.toISOString())
+        params.append('endSummaryDate', formatDate(utcToZonedTime(endSummaryDate, USER_TIMEZONE), 'yyyy-MM-dd'))
       }
-      
+
       const response = await fetch(`/api/congregation-summaries?${params.toString()}`)
       if (response.ok) {
         const data = await response.json()
+        // API retorna summaries com datas ISO UTC -> usar utcToZonedTime para exibir
         setSummaries(data.summaries || [])
-        // Simplificação: apenas pega lançamentos do primeiro resumo para visualização
-        // setLaunches(data.summaries.flatMap((summary: Summary) => summary.Launch || []) || [])
-      } else {
-         //console.error('Erro na resposta da API:', await response.json());
-         setSummaries([]);
-         setLaunches([]);
       }
-    } catch (error) {
-      console.error('Erro ao carregar resumos:', error)
-      setSummaries([]);
-      setLaunches([]);
+    } catch (err) {
+      console.error(err)
     } finally {
       setIsLoading(false)
     }
   }
 
-// const fetchLaunches = async (summaryId) => {
-//     try {
-//       const response = await fetch(`/api/congregation-summaries/${summaryId}/launches`)
-//       if (response.ok) {
-//         const data = await response.json()
-//         setLaunches(data)
-//       }
-//     } catch (error) {
-//       console.error('Erro ao carregar lançamentos:', error)
-//     }
-//   }
-
+  // handleCreateSummary: envia strings yyyy-MM-dd + timezone
   const handleCreateSummary = async () => {
     if (selectedCongregations.length === 0) {
-//      toast.error("Atenção", {
-//        description: (
-//          <p className="space-y-1 text-gray-500">
-//            {"Selecione pelo menos uma congregação para gerar o resumo."}
-//          </p>
-//        ),
-//      })
-      alert("Selecione pelo menos uma congregação para gerar o resumo.")
+      alert('Selecione pelo menos uma congregação')
+      return
+    }
+    // simple validation
+    if (!editFormData.startDate || !editFormData.endDate) {
+      alert('Defina período')
       return
     }
 
-    setIsLoading(true);
-    let successCount = 0;
-    let errorMessages: string[] = [];
+    const startStr = editFormData.startDate // 'yyyy-MM-dd'
+    const endStr = editFormData.endDate
 
     for (const congregationId of selectedCongregations) {
-        try {
-            const response = await fetch('/api/congregation-summaries', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    ...editFormData, 
-                    congregationId, 
-                    startDate: editFormData.startDate, // Passa as datas dos filtros
-                    endDate: editFormData.endDate,     // Passa as datas dos filtros
-                    timezone: USER_TIMEZONE
-                })
-            })
-
-            if (response.ok) {
-                successCount++;
-            } else {
-                const error = await response.json();
-                errorMessages.push(`Congregação ${congregations.find(c => c.id === congregationId)?.name}: ${error.error || 'Erro desconhecido'}`);
-            }
-        } catch (error) {
-            console.error(`Erro ao criar resumo para ${congregationId}:`, error);
-            errorMessages.push(`Congregação ${congregations.find(c => c.id === congregationId)?.name}: Falha na requisição.`);
+      try {
+        const response = await fetch('/api/congregation-summaries', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...editFormData,
+            congregationId,
+            startDate: startStr,
+            endDate: endStr,
+            timezone: USER_TIMEZONE
+          })
+        })
+        if (response.ok) {
+          // atualizar lista
+          await fetchSummaries(selectedCongregations)
+          setIsCreateDialogOpen(false)
+        } else {
+          const err = await response.json()
+          alert(err.error || 'Erro ao criar resumo')
         }
+      } catch (err) {
+        console.error(err)
+        alert('Erro ao criar resumo')
+      }
     }
-
-    // Feedback final
-    setIsLoading(false);
-    if (successCount > 0) {
-    //    toast.success("Sucesso!",{
-    //        description: (
-    //          <div className="space-y-1 text-gray-500">
-    //          {` ${successCount} resumo(s) criado(s) com sucesso.`}
-    //          </div>
-    //        ),
-    //    });
-         alert(`${successCount} resumo(s) criado(s) com sucesso.`);
-        fetchSummaries(selectedCongregations);
-    }
-
-    if (errorMessages.length > 0) {
-    //    toast.error( "Atenção - Erros",{
-    //        description: (
-    //            <div className="space-y-1  text-gray-500">
-    //                <p>{`${errorMessages.length} resumo(s) falhou(falharam) ao ser(em) criado(s):`}</p>
-    //                <ul className="list-disc ml-4">
-    //                    {errorMessages.map((msg, index) => <li key={index}>{msg}</li>)}
-    //                </ul>
-    //            </div>
-    //        ),
-    //        duration: 8000,
-    //    });
-	alert(`${errorMessages.length} resumo(s) falhou(falharam) ao ser(em) criado)s):`);
-    }
-
-    setIsCreateDialogOpen(false)
-    // resetForm() // Não reseta o form, pois ele está sendo usado como filtro
+    alert(`Resumo(s) criado(s) com sucesso.`);
   }
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const { name, value } = e.target
+
+      // Validações para campos específicos
+  if (name === 'talonNumber') {
+    // Permitir apenas números
+    const numericValue = value.replace(/\D/g, '')
+    setEditFormData(prev => ({ ...prev, [name]: numericValue }))
+    return
+  }
+  }
+
+  // Ao abrir edição: converte ISO UTC para date-only no timezone do usuário
   const handleEditSummary = (summary: Summary) => {
     setSelectedSummary(summary)
     setEditFormData({
       id: summary.id,
-      congregationId: summary.congregationId, 
-      startDate: format(new Date(summary.startDate), 'yyyy-MM-dd'), 
-      endDate: format(new Date(summary.endDate), 'yyyy-MM-dd'),
-      depositValue: (summary.depositValue ?? 0).toString(), 
-      cashValue: (summary.cashValue ?? 0).toString(),
-      status: summary.status,
+      congregationId: (summary as any).congregationId || '',
+      startDate: summary.startDate ? formatDate(utcToZonedTime(new Date(summary.startDate), USER_TIMEZONE), 'yyyy-MM-dd') : formatDate(new Date(), 'yyyy-MM-dd'),
+      endDate: summary.endDate ? formatDate(utcToZonedTime(new Date(summary.endDate), USER_TIMEZONE), 'yyyy-MM-dd') : formatDate(new Date(), 'yyyy-MM-dd'),
+      talonNumber: summary.talonNumber || '',
+      date: summary.date ? formatDate(utcToZonedTime(new Date(summary.date), USER_TIMEZONE), 'yyyy-MM-dd') : '',
+      depositValue: summary.depositValue ?? 0,
+      cashValue: summary.cashValue ?? 0,
       treasurerApproved: summary.treasurerApproved ?? false,
       accountantApproved: summary.accountantApproved ?? false,
       directorApproved: summary.directorApproved ?? false,
-      entryTotal: (summary.entryTotal ?? 0).toString(),
-      titheTotal: (summary.titheTotal ?? 0).toString(), 
-      exitTotal: (summary.exitTotal ?? 0).toString(),  
-      missionTotal: (summary.missionValue ?? 0).toString(),
-      circleTotal: (summary.circleValue ?? 0).toString(),
-      offerValue: summary.offerValue ?? 0,
-      votesValue: summary.votesValue ?? 0, 
-      ebdValue: summary.ebdValue ?? 0,
-      campaignValue: summary.campaignValue ?? 0,
-      missionValue: summary.missionValue ?? 0,
-      circleValue: summary.circleValue ?? 0,
-      totalTithe: summary.totalTithe || 0,
-      totalExit: summary.totalExit || 0
+      status: summary.status || 'PENDING',
+      offerTotal: summary.offerTotal ?? '',
+      votesTotal: summary.votesTotal ?? '',
+      ebdTotal: summary.ebdTotal ?? '',
+      campaignTotal: summary.campaignTotal ?? '',
+      missionTotal: summary.missionTotal ?? '',
+      circleTotal: summary.circleTotal ?? '',
+      entryTotal: summary.entryTotal ?? '',
+      titheTotal: summary.titheTotal ?? '',
+      exitTotal: summary.exitTotal ?? '',
+      totalTithe: summary.titheTotal ?? 0,
+      totalExit: summary.exitTotal ?? 0
     })
-    setLaunches(summary.Launch || []) 
-   // launches.filter(launch => launch.summaryId === summary.id)
+    setLaunches(summary.Launch || [])
     setIsEditDialogOpen(true)
     setActiveTab('summaries')
-    //fetchLaunches(summary.id)
   }
 
   const handleUpdateSummary = async () => {
@@ -317,7 +265,7 @@ export default function CongregationSummary() {
        alert(`O Saldo Geral não confere! A soma de Depósito e Espécie (R$ ${totalDepositadoEspecie.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) deve ser igual ao Saldo Geral (R$ ${saldoGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}).`)
       return;
     }
-    // ⭐️ FIM MUDANÇA 1 ⭐️
+
     try {
       const response = await fetch('/api/congregation-summaries', {
         method: 'PUT',
@@ -327,6 +275,7 @@ export default function CongregationSummary() {
         body: JSON.stringify({
           id: selectedSummary.id,
           ...editFormData,
+          talonNumber: editFormData.talonNumber,
           depositValue: parseFloat(editFormData.depositValue),
           cashValue: parseFloat(editFormData.cashValue),
           treasurerApproved: editFormData.treasurerApproved,
@@ -506,7 +455,7 @@ export default function CongregationSummary() {
 
           {/* Lista de Resumos */}
           <Card>
-            <CardHeader className='flex items-center'>
+            <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-start gap-3">
               <CardTitle>Resumos</CardTitle>
               <CardDescription>
                 {summaries.length > 0 
@@ -522,7 +471,7 @@ export default function CongregationSummary() {
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start text-left font-normal">
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {startSummaryDate ? format(startSummaryDate, 'dd/MM/yyyy') : 'Data Inicial'}
+                      {startSummaryDate ? formatDate(startSummaryDate, 'dd/MM/yyyy') : 'Data Inicial'}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -546,7 +495,7 @@ export default function CongregationSummary() {
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start text-left font-normal">
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {endSummaryDate ? format(endSummaryDate, 'dd/MM/yyyy') : 'Data Final'}
+                      {endSummaryDate ? formatDate(endSummaryDate, 'dd/MM/yyyy') : 'Data Final'}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -581,10 +530,13 @@ export default function CongregationSummary() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Período</TableHead>
-                          <TableHead>Outras Receitas</TableHead>
                           <TableHead>Dízimos</TableHead>
-                          <TableHead>Missao</TableHead>
-                          <TableHead>Circulo</TableHead>                                                    
+                          <TableHead>Oferta</TableHead>
+                          <TableHead>Votos</TableHead>
+                          <TableHead>EBD</TableHead>
+                          <TableHead>Campanha</TableHead>
+                          <TableHead>Missão</TableHead>
+                          <TableHead>Círculo</TableHead>                                                    
                           <TableHead>Saídas</TableHead>
                           <TableHead>Aprovações</TableHead>
                           <TableHead>Status</TableHead>
@@ -595,11 +547,14 @@ export default function CongregationSummary() {
                         {summaries.map((summary) => (
                           <TableRow key={summary.id}>
                             <TableCell>
-                              {format(new Date(summary.startDate), 'dd/MM/yyyy', { locale: ptBR })} - {' '}
-                              {format(new Date(summary.endDate), 'dd/MM/yyyy', { locale: ptBR })}
+                              {formatDate(new Date(summary.startDate), 'dd/MM/yyyy', { locale: ptBR })} - {' '}
+                              {formatDate(new Date(summary.endDate), 'dd/MM/yyyy', { locale: ptBR })}
                             </TableCell>
-                            <TableCell>R$ {(summary.entryTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                             <TableCell>R$ {(summary.titheTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                            <TableCell>R$ {(summary.offerTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                            <TableCell>R$ {(summary.votesTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                            <TableCell>R$ {(summary.ebdTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                            <TableCell>R$ {(summary.campaignTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                             <TableCell>R$ {(summary.missionTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                             <TableCell>R$ {(summary.circleTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>                            
                             <TableCell>R$ {(summary.exitTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
@@ -637,6 +592,7 @@ export default function CongregationSummary() {
                                   variant="destructive"
                                   size="sm"
                                   onClick={() => handleDeleteSummary(summary.id)}
+                                  disabled={summary.status === 'APPROVED'}
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -663,31 +619,49 @@ export default function CongregationSummary() {
                               </Badge>
                           </CardTitle>
                           <CardDescription className="text-sm">
-                            {format(new Date(summary.startDate), 'dd/MM/yyyy', { locale: ptBR })} - {' '}
-                            {format(new Date(summary.endDate), 'dd/MM/yyyy', { locale: ptBR })}
+                            {formatDate(new Date(summary.startDate), 'dd/MM/yyyy', { locale: ptBR })} - {' '}
+                            {formatDate(new Date(summary.endDate), 'dd/MM/yyyy', { locale: ptBR })}
                           </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-2 text-sm">
-                            <div className="flex justify-between border-t pt-2">
-                                <span>Outras Receitas:</span>
-                                <span className="font-medium text-blue-600">
-                                    R$ {(summary.entryTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </span>
-                            </div>
                             <div className="flex justify-between">
                                 <span>Dízimos:</span>
-                                <span className="font-medium text-green-600">
+                                <span className="font-medium text-blue-600">
                                     R$ {(summary.titheTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
                             </div>
                             <div className="flex justify-between">
-                                <span>Missao:</span>
+                                <span>Oferta:</span>
+                                <span className="font-medium text-green-600">
+                                    R$ {(summary.offerTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>Votos:</span>
+                                <span className="font-medium text-green-600">
+                                    R$ {(summary.votesTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>EBD:</span>
+                                <span className="font-medium text-green-600">
+                                    R$ {(summary.ebdTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                            </div>            
+                            <div className="flex justify-between">
+                                <span>Campanha:</span>
+                                <span className="font-medium text-green-600">
+                                    R$ {(summary.campaignTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                            </div>                                            
+                            <div className="flex justify-between">
+                                <span>Missão:</span>
                                 <span className="font-medium text-orange-600">
                                     R$ {(summary.missionTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
                             </div>
                             <div className="flex justify-between">
-                                <span>Circulo:</span>
+                                <span>Círculo:</span>
                                 <span className="font-medium text-yellow-600">
                                     R$ {(summary.circleTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
@@ -727,6 +701,7 @@ export default function CongregationSummary() {
                                 variant="destructive"
                                 size="sm"
                                 onClick={() => handleDeleteSummary(summary.id)}
+                                disabled={summary.status === 'APPROVED'}
                                 // className="w-full"
                               >
                                 <Trash2 className="h-4 w-4 mr-2" /> Excluir
@@ -735,6 +710,254 @@ export default function CongregationSummary() {
                         </CardContent>
                       </Card>
                     ))}
+
+                    {/* Resumo Detalhado - Sempre Exibir o Primeiro Resumo para Edição Rápida */}
+                    {/* {summaries.length === 1 && (
+                      <Card className="border-l-4 border-blue-500">
+                        <CardHeader className="py-3">
+                          <CardTitle className="text-base flex justify-between items-center">
+                              Resumo Detalhado
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2 text-sm">
+                            {/* Campos do Resumo */}
+                            {/*<div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label htmlFor="talonNumber">Nr. Talão</Label>
+                                <Input
+                                  id="talonNumber"
+                                  name="talonNumber"
+                                  type="text"
+                                  inputMode="numeric"
+                                  pattern="[0-9]*"
+                                  value={editFormData.talonNumber}
+                                  onChange={handleInputChange}
+                                  required
+                                />
+                              </div>
+
+                              <div>
+                                <Label htmlFor="startDate">Data Início</Label>
+                                <Input
+                                  id="startDate"
+                                  type="date"
+                                  value={editFormData.startDate}
+                                  onChange={(e) => setEditFormData({ ...editFormData, startDate: e.target.value })}
+                                />
+                              </div>
+
+                              <div>
+                                <Label htmlFor="endDate">Data Fim</Label>
+                                <Input
+                                  id="endDate"
+                                  type="date"
+                                  value={editFormData.endDate}
+                                  onChange={(e) => setEditFormData({ ...editFormData, endDate: e.target.value })}
+                                />
+                              </div>
+
+                              <div>
+                                <Label htmlFor="depositValue">Valor Depósito</Label>
+                                <NumericFormat
+                                    id="depositValue"
+                                    name="depositValue"
+                                    className="col-span-3 h-10 w-full rounded-md border border-input bg-background px-2 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                    value={editFormData.depositValue || 0}
+                                    onValueChange={(values) => {
+                                      const { floatValue } = values;
+                                      setEditFormData(prev => ({ ...prev, depositValue: floatValue }));
+                                    }}
+                                    thousandSeparator="."
+                                    decimalSeparator=","
+                                    prefix="R$ "
+                                    decimalScale={2}
+                                    fixedDecimalScale={true}
+                                    allowNegative={false}
+                                    placeholder="R$ 0,00"
+                                  />
+                              </div>
+
+                              <div>
+                                <Label htmlFor="cashValue">Valor Espécie</Label>
+                                <NumericFormat
+                                    id="cashValue"
+                                    name="cashValue"
+                                    className="col-span-3 h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                    value={editFormData.cashValue || 0}
+                                    onValueChange={(values) => {
+                                      const { floatValue } = values;
+                                      setEditFormData(prev => ({ ...prev, cashValue: floatValue }));
+                                    }}
+                                    thousandSeparator="."
+                                    decimalSeparator=","
+                                    prefix="R$ "
+                                    decimalScale={2}
+                                    fixedDecimalScale={true}
+                                    allowNegative={false}
+                                    placeholder="R$ 0,00"
+                                  />  
+                              </div>                      
+
+                              <div className="col-span-2">
+                                <Label htmlFor="status">Status</Label>
+                                <Select
+                                  id="status"
+                                  value={editFormData.status}
+                                  onValueChange={(value) => setEditFormData({ ...editFormData, status: value })}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Selecione o status" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="PENDING">Pendente</SelectItem>
+                                    <SelectItem value="APPROVED">Aprovado</SelectItem>
+                                    <SelectItem value="REJECTED">Rejeitado</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+
+                            {/* Totais */}
+                            {/*<div className="pt-4 mt-4 border-t">
+                              <h4 className="font-medium mb-2">Totais</h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div className="flex flex-col gap-2">
+                                      {/* 1. CARD DE OUTRAS RECEITAS (DETALHADO) */}
+                                      {/* <div className="bg-blue-50 p-3 rounded-lg">
+                                          <h5 className="font-medium text-blue-700">Outras Receitas</h5>
+                                          <div className="text-sm space-y-0">
+                                              {/* Detalhes com Título à Esquerda e Valor à Direita */}
+                                              {/* <div className="flex justify-between">
+                                                  <span>Oferta:</span>
+                                                  <span>
+                                                      R$ {Number(editFormData.offerValue ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                  </span>
+                                              </div>
+                                              <div className="flex justify-between">
+                                                  <span>Votos:</span>
+                                                  <span>
+                                                      R$ {Number(editFormData.votesValue ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                  </span>
+                                              </div>
+                                              <div className="flex justify-between">
+                                                  <span>EBD:</span>
+                                                  <span>
+                                                      R$ {Number(editFormData.ebdValue ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                  </span>
+                                              </div>
+                                              <div className="flex justify-between">
+                                                  <span>Campanha:</span>
+                                                  <span>
+                                                      R$ {Number(editFormData.campaignValue ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                  </span>
+                                              </div>
+                                              <div className="flex justify-between font-semibold">
+                                                  <span>Total:</span>
+                                                  <span className="font-semibold">
+                                                      R$ {Number(editFormData.entryTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                  </span>
+                                              </div>                                          
+                                          </div>
+                                      </div> */}
+                                      
+                                      {/* 2. CARD DE DÍZIMOS */}
+                                      {/*<div className="bg-blue-50 p-1 rounded-lg flex justify-between items-center">
+                                          <h5 className="font-medium text-blue-700">Dízimos</h5>
+                                          <div className="text-sm font-semibold flex justify-end">
+                                              R$ {Number(editFormData.titheTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </div>
+                                      </div>
+
+                                      {/* 2. CARD DE OFERTAS */}
+                                      {/*<div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
+                                          <h5 className="font-medium text-green-700">Ofertas do Culto</h5>
+                                          <div className="text-sm font-semibold flex justify-end">
+                                              R$ {Number(editFormData.offerTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </div>
+                                      </div>                                      
+
+                                      {/* 2. CARD DE MISSAO */}
+                                      {/*<div className="bg-orange-50 p-1 rounded-lg flex justify-between items-center">
+                                          <h5 className="font-medium text-orange-700">Missão</h5>
+                                          <div className="text-sm font-semibold flex justify-end">
+                                              R$ {Number(editFormData.missionTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </div>
+                                      </div>
+
+                                      {/* 2. CARD DE CIRCULO */}
+                                      {/*<div className="bg-yellow-50 p1 rounded-lg flex justify-between items-center">
+                                          <h5 className="font-medium text-yellow-700">Circulo</h5>
+                                          <div className="text-sm font-semibold flex justify-end">
+                                              R$ {Number(editFormData.circleTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </div>
+                                      </div>         
+
+                                      {/* 2. CARD DE VOTO */}
+                                      {/*<div className="bg-green-50 p1 rounded-lg flex justify-between items-center">
+                                          <h5 className="font-medium text-green-700">Votos</h5>
+                                          <div className="text-sm font-semibold flex justify-end">
+                                              R$ {Number(editFormData.votesTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </div>
+                                      </div>        
+
+                                      {/* 2. CARD DE EBD */}
+                                      {/*<div className="bg-green-50 p1 rounded-lg flex justify-between items-center">
+                                          <h5 className="font-medium text-green-700">EBD</h5>
+                                          <div className="text-sm font-semibold flex justify-end">
+                                              R$ {Number(editFormData.ebdTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </div>
+                                      </div>        
+
+                                      {/* 2. CARD DE CAMPANHA */}
+                                      {/*<div className="bg-green-50 p1 rounded-lg flex justify-between items-center">
+                                          <h5 className="font-medium text-green-700">Campanha</h5>
+                                          <div className="text-sm font-semibold flex justify-end">
+                                              R$ {Number(editFormData.campaignTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </div>
+                                      </div>                                                                                                                                                                                     
+
+
+                                      {/* ⭐️ NOVO: CARD TOTAL DE ENTRADAS (Entrada + Dízimo) ⭐️ */}
+                                      {/*<div className="bg-blue-100 p-1 rounded-lg border-2 border-blue-300">
+                                          <div className="flex justify-between items-center">
+                                              <h5 className="font-bold font-small text-blue-800">Tot Entradas</h5>
+                                              <div className="text-sm font-extrabold text-blue-800">
+                                                  {/* Calcula Entradas (entryTotal) + Dízimo (titheTotal) */}
+                                                  {/*R$ {(Number(editFormData.entryTotal) + Number(editFormData.titheTotal) + + Number(editFormData.missionTotal) + + Number(editFormData.circleTotal)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                              </div>
+                                          </div>
+                                      </div>
+                                  </div>
+                                  
+                                  {/* ⭐️ COLUNA DIREITA: SAÍDAS E TOTAIS FINAIS ⭐️ */}
+                                  {/*<div className="flex flex-col gap-4">
+                                      
+                                      {/* 3. CARD TOTAL DE SAÍDAS */}
+                                      {/*<div className="bg-red-50 p-1 *:rounded-lg flex justify-between items-center md:mb-55">
+                                          <h5 className="font-medium text-red-700">Saídas</h5>
+                                          <div className="text-sm font-semibold ">
+                                              R$ {Number(editFormData.exitTotal).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </div>
+                                      </div>
+
+                                      {/* ⭐️ NOVO: CARD TOTAL GERAL (Entrada - Saída) ⭐️ */}
+                                      {/*<div className="bg-purple-100 p-1 rounded-lg border-2 border-purple-300">
+                                          <div className="flex justify-between items-center">
+                                              <h5 className="font-bold text-purple-800">Saldo Geral</h5>
+                                              <div className="text-sm font-extrabold text-purple-800">
+                                                  {/* Calcula (Entrada + Dízimo) - Saída */}
+                                                  {/*R$ {(
+                                                      (Number(editFormData.entryTotal) + Number(editFormData.titheTotal) + + Number(editFormData.missionTotal) + + Number(editFormData.circleTotal)) - Number(editFormData.exitTotal)
+                                                  ).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                              </div>
+                                          </div>
+                                      </div>
+                                  </div>
+                              </div>
+                            </div>
+                        </CardContent>
+                      </Card>
+                    )} */}
                   </div>
                   {/* FIM MUDANÇA 3 */}
                 </>
@@ -744,11 +967,18 @@ export default function CongregationSummary() {
           
           {/* Diálogo de Edição */}
           <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>Editar Resumo</DialogTitle>
-              </DialogHeader>
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <DialogContent className="max-h-[85vh] overflow-y-auto h-[90vh]">
+            <DialogHeader>
+              <DialogTitle>Editar Resumo</DialogTitle>
+              <DialogDescription className="sr-only">
+                Edite os detalhes do resumo e visualize os lançamentos associados.
+              </DialogDescription>
+            </DialogHeader>
+
+            {/* Wrapper principal: mantém header + footer fixos e área de conteúdo rolável */}
+            <div className="flex flex-col flex-1 min-h-0">
+              {/* Tabs header (sempre visível) */}
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="summaries" className="flex items-center">
                     <FileText className="mr-2 h-4 w-4" />
@@ -759,9 +989,10 @@ export default function CongregationSummary() {
                     Lançamentos
                   </TabsTrigger>
                 </TabsList>
- 
-              <div className="max-h-[80vh] overflow-y-auto pr-4"> 
-                <TabsContent value="summaries" className="mt-0">
+
+                {/* Área rolável: ocupa o espaço restante entre header e footer */}
+                <div className="flex-1 min-h-0 overflow-y-auto pt-2 pb-4">
+                  <TabsContent value="summaries" className="min-h-0">
                   <div className="space-y-2 py-2">
                       {/* Totais */}
                       {editFormData && (
@@ -770,16 +1001,16 @@ export default function CongregationSummary() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div className="flex flex-col gap-2">
                                   {/* 1. CARD DE OUTRAS RECEITAS (DETALHADO) */}
-                                  <div className="bg-blue-50 p-3 rounded-lg">
+                                  {/* <div className="bg-blue-50 p-3 rounded-lg">
                                       <h5 className="font-medium text-blue-700">Outras Receitas</h5>
                                       <div className="text-sm space-y-0">
                                           {/* Detalhes com Título à Esquerda e Valor à Direita */}
-                                          <div className="flex justify-between">
+                                          {/*<div className="flex justify-between">
                                               <span>Oferta:</span>
                                               <span>
                                                   R$ {Number(editFormData.offerValue ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                               </span>
-                                          </div>
+                                          </div> 
                                           <div className="flex justify-between">
                                               <span>Votos:</span>
                                               <span>
@@ -804,16 +1035,49 @@ export default function CongregationSummary() {
                                                   R$ {Number(editFormData.entryTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                               </span>
                                           </div>                                          
-                                      </div>
-                                  </div>
-                                  
+                                      </div>  
+                                  </div>  */}
+                               
                                   {/* 2. CARD DE DÍZIMOS */}
-                                  <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
-                                      <h5 className="font-medium text-green-700">Dízimos</h5>
+                                  <div className="bg-blue-50 p-1 rounded-lg flex justify-between items-center">
+                                      <h5 className="font-medium text-blue-700">Dízimos</h5>
                                       <div className="text-sm font-semibold flex justify-end">
                                           R$ {Number(editFormData.titheTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                       </div>
                                   </div>
+
+                                  {/* 2. CARD DE OFFERTA DE CULTO*/}
+                                  <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
+                                      <h5 className="font-medium text-green-700">Oferta de Culto</h5>
+                                      <div className="text-sm font-semibold flex justify-end">
+                                          R$ {Number(editFormData.offerTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                      </div>
+                                  </div>       
+
+                                  {/* 2. CARD DE VOTOS*/}
+                                  <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
+                                      <h5 className="font-medium text-green-700">Votos</h5>
+                                      <div className="text-sm font-semibold flex justify-end">
+                                          R$ {Number(editFormData.votesTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                      </div>
+                                  </div>     
+
+                                  {/* 2. CARD DE EBD*/}
+                                  <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
+                                      <h5 className="font-medium text-green-700">EBD</h5>
+                                      <div className="text-sm font-semibold flex justify-end">
+                                          R$ {Number(editFormData.ebdTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                      </div>
+                                  </div>     
+
+                                  {/* 2. CARD DE CAMPANHA*/}
+                                  <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
+                                      <h5 className="font-medium text-green-700">Campanha</h5>
+                                      <div className="text-sm font-semibold flex justify-end">
+                                          R$ {Number(editFormData.campaignTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                      </div>
+                                  </div>                                                                                                                                      
+                                  
 
                                   {/* 2. CARD DE MISSAO */}
                                   <div className="bg-orange-50 p-1 rounded-lg flex justify-between items-center">
@@ -831,13 +1095,14 @@ export default function CongregationSummary() {
                                       </div>
                                   </div>                                                                    
 
+
                                   {/* ⭐️ NOVO: CARD TOTAL DE ENTRADAS (Entrada + Dízimo) ⭐️ */}
                                   <div className="bg-blue-100 p-1 rounded-lg border-2 border-blue-300">
                                       <div className="flex justify-between items-center">
                                           <h5 className="font-bold font-small text-blue-800">Tot Entradas</h5>
                                           <div className="text-sm font-extrabold text-blue-800">
                                               {/* Calcula Entradas (entryTotal) + Dízimo (titheTotal) */}
-                                              R$ {(Number(editFormData.entryTotal) + Number(editFormData.titheTotal) + + Number(editFormData.missionTotal) + + Number(editFormData.circleTotal)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                              R$ {(Number(editFormData.titheTotal ?? 0) + Number(editFormData.offerTotal ?? 0)  + Number(editFormData.votesTotal   ?? 0) + Number(editFormData.ebdTotal ?? 0) + Number(editFormData.campaignTotal ?? 0) + Number(editFormData.missionTotal ?? 0) + Number(editFormData.circleTotal ?? 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                           </div>
                                       </div>
                                   </div>
@@ -847,7 +1112,7 @@ export default function CongregationSummary() {
                               <div className="flex flex-col gap-4">
                                   
                                   {/* 3. CARD TOTAL DE SAÍDAS */}
-                                  <div className="bg-red-50 p-1 *:rounded-lg flex justify-between items-center md:mb-55">
+                                  <div className="bg-red-50 p-1 *:rounded-lg flex justify-between items-center md:mb-56">
                                       <h5 className="font-medium text-red-700">Saídas</h5>
                                       <div className="text-sm font-semibold ">
                                           R$ {Number(editFormData.exitTotal).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -862,7 +1127,7 @@ export default function CongregationSummary() {
                                           <div className="text-sm font-extrabold text-purple-800">
                                               {/* Calcula (Entrada + Dízimo) - Saída */}
                                               R$ {(
-                                                  (Number(editFormData.entryTotal) + Number(editFormData.titheTotal) + + Number(editFormData.missionTotal) + + Number(editFormData.circleTotal)) - Number(editFormData.exitTotal)
+                                                  (Number(editFormData.titheTotal ?? 0)  + Number(editFormData.offerTotal ?? 0) + Number(editFormData.votesTotal ?? 0) + Number(editFormData.ebdTotal ?? 0) + Number(editFormData.campaignTotal ?? 0) + Number(editFormData.missionTotal ?? 0) + Number(editFormData.circleTotal ?? 0)) - Number(editFormData.exitTotal ?? 0)
                                               ).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                           </div>
                                       </div>
@@ -872,22 +1137,30 @@ export default function CongregationSummary() {
                         </div>
                       )}
                     </div>
-                      <div className='grid grid-cols-1 md:grid-cols-2 space-x-4'>
+                      <div className='grid grid-cols-1 md:grid-cols-3 space-x-4'>
+
+                        <div className='col-span-1'>
+                            <Label htmlFor="talonNumber">Nr. Talão</Label>
+                            <Input
+                              id="talonNumber"
+                              name="talonNumber"
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              value={editFormData.talonNumber}
+                              onChange={handleInputChange}
+                              required
+                              disabled={editFormData.status === 'APPROVED'}
+                            />
+                        </div>
+
                         <div>
                         <Label htmlFor="depositValue">Valor Depósito</Label>
-                        {/* <Input
-                          id="depositValue"
-                          name="depositValue"
-                          type="number"
-                          step="0.01"
-                          value={editFormData.depositValue}
-                          onChange={(e) => setEditFormData(prev => ({ ...prev, depositValue: e.target.value }))}
-                        /> */}
                         <NumericFormat
                             id="depositValue"
                             name="depositValue"
                             className="col-span-3 h-10 w-full rounded-md border border-input bg-background px-2 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                            value={editFormData.depositValue || ''}
+                            value={editFormData.depositValue || 0}
                             onValueChange={(values) => {
                               const { floatValue } = values;
                               setEditFormData(prev => ({ ...prev, depositValue: floatValue }));
@@ -897,25 +1170,18 @@ export default function CongregationSummary() {
                             prefix="R$ "
                             decimalScale={2}
                             fixedDecimalScale={true}
-                            allowNegative={false}
+                            allowNegative={true}
                             placeholder="R$ 0,00"
+                            disabled={editFormData.status === 'APPROVED'}
                           />
                         </div>
                         <div>
                           <Label htmlFor="cashValue">Valor Espécie</Label>
-                          {/* <Input
-                            id="cashValue"
-                            name="cashValue"
-                            type="number"
-                            step="0.01"
-                            value={editFormData.cashValue}
-                            onChange={(e) => setEditFormData(prev => ({ ...prev, cashValue: e.target.value }))}
-                          /> */}
                           <NumericFormat
                               id="cashValue"
                               name="cashValue"
                               className="col-span-3 h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                              value={editFormData.cashValue || ''}
+                              value={editFormData.cashValue || 0}
                               onValueChange={(values) => {
                                 const { floatValue } = values;
                                 setEditFormData(prev => ({ ...prev, cashValue: floatValue }));
@@ -925,8 +1191,9 @@ export default function CongregationSummary() {
                               prefix="R$ "
                               decimalScale={2}
                               fixedDecimalScale={true}
-                              allowNegative={false}
+                              allowNegative={true}
                               placeholder="R$ 0,00"
+                              disabled={editFormData.status === 'APPROVED'}                              
                             />  
                         </div>                      
                       </div>
@@ -937,7 +1204,7 @@ export default function CongregationSummary() {
                               <h5 className="font-small text-yellow-700">Total Depósito + Espécie</h5>
                               <div className="text-sm font-semibold text-yellow-800">
                                   {/* Calcula Depósito (depositValue) + Espécie (cashValue) */}
-                                  R$ {(Number(editFormData.depositValue) + Number(editFormData.cashValue)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  R$ {(Number(editFormData.depositValue ?? 0) + Number(editFormData.cashValue ?? 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </div>
                           </div>
                       </div>
@@ -950,7 +1217,7 @@ export default function CongregationSummary() {
                               type="checkbox"
                               id="treasurerApproved"
                               checked={editFormData.treasurerApproved}
-                              disabled={!session.user.canApproveTreasury || editFormData.accountantApproved}
+                              disabled={!session.user.canApproveTreasury || editFormData.directorApproved}
                               onChange={(e) => setEditFormData(prev => ({ ...prev, treasurerApproved: e.target.checked }))}
                             />
                             <Label htmlFor="treasurerApproved">Tesoureiro</Label>
@@ -961,7 +1228,7 @@ export default function CongregationSummary() {
                               type="checkbox"
                               id="accountantApproved"
                               checked={editFormData.accountantApproved}
-                              disabled={!session.user.canApproveAccountant || editFormData.treasurerApproved}
+                              disabled={!session.user.canApproveAccountant || editFormData.treasurerApproved || editFormData.directorApproved}
                               onChange={(e) => setEditFormData(prev => ({ ...prev, accountantApproved: e.target.checked }))}
                             />
                             <Label htmlFor="accountantApproved">Contador</Label>
@@ -988,7 +1255,7 @@ export default function CongregationSummary() {
 
                   
                 {/* Aba de Lançamentos */}
-                <TabsContent value="launches" className="mt-4">
+                <TabsContent value="launches" className="max-w-[300px] md:max-w-[600px] max-h-[50vh] h-[50vh] min-h-0">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -1009,18 +1276,24 @@ export default function CongregationSummary() {
                          launches.map((launch) => (
                           <TableRow key={launch.id}>
                             <TableCell>
-                              {format(new Date(launch.date), 'dd/MM/yyyy', { locale: ptBR })}
+                              {formatDate(new Date(launch.date), 'dd/MM/yyyy', { locale: ptBR })}
                             </TableCell>
                           <TableCell>
                             <div className={`w-full py-1 px-0 rounded text-center text-white font-medium ${
-                              launch.type === 'ENTRADA' ? 'bg-green-500' : 
                               launch.type === 'DIZIMO' ? 'bg-blue-500' : 
+                              launch.type === 'OFERTA_CULTO'? 'bg-green-500' :
+                              launch.type === 'VOTO' ? 'bg-green-500' : 
+                              launch.type === 'EBD' ? 'bg-green-500' :
+                              launch.type === 'CAMPANHA'? 'bg-green-500' :
                               launch.type === 'SAIDA'? 'bg-red-500' :
                               launch.type === 'MISSAO'? 'bg-orange-500' :
                               launch.type === 'CIRCULO'? 'bg-yellow-500' : ''
                             }`}>
-                            {launch.type === 'ENTRADA' ? 'Outras Receitas' : 
-                              launch.type === 'DIZIMO' ? 'Dízimo' : 
+                            { launch.type === 'DIZIMO' ? 'Dízimo' : 
+                              launch.type === 'OFERTA_CULTO' ? 'Oferta de Culto' :
+                              launch.type === 'VOTO' ? 'Voto' :
+                              launch.type === 'EBD' ? 'EBD' :
+                              launch.type === 'CAMPANHA' ? 'Campanha' :
                               launch.type === 'SAIDA' ? 'Saída' :
                               launch.type === 'MISSAO' ? 'Missão' :
                               launch.type === 'CIRCULO' ? 'Círculo de Oração' : ''}
@@ -1028,7 +1301,7 @@ export default function CongregationSummary() {
                           </TableCell>
                             <TableCell>
                               R$ {(
-                                (launch.offerValue + launch.votesValue + launch.ebdValue + launch.campaignValue + launch.value) || 0
+                                (launch.value) || 0
                               ).toFixed(2)}
                             </TableCell>
                             <TableCell>
@@ -1051,7 +1324,7 @@ export default function CongregationSummary() {
                 </div>
               </Tabs>
               
-              <DialogFooter>
+              <DialogFooter className="mt-auto">
                 <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
                   Cancelar
                 </Button>
@@ -1059,6 +1332,7 @@ export default function CongregationSummary() {
                   Salvar
                 </Button>
               </DialogFooter>
+              </div>
             </DialogContent>
           </Dialog>
         </div>

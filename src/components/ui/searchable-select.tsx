@@ -150,8 +150,8 @@ export function SearchableSelect({
             >
             <CardContent className="p-3">
               <div className="flex items-center space-x-3">
-                <div key={item.id} className="flex-shrink-0"></div>
-                <div className="flex-shrink-0">
+                <div key={item.id} className="shrink-0"></div>
+                <div className="shrink-0">
                   {item.photoUrl && item.photoExists ? (
                     <img 
                     src={`uploads/${item.photoUrl}`} 

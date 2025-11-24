@@ -136,11 +136,12 @@ const navigationItems = navigation
         <div className="flex min-h-0 flex-1 flex-col border-r border-gray-200 bg-white">
           <div className="flex h-16 flex-shrink-0 items-center px-4 mt-3">
             {/* <h1 className="text-xl font-bold">Lance Fácil</h1> */}
-            <Image loading="lazy"
+            <Image 
               src="/images/LogoDashboard.png" // Caminho relativo a partir da pasta `public`
               alt="Logo Dashboard do Agilize"
               width={400} // Largura da imagem
               height={300} // Altura da imagem
+              priority
             />
           </div>
           <div className="flex flex-1 flex-col overflow-y-auto pt-5 pb-4">

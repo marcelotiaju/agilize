@@ -46,43 +46,67 @@ model VerificationToken {
 }
 
 model User {
-  id                   String             @id @default(cuid())
-  name                 String?
-  email                String             @unique
-  emailVerified        DateTime?          @db.DateTime(0)
-  image                String?            @db.Text
-  cpf                  String             @unique
-  phone                String?
-  password             String
-  validFrom            DateTime           @db.DateTime(0)
-  validTo              DateTime           @db.DateTime(0)
-  historyDays          Int                @default(30)
-  canExport            Boolean            @default(false)
-  canDelete            Boolean            @default(false)
-  canLaunchEntry       Boolean            @default(false)
-  canLaunchTithe       Boolean            @default(false)
-  canLaunchExpense     Boolean            @default(false)
-  canLaunchMission     Boolean            @default(false)
-  canLaunchCircle      Boolean            @default(false)
-  canApproveEntry      Boolean            @default(false)
-  canApproveTithe      Boolean            @default(false)
-  canApproveExpense    Boolean            @default(false)
-  canApproveMission    Boolean            @default(false)
-  canApproveCircle     Boolean            @default(false)
-  canCreate            Boolean            @default(false)
-  canEdit              Boolean            @default(false)
-  canExclude           Boolean            @default(false)
-  canManageUsers       Boolean            @default(false)
-  defaultPage          String             @default("/dashboard")
-  canManageSummary     Boolean            @default(false)
-  canApproveTreasury   Boolean            @default(false)
-  canApproveAccountant Boolean            @default(false)
-  canApproveDirector   Boolean            @default(false)
-  accounts             Account[]
-  sessions             Session[]
-  congregations        UserCongregation[]
-  createdAt            DateTime           @default(now()) @db.DateTime(0)
-  updatedAt            DateTime           @updatedAt @db.DateTime(0)
+  id            String             @id @default(cuid())
+  login         String?            @unique
+  name          String?
+  email         String             @unique
+  emailVerified DateTime?          @db.DateTime(0)
+  image         String?            @db.Text
+  cpf           String             @unique
+  phone         String?
+  password      String
+  validFrom     DateTime           @db.DateTime(0)
+  validTo       DateTime           @db.DateTime(0)
+  historyDays   Int                @default(30)
+  defaultPage   String             @default("/dashboard")
+
+  // relacionamento com Profile (permissões agora centralizadas em Profile)
+  profileId     String?
+  profile       Profile?           @relation(fields: [profileId], references: [id])
+
+  accounts      Account[]
+  sessions      Session[]
+  congregations UserCongregation[]
+  createdAt     DateTime           @default(now()) @db.DateTime(0)
+  updatedAt     DateTime           @updatedAt @db.DateTime(0)
+}
+
+model Profile {
+  id                     String   @id @default(cuid())
+  name                   String   @unique
+  description            String?
+
+  // permissões centralizadas (migradas do User)
+  canExport              Boolean  @default(false)
+  canDelete              Boolean  @default(false)
+  canLaunchVote          Boolean  @default(false)
+  canLaunchEbd           Boolean  @default(false)
+  canLaunchCampaign      Boolean  @default(false)
+  canLaunchTithe         Boolean  @default(false)
+  canLaunchExpense       Boolean  @default(false)
+  canLaunchMission       Boolean  @default(false)
+  canLaunchCircle        Boolean  @default(false)
+  canLaunchServiceOffer  Boolean  @default(false)
+  canApproveVote         Boolean  @default(false)
+  canApproveEbd          Boolean  @default(false)
+  canApproveCampaign     Boolean  @default(false)
+  canApproveTithe        Boolean  @default(false)
+  canApproveExpense      Boolean  @default(false)
+  canApproveMission      Boolean  @default(false)
+  canApproveCircle       Boolean  @default(false)
+  canApproveServiceOffer Boolean  @default(false)
+  canCreate              Boolean  @default(false)
+  canEdit                Boolean  @default(false)
+  canExclude             Boolean  @default(false)
+  canManageSummary       Boolean  @default(false)
+  canApproveTreasury     Boolean  @default(false)
+  canApproveAccountant   Boolean  @default(false)
+  canApproveDirector     Boolean  @default(false)
+  canManageUsers         Boolean  @default(false)
+
+  users                  User[]
+  createdAt              DateTime @default(now()) @db.DateTime(0)
+  updatedAt              DateTime @updatedAt @db.DateTime(0)
 }
 
 model Congregation {
@@ -142,10 +166,6 @@ model Launch {
   type             LaunchType
   date             DateTime             @db.DateTime(0)
   talonNumber      String?
-  offerValue       Float?
-  votesValue       Float?
-  ebdValue         Float?
-  campaignValue    Float?
   value            Float?
   description      String?              @db.VarChar(255)
   status           LaunchStatus         @default(NORMAL)
@@ -216,22 +236,17 @@ model CongregationSummary {
   startDate          DateTime      @db.DateTime(0)
   endDate            DateTime      @db.DateTime(0)
   launchCount        Int           @default(0)
-  entryCount         Int           @default(0)
-  titheCount         Int           @default(0)
-  exitCount          Int           @default(0)
   entryTotal         Float         @default(0)
   titheTotal         Float         @default(0)
   exitTotal          Float         @default(0)
-  titheValue         Float         @default(0)
-  offerValue         Float         @default(0)
-  votesValue         Float         @default(0)
-  campaignValue      Float         @default(0)
-  ebdValue           Float         @default(0)
-  missionValue       Float         @default(0)
+  offerTotal         Float         @default(0)
+  votesTotal         Float         @default(0)
+  ebdTotal           Float         @default(0)
+  campaignTotal      Float         @default(0)
   missionTotal       Float         @default(0)
-  circleValue        Float         @default(0)
   circleTotal        Float         @default(0)
   exitValue          Float         @default(0)
+  talonNumber        String?
   depositValue       Float         @default(0)
   cashValue          Float         @default(0)
   totalValue         Float         @default(0)
@@ -248,11 +263,15 @@ model CongregationSummary {
 }
 
 enum LaunchType {
-  ENTRADA
   DIZIMO
-  SAIDA
+  VOTO
+  EBD
+  CAMPANHA
+  OFERTA_CULTO
   MISSAO
   CIRCULO
+  ENTRADA
+  SAIDA
 }
 
 enum LaunchStatus {

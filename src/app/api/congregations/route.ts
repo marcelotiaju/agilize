@@ -58,22 +58,26 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { 
-      code, 
-      name, 
+    const {
+      code,
+      name,
       regionalName,
+      // Accept both old (entradaOffer*) and new (serviceOffer*) names from client
       entradaOfferAccountPlan,
       entradaOfferFinancialEntity,
       entradaOfferPaymentMethod,
+      serviceOfferAccountPlan,
+      serviceOfferFinancialEntity,
+      serviceOfferPaymentMethod,
       entradaEbdAccountPlan,
       entradaEbdFinancialEntity,
-      entradaEbdPaymentMethod,      
+      entradaEbdPaymentMethod,
       entradaCampaignAccountPlan,
       entradaCampaignFinancialEntity,
-      entradaCampaignPaymentMethod,      
+      entradaCampaignPaymentMethod,
       entradaVotesAccountPlan,
       entradaVotesFinancialEntity,
-      entradaVotesPaymentMethod,      
+      entradaVotesPaymentMethod,
       dizimoAccountPlan,
       dizimoFinancialEntity,
       dizimoPaymentMethod,
@@ -93,23 +97,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Código e nome são obrigatórios" }, { status: 400 })
     }
 
+    // Map serviceOffer* from client into the existing entradaOffer* DB columns for backward compatibility.
+    // If your DB has been migrated to serviceOffer* columns, replace the keys below accordingly.
+    const entradaOfferAccountPlanToSave = serviceOfferAccountPlan ?? entradaOfferAccountPlan ?? null
+    const entradaOfferFinancialEntityToSave = serviceOfferFinancialEntity ?? entradaOfferFinancialEntity ?? null
+    const entradaOfferPaymentMethodToSave = serviceOfferPaymentMethod ?? entradaOfferPaymentMethod ?? null
+
     const congregation = await prisma.congregation.create({
       data: {
         code,
         name,
         regionalName,
-        entradaOfferAccountPlan,
-        entradaOfferFinancialEntity,
-        entradaOfferPaymentMethod,
+        // store into existing entradaOffer* fields (compat)
+        entradaOfferAccountPlan: entradaOfferAccountPlanToSave,
+        entradaOfferFinancialEntity: entradaOfferFinancialEntityToSave,
+        entradaOfferPaymentMethod: entradaOfferPaymentMethodToSave,
         entradaEbdAccountPlan,
         entradaEbdFinancialEntity,
-        entradaEbdPaymentMethod,      
+        entradaEbdPaymentMethod,
         entradaCampaignAccountPlan,
         entradaCampaignFinancialEntity,
-        entradaCampaignPaymentMethod,      
+        entradaCampaignPaymentMethod,
         entradaVotesAccountPlan,
         entradaVotesFinancialEntity,
-        entradaVotesPaymentMethod,  
+        entradaVotesPaymentMethod,
         dizimoAccountPlan,
         dizimoFinancialEntity,
         dizimoPaymentMethod,
@@ -136,6 +147,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(congregation, { status: 201 })
   } catch (error) {
+    console.error('API: Erro ao criar congregação:', error)
     return NextResponse.json({ error: "Erro ao criar congregação" }, { status: 500 })
   }
 }
@@ -149,23 +161,27 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { 
-      id, 
-      code, 
+    const {
+      id,
+      code,
       name,
-      regionalName, 
+      regionalName,
+      // Accept both old (entradaOffer*) and new (serviceOffer*) names from client
       entradaOfferAccountPlan,
       entradaOfferFinancialEntity,
       entradaOfferPaymentMethod,
+      serviceOfferAccountPlan,
+      serviceOfferFinancialEntity,
+      serviceOfferPaymentMethod,
       entradaEbdAccountPlan,
       entradaEbdFinancialEntity,
-      entradaEbdPaymentMethod,      
+      entradaEbdPaymentMethod,
       entradaCampaignAccountPlan,
       entradaCampaignFinancialEntity,
-      entradaCampaignPaymentMethod,      
+      entradaCampaignPaymentMethod,
       entradaVotesAccountPlan,
       entradaVotesFinancialEntity,
-      entradaVotesPaymentMethod,  
+      entradaVotesPaymentMethod,
       dizimoAccountPlan,
       dizimoFinancialEntity,
       dizimoPaymentMethod,
@@ -181,24 +197,29 @@ export async function PUT(request: NextRequest) {
       circlePaymentMethod
     } = body
 
+    // Map serviceOffer* from client into the existing entradaOffer* DB columns for backward compatibility.
+    const entradaOfferAccountPlanToSave = serviceOfferAccountPlan ?? entradaOfferAccountPlan ?? null
+    const entradaOfferFinancialEntityToSave = serviceOfferFinancialEntity ?? entradaOfferFinancialEntity ?? null
+    const entradaOfferPaymentMethodToSave = serviceOfferPaymentMethod ?? entradaOfferPaymentMethod ?? null
+
     const congregation = await prisma.congregation.update({
       where: { id },
       data: {
         code,
         name,
         regionalName,
-        entradaOfferAccountPlan,
-        entradaOfferFinancialEntity,
-        entradaOfferPaymentMethod,
+        entradaOfferAccountPlan: entradaOfferAccountPlanToSave,
+        entradaOfferFinancialEntity: entradaOfferFinancialEntityToSave,
+        entradaOfferPaymentMethod: entradaOfferPaymentMethodToSave,
         entradaEbdAccountPlan,
         entradaEbdFinancialEntity,
-        entradaEbdPaymentMethod,      
+        entradaEbdPaymentMethod,
         entradaCampaignAccountPlan,
         entradaCampaignFinancialEntity,
-        entradaCampaignPaymentMethod,      
+        entradaCampaignPaymentMethod,
         entradaVotesAccountPlan,
         entradaVotesFinancialEntity,
-        entradaVotesPaymentMethod,  
+        entradaVotesPaymentMethod,
         dizimoAccountPlan,
         dizimoFinancialEntity,
         dizimoPaymentMethod,
@@ -217,6 +238,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json(congregation)
   } catch (error) {
+    console.error('API: Erro ao atualizar congregação:', error)
     return NextResponse.json({ error: "Erro ao atualizar congregação" }, { status: 500 })
   }
 }

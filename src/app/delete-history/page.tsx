@@ -8,10 +8,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Trash2, AlertTriangle, Shield } from 'lucide-react'
+import { Trash2, AlertTriangle } from 'lucide-react'
 import { format } from 'date-fns'
 import { PermissionGuard } from '@/components/auth/PermissionGuard'
 
@@ -33,7 +32,7 @@ export default function DeleteHistory() {
   const [formData, setFormData] = useState({
     startDate: format(new Date(new Date().setDate(new Date().getDate() - 30)), 'yyyy-MM-dd'),
     endDate: format(new Date(), 'yyyy-MM-dd'),
-    type: ['ENTRADA', 'DIZIMO', 'SAIDA'], 
+    type: ['DIZIMO','OFERTA_CULTO','MISSAO','CIRCULO','VOTO','EBD','CAMPANHA','SAIDA'], 
     congregationIds: [] as string[]
   })
   const [isDeleting, setIsDeleting] = useState(false)
@@ -218,7 +217,7 @@ export default function DeleteHistory() {
                     </div>
 
                     <div>
-                      <Label>Tipo de Dados</Label>
+                      <Label className='mb-2'>Tipo de Dados</Label>
                         <div className="flex items-center space-x-2">
                           <Checkbox
                             id="type-dizimo"
@@ -230,12 +229,52 @@ export default function DeleteHistory() {
                       <div className="space-y-2 mt-2">
                         <div className="flex items-center space-x-2">
                           <Checkbox
-                            id="type-entrada"
-                            checked={formData.type.includes('ENTRADA')}
-                            onCheckedChange={(checked) => handleTypeChange('ENTRADA', checked as boolean)}
+                            id="type-oferta"
+                            checked={formData.type.includes('OFERTA_CULTO')}
+                            onCheckedChange={(checked) => handleTypeChange('OFERTA_CULTO', checked as boolean)}
                           />
-                          <Label htmlFor="type-entrada">Outras Receitas</Label>
+                          <Label htmlFor="type-oferta">Oferta de Culto</Label>
                         </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="type-missao"
+                            checked={formData.type.includes('MISSAO')}
+                            onCheckedChange={(checked) => handleTypeChange('MISSAO', checked as boolean)}
+                          />
+                          <Label htmlFor="type-missao">Missão</Label>
+                        </div>      
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="type-circulo"
+                            checked={formData.type.includes('CIRCULO')}
+                            onCheckedChange={(checked) => handleTypeChange('CIRCULO', checked as boolean)}
+                          />
+                          <Label htmlFor="type-circulo">Círculo de Oração</Label>
+                        </div>   
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="type-voto"
+                            checked={formData.type.includes('VOTO')}
+                            onCheckedChange={(checked) => handleTypeChange('VOTO', checked as boolean)}
+                          />
+                          <Label htmlFor="type-votos">Voto</Label>
+                        </div> 
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="type-ebd"
+                            checked={formData.type.includes('EBD')}
+                            onCheckedChange={(checked) => handleTypeChange('EBD', checked as boolean)}
+                          />
+                          <Label htmlFor="type-ebd">EBD</Label>
+                        </div> 
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="type-campanha"
+                            checked={formData.type.includes('CAMPANHA')}
+                            onCheckedChange={(checked) => handleTypeChange('CAMPANHA', checked as boolean)}
+                          />
+                          <Label htmlFor="type-campanha">Campanha</Label>
+                        </div>                                                                                                                  
                         <div className="flex items-center space-x-2">
                           <Checkbox
                             id="type-saida"

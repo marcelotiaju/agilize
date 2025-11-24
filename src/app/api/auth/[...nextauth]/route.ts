@@ -1,27 +1,28 @@
-    // app/lib/authOptions.ts
-  import NextAuth, { NextAuthOptions } from 'next-auth';
-  import CredentialsProvider from 'next-auth/providers/credentials';
-  import prisma from "@/lib/prisma"
-  import bcrypt from "bcrypt"
+// app/lib/authOptions.ts
+import NextAuth, { NextAuthOptions } from 'next-auth';
+import CredentialsProvider from 'next-auth/providers/credentials';
+import prisma from "@/lib/prisma"
+import bcrypt from "bcrypt"
 
 
-  export const authOptions : NextAuthOptions = {
+export const authOptions : NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: "credentials",
       credentials: {
-        cpf: { label: "CPF", type: "text" },
+        login: { label: "Login", type: "text" },
         password: { label: "Senha", type: "password" }
       },
       async authorize(credentials) {
-        if (!credentials?.cpf || !credentials?.password) {
+        if (!credentials?.login || !credentials?.password) {
           return null
         }
 
         const user = await prisma.user.findUnique({
           where: {
-            cpf: credentials.cpf
-          }
+            login: credentials.login
+          },
+          include: { profile: true }
         })
         console.log('Usuário Encontrado:', user);
 
@@ -35,38 +36,49 @@
           return null
         }
 
-        // Retorna o usuário. O NextAuth vai pegar automaticamente o `id`, `name` e `email`.
-        // Outros campos devem ser adicionados nos callbacks.
+        // Resolver permissões a partir do profile (quando existir)
+        const p = user.profile
+        const resolved = {
+          canExport: !!p?.canExport,
+          canDelete: !!p?.canDelete,
+          canLaunchVote: !!p?.canLaunchVote,
+          canLaunchEbd: !!p?.canLaunchEbd,
+          canLaunchCampaign: !!p?.canLaunchCampaign,
+          canLaunchTithe: !!p?.canLaunchTithe,
+          canLaunchExpense: !!p?.canLaunchExpense,
+          canLaunchMission: !!p?.canLaunchMission,
+          canLaunchCircle: !!p?.canLaunchCircle,
+          canLaunchServiceOffer: !!p?.canLaunchServiceOffer,
+          canApproveVote: !!p?.canApproveVote,
+          canApproveEbd: !!p?.canApproveEbd,
+          canApproveCampaign: !!p?.canApproveCampaign,
+          canApproveTithe: !!p?.canApproveTithe,
+          canApproveExpense: !!p?.canApproveExpense,
+          canApproveMission: !!p?.canApproveMission,
+          canApproveCircle: !!p?.canApproveCircle,
+          canApproveServiceOffer: !!p?.canApproveServiceOffer,
+          canCreate: !!p?.canCreate,
+          canEdit: !!p?.canEdit,
+          canExclude: !!p?.canExclude,
+          canManageUsers: !!p?.canManageUsers,
+          canManageSummary: !!p?.canManageSummary,
+          canApproveTreasury: !!p?.canApproveTreasury,
+          canApproveAccountant: !!p?.canApproveAccountant,
+          canApproveDirector: !!p?.canApproveDirector
+        }
+
         return {
           id: user.id,
           name: user.name,
           email: user.email,
-          cpf: user.cpf,
+          login: user.login,
           phone: user.phone ?? undefined,
           validFrom: user.validFrom,
           validTo: user.validTo,
           historyDays: user.historyDays,
-          canExport: user.canExport,
-          canDelete: user.canDelete,
-          canLaunchEntry: user.canLaunchEntry,
-          canLaunchTithe: user.canLaunchTithe,
-          canLaunchExpense: user.canLaunchExpense,
-          canLaunchMission: user.canLaunchMission,
-          canLaunchCircle: user.canLaunchCircle,
-          canApproveEntry: user.canApproveEntry,
-          canApproveTithe: user.canApproveTithe,
-          canApproveExpense: user.canApproveExpense,
-          canApproveMission: user.canApproveMission,
-          canApproveCircle: user.canApproveCircle,
-          canCreate: user.canCreate,
-          canEdit: user.canEdit,
-          canExclude: user.canExclude,
-          canManageUsers: user.canManageUsers,
           defaultPage: user.defaultPage,
-          canManageSummary: user.canManageSummary,
-          canApproveTreasury: user.canApproveTreasury,
-          canApproveAccountant: user.canApproveAccountant,
-          canApproveDirector: user.canApproveDirector
+          profile: user.profile ? { id: user.profile.id, name: user.profile.name } : null,
+          ...resolved
         }
       }
     })
@@ -82,33 +94,40 @@
       if (user) {
         return {
           ...token,
-          cpf: user.cpf,
-          phone: user.phone,
-          validFrom: user.validFrom,
-          validTo: user.validTo,
-          historyDays: user.historyDays,
-          canExport: user.canExport,
-          canDelete: user.canDelete,
-          // Novas permissões
-          canLaunchEntry: user.canLaunchEntry,
-          canLaunchTithe: user.canLaunchTithe,
-          canLaunchExpense: user.canLaunchExpense,
-          canLaunchMission: user.canLaunchMission,
-          canLaunchCircle: user.canLaunchCircle,
-          canApproveEntry: user.canApproveEntry,
-          canApproveTithe: user.canApproveTithe,
-          canApproveExpense: user.canApproveExpense,
-          canApproveMission: user.canApproveMission,
-          canApproveCircle: user.canApproveCircle,
-          canCreate: user.canCreate,
-          canEdit: user.canEdit,
-          canExclude: user.canExclude,
-          canManageUsers: user.canManageUsers,
-          defaultPage: user.defaultPage,
-          canManageSummary: user.canManageSummary,
-          canApproveTreasury: user.canApproveTreasury,
-          canApproveAccountant: user.canApproveAccountant,
-          canApproveDirector: user.canApproveDirector
+          sub: (user as any).id ?? token.sub,
+          login: (user as any).login,
+          phone: (user as any).phone,
+          validFrom: (user as any).validFrom,
+          validTo: (user as any).validTo,
+          historyDays: (user as any).historyDays,
+          defaultPage: (user as any).defaultPage,
+          profile: (user as any).profile ?? null,
+          canExport: (user as any).canExport,
+          canDelete: (user as any).canDelete,
+          canLaunchVote: (user as any).canLaunchVote,
+          canLaunchEbd: (user as any).canLaunchEbd,
+          canLaunchCampaign: (user as any).canLaunchCampaign,
+          canLaunchTithe: (user as any).canLaunchTithe,
+          canLaunchExpense: (user as any).canLaunchExpense,
+          canLaunchMission: (user as any).canLaunchMission,
+          canLaunchCircle: (user as any).canLaunchCircle,
+          canLaunchServiceOffer: (user as any).canLaunchServiceOffer,
+          canApproveVote: (user as any).canApproveVote,
+          canApproveEbd: (user as any).canApproveEbd,
+          canApproveCampaign: (user as any).canApproveCampaign,
+          canApproveTithe: (user as any).canApproveTithe,
+          canApproveExpense: (user as any).canApproveExpense,
+          canApproveMission: (user as any).canApproveMission,
+          canApproveCircle: (user as any).canApproveCircle,
+          canApproveServiceOffer: (user as any).canApproveServiceOffer,
+          canCreate: (user as any).canCreate,
+          canEdit: (user as any).canEdit,
+          canExclude: (user as any).canExclude,
+          canManageUsers: (user as any).canManageUsers,
+          canManageSummary: (user as any).canManageSummary,
+          canApproveTreasury: (user as any).canApproveTreasury,
+          canApproveAccountant: (user as any).canApproveAccountant,
+          canApproveDirector: (user as any).canApproveDirector
         }
       }
       return token
@@ -118,7 +137,7 @@
       session.user = {
         ...session.user,
         id: token.sub,
-        cpf: token.cpf as string | undefined,
+        login: token.login as string | undefined,
         phone: token.phone as string | undefined,
         validFrom: typeof token.validFrom === "string" || typeof token.validFrom === "number"
           ? new Date(token.validFrom)
@@ -129,17 +148,22 @@
         historyDays: typeof token.historyDays === "number" ? token.historyDays : undefined,
         canExport: typeof token.canExport === "boolean" ? token.canExport : undefined,
         canDelete: typeof token.canDelete === "boolean" ? token.canDelete : undefined,
-        // Novas permissões
-        canLaunchEntry: typeof token.canLaunchEntry === "boolean" ? token.canLaunchEntry : undefined,
+        canLaunchVote: typeof token.canLaunchVote === "boolean" ? token.canLaunchVote : undefined,
+        canLaunchEbd: typeof token.canLaunchEbd === "boolean" ? token.canLaunchEbd : undefined,
+        canLaunchCampaign: typeof token.canLaunchCampaign === "boolean" ? token.canLaunchCampaign : undefined,
         canLaunchTithe: typeof token.canLaunchTithe === "boolean" ? token.canLaunchTithe : undefined,
         canLaunchExpense: typeof token.canLaunchExpense === "boolean" ? token.canLaunchExpense : undefined,
         canLaunchMission: typeof token.canLaunchMission === "boolean" ? token.canLaunchMission : undefined,
         canLaunchCircle: typeof token.canLaunchCircle === "boolean" ? token.canLaunchCircle : undefined,
-        canApproveEntry: typeof token.canApproveEntry === "boolean" ?  token.canApproveEntry : undefined,
+        canLaunchServiceOffer: typeof token.canLaunchServiceOffer === "boolean" ? token.canLaunchServiceOffer : undefined,
+        canApproveVote: typeof token.canApproveVote === "boolean" ?  token.canApproveVote : undefined,
+        canApproveEbd: typeof token.canApproveEbd === "boolean" ? token.canApproveEbd : undefined,
+        canApproveCampaign: typeof token.canApproveCampaign === "boolean" ? token.canApproveCampaign : undefined,
         canApproveTithe: typeof token.canApproveTithe === "boolean" ? token.canApproveTithe : undefined,
         canApproveExpense: typeof token.canApproveExpense === "boolean" ? token.canApproveExpense : undefined,
         canApproveMission: typeof token.canApproveMission === "boolean" ? token.canApproveMission : undefined,
         canApproveCircle: typeof token.canApproveCircle === "boolean" ? token.canApproveCircle : undefined,
+        canApproveServiceOffer: typeof token.canApproveServiceOffer === "boolean" ? token.canApproveServiceOffer : undefined,
         canCreate: typeof token.canCreate === "boolean" ? token.canCreate : undefined,
         canEdit: typeof token.canEdit === "boolean" ? token.canEdit : undefined,
         canExclude: typeof token.canExclude === "boolean" ?  token.canExclude : undefined,

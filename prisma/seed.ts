@@ -37,20 +37,26 @@ async function main() {
   console.log('✅ Congregações criadas:', { congregation1, congregation2, congregation3 })
 */
   // Criar usuário de teste
-  const hashedPassword = await bcrypt.hash('19321932', 12)
+  // const hashedPassword = await bcrypt.hash('19321932', 12)
   
-  const user1 = await prisma.user.upsert({
-    where: { email: 'admin@igreja.com' },
-    update: {},
-    create: {
+  // const user1 = await prisma.user.upsert({
+  //   where: { email: 'admin@igreja.com' },
+  //   update: {},
+  //   create: {
+  //     name: 'Administrador',
+  //     email: 'admin@igreja.com',
+  //     cpf: '12345678901',
+  //     phone: '(11) 99999-9999',
+  //     password: hashedPassword,
+  //     validFrom: new Date(),
+  //     validTo: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+  //     historyDays: 30,
+  //   }
+  // })
+
+  const profile1 = await prisma.profile.create({
+    data: {
       name: 'Administrador',
-      email: 'admin@igreja.com',
-      cpf: '12345678901',
-      phone: '(11) 99999-9999',
-      password: hashedPassword,
-      validFrom: new Date(),
-      validTo: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
-      historyDays: 30,
       canExport: true,
       canDelete: true,
       // Novas permissões
@@ -64,12 +70,11 @@ async function main() {
       canEdit              :true,
       canExclude           :true,
       canManageUsers       :true,
-      defaultPage          :"/launches",
       canManageSummary     :true,
       canApproveTreasury   :true,
       canApproveAccountant :true,
       canApproveDirector   :true,
-    }
+          }
   })
 
   // const user2 = await prisma.user.upsert({

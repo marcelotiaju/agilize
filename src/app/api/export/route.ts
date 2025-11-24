@@ -131,16 +131,35 @@ export async function POST(request: NextRequest) {
         "Data de Emissao": formatDate(launch.date),
         "Data de Vencimento": "",
         //"Codigo da Conta a Pagar": "",
-        "Codigo do Caixa": launch.type === "ENTRADA" ? launch.congregation?.entradaFinancialEntity : launch.type === "DIZIMO" ? launch.congregation?.dizimoFinancialEntity : launch.type === "SAIDA" ? launch.congregation?.saidaFinancialEntity : "",
+        "Codigo do Caixa": launch.type === "OFERTA_CULTO" ? launch.congregation?.entradaOfferFinancialEntity : 
+                           launch.type === "MISSAO" ? launch.congregation?.missionFinancialEntity :
+                           launch.type === "CIRCULO" ? launch.congregation?.circleFinancialEntity :
+                           launch.type === "VOTO" ? launch.congregation?.entradaVotesFinancialEntity :
+                           launch.type === "EBD" ? launch.congregation?.entradaEbdFinancialEntity :
+                           launch.type === "CAMPANHA" ? launch.congregation?.entradaCampaignFinancialEntity :
+                           launch.type === "DIZIMO" ? launch.congregation?.dizimoFinancialEntity : 
+                           launch.type === "SAIDA" ? launch.congregation?.saidaFinancialEntity : "",
         "Código da Congregação": launch.congregation.code,
-        "Codigo da Forma de Pagamento": launch.type === "ENTRADA" ? launch.congregation?.entradaPaymentMethod : launch.type === "DIZIMO" ? launch.congregation?.dizimoPaymentMethod : launch.type === "SAIDA" ? launch.congregation?.saidaPaymentMethod : "",
+        "Codigo da Forma de Pagamento": launch.type === "OFERTA_CULTO" ? launch.congregation?.entradaOfferPaymentMethod : 
+                                        launch.type === "MISSAO" ? launch.congregation?.missionPaymentMethod :
+                                        launch.type === "CIRCULO" ? launch.congregation?.circlePaymentMethod :
+                                        launch.type === "VOTO" ? launch.congregation?.entradaVotesPaymentMethod :
+                                        launch.type === "EBD" ? launch.congregation?.entradaEbdPaymentMethod :
+                                        launch.type === "CAMPANHA" ? launch.congregation?.entradaCampaignPaymentMethod :
+                                        launch.type === "DIZIMO" ? launch.congregation?.dizimoPaymentMethod : 
+                                        launch.type === "SAIDA" ? launch.congregation?.saidaPaymentMethod : "",
         //"Nome da Congregação": launch.congregation.name,
-        "Valor": launch.offerValue + launch.votesValue + launch.ebdValue + launch.campaignValue + launch.value ,
-        "Codigo de Conta" : launch.type === "ENTRADA" ? launch.congregation?.entradaAccountPlan : launch.type === "DIZIMO" ? launch.congregation?.dizimoAccountPlan : launch.type === "SAIDA" ? launch.congregation?.saidaAccountPlan : "",
+        "Valor": launch.value ,
+        "Codigo de Conta" : launch.type === "OFERTA_CULTO" ? launch.congregation?.entradaOfferAccountPlan : 
+                            launch.type === "MISSAO" ? launch.congregation?.missionAccountPlan :
+                            launch.type === "CIRCULO" ? launch.congregation?.circleAccountPlan :
+                            launch.type === "VOTO" ? launch.congregation?.entradaVotesAccountPlan :
+                            launch.type === "EBD" ? launch.congregation?.entradaEbdAccountPlan :
+                            launch.type === "CAMPANHA" ? launch.congregation?.entradaCampaignAccountPlan :
+                            launch.type === "DIZIMO" ? launch.congregation?.dizimoAccountPlan : "",
         "Tipo": launch.type === "SAIDA" ? "D" : "C",
-        "Historico": launch.type === "ENTRADA" ? launch.description || "" : 
-                     launch.type === "DIZIMO" ? getFormattedTitle(launch) : // Mantenha o resto da sua lógica aqui : 
-                     launch.type === "SAIDA" ? launch.description || "" : "",
+        "Historico": launch.type !== "DIZIMO" ? launch.description || "" : 
+                     launch.type === "DIZIMO" ? getFormattedTitle(launch) : "",
         "Parcelas": "",
         "Codigo de Departamento" : ""
       }))
