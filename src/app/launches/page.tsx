@@ -1010,6 +1010,7 @@ export default function Launches() {
                               launch.type === 'CAMPANHA' ? 'bg-green-500' :                                                             
                               launch.type === 'SAIDA'? 'bg-red-500' :
                               launch.type === 'MISSAO'? 'bg-orange-500' :
+                              launch.type === 'OFERTA_CULTO'? 'bg-purple-500' :
                               launch.type === 'CIRCULO'? 'bg-yellow-500' : ''
                             }`}>
                                 {launch.type === 'VOTO' ? 'Voto' :

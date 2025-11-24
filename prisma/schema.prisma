@@ -114,9 +114,14 @@ model Congregation {
   code                           String                @unique
   name                           String
   regionalName                   String?
+  // Campos legados de "Entrada->Oferta"
   entradaOfferAccountPlan        String?
   entradaOfferFinancialEntity    String?
   entradaOfferPaymentMethod      String?
+  // Novos campos dedicados para "Oferta do Culto" (mantemos legados para compatibilidade)
+  serviceOfferAccountPlan        String?
+  serviceOfferFinancialEntity    String?
+  serviceOfferPaymentMethod      String?
   entradaEbdAccountPlan          String?
   entradaEbdFinancialEntity      String?
   entradaEbdPaymentMethod        String?

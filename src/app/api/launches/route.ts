@@ -187,11 +187,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Acesso não autorizado a esta congregação" }, { status: 403 })
     }
 
-    const launchDate = new Date(`${date}T12:00:00Z`)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    launchDate.setHours(0, 0, 0, 0)
+    // const launchDate = new Date(`${date}T12:00:00Z`)
+    // const today = new Date()
+    // today.setHours(0, 0, 0, 0)
+    // launchDate.setHours(0, 0, 0, 0)
+    let today = new Date();
+    //var FusoToday = today.getTimezoneOffset()/60 - 6;
+    //if (FusoToday) today = new Date(today.valueOf() + (FusoToday * 3600000));
 
+    let launchDate = new Date(date)
+    //var Fuso = launchDate.getTimezoneOffset()/60 -3;
+    //if (Fuso) launchDate = new Date(launchDate.valueOf() + (Fuso * 3600000));
+console.log(launchDate,today)
     if (launchDate > today) {
       return NextResponse.json({ error: "Não é permitido lançar com data futura" }, { status: 400 })
     }

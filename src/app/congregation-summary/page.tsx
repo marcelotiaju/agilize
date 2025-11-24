@@ -1287,6 +1287,7 @@ export default function CongregationSummary() {
                               launch.type === 'CAMPANHA'? 'bg-green-500' :
                               launch.type === 'SAIDA'? 'bg-red-500' :
                               launch.type === 'MISSAO'? 'bg-orange-500' :
+                              launch.type === 'OFERTA_CULTO'? 'bg-purple-500' :
                               launch.type === 'CIRCULO'? 'bg-yellow-500' : ''
                             }`}>
                             { launch.type === 'DIZIMO' ? 'Dízimo' : 
@@ -1296,6 +1297,7 @@ export default function CongregationSummary() {
                               launch.type === 'CAMPANHA' ? 'Campanha' :
                               launch.type === 'SAIDA' ? 'Saída' :
                               launch.type === 'MISSAO' ? 'Missão' :
+                              launch.type === 'OFERTA_CULTO' ? 'Oferta de Culto' :
                               launch.type === 'CIRCULO' ? 'Círculo de Oração' : ''}
                             </div>
                           </TableCell>

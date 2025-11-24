@@ -186,6 +186,8 @@ export async function POST(request: NextRequest) {
         entradaSummary.mission += launch.value || 0
       } else if (launch.type === "CIRCULO") {
         entradaSummary.circle += launch.value || 0
+      } else if (launch.type === "OFERTA_CULTO") {
+        entradaSummary.oferta += launch.offerValue || 0
       } else if (launch.type === "SAIDA") {
         saidaSummary.saida += launch.value || 0
         saidaSummary.total += launch.value || 0
@@ -199,7 +201,6 @@ export async function POST(request: NextRequest) {
     if (existingSummary) {
       return NextResponse.json({ error: "Já existe um resumo para este período" }, { status: 400 })
     }
-
     const summary = await prisma.congregationSummary.create({
       data: {
         congregationId,
@@ -215,6 +216,10 @@ export async function POST(request: NextRequest) {
         ebdTotal: entradaSummary.ebd,
         campaignTotal: entradaSummary.campanha,
         exitTotal: saidaSummary.total,
+        offerTotal: entradaSummary.oferta,
+        votesTotal: entradaSummary.votos,
+        ebdTotal: entradaSummary.ebd,
+        campaignTotal: entradaSummary.campanha,
         depositValue: 0,
         cashValue: 0,
         talonNumber: '',
