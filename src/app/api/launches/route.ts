@@ -4,6 +4,7 @@ import{ authOptions }from "../auth/[...nextauth]/route";
 import { getServerSession } from "next-auth";
 import { zonedTimeToUtc, utcToZonedTime } from 'date-fns-tz';
 import { startOfDay, endOfDay } from 'date-fns';
+import { start } from "repl";
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -43,40 +44,43 @@ export async function GET(request: NextRequest) {
     }
 
     // Handle date filtering with proper timezone awareness
-    if (startDate && endDate) {
-      // Convert the dates to the user's timezone and get start/end of day
-      const startZoned = utcToZonedTime(new Date(startDate), timezone)
-      const endZoned = utcToZonedTime(new Date(endDate), timezone)
+//     if (startDate && endDate) {
+//       // Convert the dates to the user's timezone and get start/end of day
+//       const startZoned = utcToZonedTime(new Date(startDate), timezone)
+//       const endZoned = utcToZonedTime(new Date(endDate), timezone)
       
-      // Get start of day and end of day in the user's timezone
-      const startOfDayZoned = startOfDay(startZoned)
-      const endOfDayZoned = endOfDay(endZoned)
+//       // Get start of day and end of day in the user's timezone
+//       const startOfDayZoned = startOfDay(startZoned)
+//       const endOfDayZoned = endOfDay(endZoned)
       
-      // Convert back to UTC for database query
-      const startUtc = zonedTimeToUtc(startOfDayZoned, timezone)
-      const endUtc = zonedTimeToUtc(endOfDayZoned, timezone)
+//       // Convert back to UTC for database query
+//       const startUtc = zonedTimeToUtc(startOfDayZoned, timezone)
+//       const endUtc = zonedTimeToUtc(endOfDayZoned, timezone)
+// //console.log(startUtc,endUtc)
+//       where.date = {
+//         gte: startUtc,
+//         lte: endUtc
+//       }
+//      }
 
-      where.date = {
-        gte: startUtc,
-        lte: endUtc
-      }
-    }
+    //1. Adiciona o filtro de data
+    // if (startDate && endDate)  {
+    //     const launchDateStart = new Date(startDate);
+    //     const launchDateEnd = new Date(endDate);
+    //     launchDateStart.setHours(0, 0, 0, 0)
+    //     launchDateEnd.setHours(23,59, 59, 999)
+        where.date = {
+          gte: startDate ? startOfDay(utcToZonedTime(new Date(startDate), timezone)) : undefined,
+          lte: endDate ? endOfDay(utcToZonedTime(new Date(endDate), timezone)) : undefined
+        }
+      //where.date.gte;
+      // where.date.gte.setHours(0, 0, 0, 0);
+      // where.date.lte.setHours(20, 59, 0, 0);
+      //console.log(launchDateStart,launchDateEnd)
+      //} 
 
-    // 1. Adiciona o filtro de data
-    // if (searchTerm.includes('/')) {
-    //     const launchDateStart = new Date(searchTerm.substring(6, 10).concat('/').concat(searchTerm.substring(3, 5)).concat('/').concat(searchTerm.substring(0, 2)) as string);
-    //     const launchDateEnd = new Date(searchTerm.substring(6, 10).concat('/').concat(searchTerm.substring(3, 5)).concat('/').concat(searchTerm.substring(0, 2)) as string);
-    //     launchDateStart.setHours(-3, 0, 0, 0)
-    //     launchDateEnd.setHours(20,59, 59, 0)
-    //     where.date = {
-    //       gte: launchDateStart,
-    //       lte: launchDateEnd
-    //     }
-    //   //where.date.gte;
-    //   where.date.gte.setHours(0, 0, 0, 0);
-    //   where.date.lte.setHours(20, 59, 0, 0);
-    //        console.log(launchDateStart,launchDateEnd)
-    //   } 
+      // const dataStringUTC = startDate.replace(' ', 'T') + 'Z';
+      // const dataObjeto = new Date(dataStringUTC);
 
     if (searchTerm ) {
       where.OR = [
@@ -187,21 +191,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Acesso não autorizado a esta congregação" }, { status: 403 })
     }
 
-    const launchDate = new Date(`${date}T12:00:00Z`)
-     launchDate.setHours(0, 0, 0, 0)
-    // const today = new Date()
-    // today.setHours(0, 0, 0, 0)
-    let today = new Date();
-    //var FusoToday = today.getTimezoneOffset()/60 - 6;
-    //if (FusoToday) today = new Date(today.valueOf() + (FusoToday * 3600000));
-
-    //let launchDate = new Date(date)
-    //var Fuso = launchDate.getTimezoneOffset()/60 -3;
-    //if (Fuso) launchDate = new Date(launchDate.valueOf() + (Fuso * 3600000));
-//console.log(launchDate,today)
-    if (launchDate > today) {
+    const timezone = 'America/Fortaleza'; 
+    
+    // 1. Criar um ponto no tempo seguro (Meio-dia local) para a data escolhida.
+    const localDateTimeString = `${date}T12:00:00`; 
+    const dateZoned = utcToZonedTime(new Date(localDateTimeString), timezone)
+    const launchDate = zonedTimeToUtc(dateZoned, timezone)
+    //let launchDate = zonedTimeToUtc(localDateTimeString, timezone); 
+//console.log(launchDate)
+    // 2. Verificação de Data Futura (usando apenas o dia para comparação)
+    const today = new Date();
+    // Comparar apenas a data (ignorando a hora)
+    if (new Date(date) > today) {
       return NextResponse.json({ error: "Não é permitido lançar com data futura" }, { status: 400 })
     }
+    // if (launchDate > today) {
+    //   return NextResponse.json({ error: "Não é permitido lançar com data futura" }, { status: 400 })
+    // }
 
         // Validação para classificação obrigatória em saídas
     if (type === "SAIDA" && !classificationId) {

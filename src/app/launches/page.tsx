@@ -69,7 +69,7 @@ export default function Launches() {
     id: string
     congregationId: string
     type: string
-    date: string
+    date: Date
     talonNumber?: string
     value?: number
     description?: string
@@ -294,8 +294,8 @@ export default function Launches() {
         return
       }
     }
-    var opcoesFormatacao = { timeZone: USER_TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit' } as const;
-    formData.date = formData.date.toLocaleString('pt-BR', opcoesFormatacao).split('/').reverse().join('-');
+    //var opcoesFormatacao = { timeZone: USER_TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit' } as const;
+    //formData.date = formData.date.toLocaleString('pt-BR', opcoesFormatacao).split('/').reverse().join('-');
 
     try {
       const url = editingLaunch ? `/api/launches/${editingLaunch.id}` : '/api/launches'
@@ -1023,7 +1023,7 @@ export default function Launches() {
                                  launch.type === 'CIRCULO' ? 'Círculo de Oração' : ''}
                               </div>
                             </TableCell>
-                            <TableCell>{format(new Date(launch.date), 'dd/MM/yyyy', { locale: ptBR })}</TableCell>
+                            <TableCell>{format(new Date(launch.date), 'dd/MM/yyyy')}</TableCell>
                             <TableCell>{formatCurrency(launch.value)}</TableCell>
                             <TableCell>{launch.contributor?.name || launch.supplier?.razaoSocial || launch.contributorName || launch.supplierName || '-'}</TableCell>
                             <TableCell>{launch.talonNumber}</TableCell>
