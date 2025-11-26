@@ -187,6 +187,27 @@ export async function POST(request: NextRequest) {
     //   return NextResponse.json({ error: "Sem permissão para lançar saídas" }, { status: 403 })
     // }
 
+    // helper: aceita 'yyyy-MM-dd', 'dd/MM/yyyy' ou ISO full e retorna Date UTC instant
+    function parseDateToUtcInstant(dateStr: string, timezone: string, endOfDayFlag = false): Date {
+      if (!dateStr) throw new Error('empty date')
+      // yyyy-MM-dd (HTML date input)
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        return zonedTimeToUtc(`${dateStr}T${endOfDayFlag ? '23:59:59.999' : '00:00:00'}`, timezone)
+      }
+      // dd/MM/yyyy
+      if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+        const [dd, mm, yyyy] = dateStr.split('/')
+        const iso = `${yyyy}-${mm}-${dd}`
+        return zonedTimeToUtc(`${iso}T${endOfDayFlag ? '23:59:59.999' : '00:00:00'}`, timezone)
+      }
+      // try full ISO / Date parse fallback
+      const d = new Date(dateStr)
+      if (!isNaN(d.getTime())) {
+        return d
+      }
+      throw new Error('Invalid date format')
+    }
+
     const userCongregation = await prisma.userCongregation.findFirst({
       where: {
         userId: session.user.id,
@@ -199,16 +220,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Acesso não autorizado a esta congregação" }, { status: 403 })
     }
 
-    const timezone = 'America/Fortaleza'; 
+    const timezone = 'America/Sao_Paulo'
     
     // 1. Criar um ponto no tempo seguro (Meio-dia local) para a data escolhida.
-    const localDateTimeString = `${date}T12:00:00`; 
-    const dateZoned = utcToZonedTime(new Date(localDateTimeString), timezone)
-    const launchDate = zonedTimeToUtc(dateZoned, timezone)
+    //const localDateTimeString = `${date}T12:00:00`; 
+    //const launchDate = parseDateToUtcInstant(date, timezone, true)
+    //const dateZoned = utcToZonedTime(new Date(localDateTimeString), timezone)
+    //const launchDate = zonedTimeToUtc(dateZoned, timezone)
     //launchDate.setHours(launchDate.getHours() + 3) // Ajuste para UTC
     //let launchDate = zonedTimeToUtc(localDateTimeString, timezone); 
 //console.log(launchDate)
     // 2. Verificação de Data Futura (usando apenas o dia para comparação)
+
+    const dataStringUTC = date.replace(' ', 'T') + 'Z';
+    const dataObjeto = new Date(dataStringUTC);
+
+    // Agora, para exibição, você pode usar métodos que consideram o fuso horário local ou UTC
+    const dia = dataObjeto.getDate();
+    const mes = dataObjeto.getMonth() + 1; // getMonth() é de 0 a 11
+    const ano = dataObjeto.getFullYear();
+    const launchDate = new Date(ano, mes - 1, dia + 1); // Meses são baseados em zero
+    console.log(launchDate)
     const today = new Date();
     // Comparar apenas a data (ignorando a hora)
     if (new Date(date) > today) {
