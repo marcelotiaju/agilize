@@ -69,10 +69,18 @@ export async function GET(request: NextRequest) {
     //     const launchDateEnd = new Date(endDate);
     //     launchDateStart.setHours(0, 0, 0, 0)
     //     launchDateEnd.setHours(23,59, 59, 999)
+    // const dataStringUTC = "2025/11/24 00:00:00".replace(' ', 'T') + 'Z';
+    // const dataObjeto = new Date(dataStringUTC);
+
+    // // Agora, para exibição, você pode usar métodos que consideram o fuso horário local ou UTC
+    // const dia = dataObjeto.getDate();
+    // const mes = dataObjeto.getMonth() + 1; // getMonth() é de 0 a 11
+    // const ano = dataObjeto.getFullYear();
         where.date = {
           gte: startDate ? startOfDay(utcToZonedTime(new Date(startDate), timezone)) : undefined,
           lte: endDate ? endOfDay(utcToZonedTime(new Date(endDate), timezone)) : undefined
         }
+        console.log(where.date)
       //where.date.gte;
       // where.date.gte.setHours(0, 0, 0, 0);
       // where.date.lte.setHours(20, 59, 0, 0);
@@ -197,6 +205,7 @@ export async function POST(request: NextRequest) {
     const localDateTimeString = `${date}T12:00:00`; 
     const dateZoned = utcToZonedTime(new Date(localDateTimeString), timezone)
     const launchDate = zonedTimeToUtc(dateZoned, timezone)
+    launchDate.setHours(launchDate.getHours() + 3) // Ajuste para UTC
     //let launchDate = zonedTimeToUtc(localDateTimeString, timezone); 
 //console.log(launchDate)
     // 2. Verificação de Data Futura (usando apenas o dia para comparação)
