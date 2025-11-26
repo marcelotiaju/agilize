@@ -169,7 +169,7 @@ model Launch {
   congregationId   String
   congregation     Congregation         @relation(fields: [congregationId], references: [id], onDelete: Cascade)
   type             LaunchType
-  date             DateTime             @db.DateTime(0)
+  date             DateTime             @db.DateTime
   talonNumber      String?
   value            Float?
   description      String?              @db.VarChar(255)

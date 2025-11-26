@@ -205,7 +205,7 @@ export async function POST(request: NextRequest) {
     const localDateTimeString = `${date}T12:00:00`; 
     const dateZoned = utcToZonedTime(new Date(localDateTimeString), timezone)
     const launchDate = zonedTimeToUtc(dateZoned, timezone)
-    launchDate.setHours(launchDate.getHours() + 3) // Ajuste para UTC
+    //launchDate.setHours(launchDate.getHours() + 3) // Ajuste para UTC
     //let launchDate = zonedTimeToUtc(localDateTimeString, timezone); 
 //console.log(launchDate)
     // 2. Verificação de Data Futura (usando apenas o dia para comparação)
