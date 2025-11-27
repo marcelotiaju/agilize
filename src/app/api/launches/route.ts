@@ -224,7 +224,7 @@ export async function POST(request: NextRequest) {
     
     // 1. Criar um ponto no tempo seguro (Meio-dia local) para a data escolhida.
     //const localDateTimeString = `${date}T12:00:00`; 
-    //const launchDate = parseDateToUtcInstant(date, timezone, true)
+    const launchDate = parseDateToUtcInstant(date, timezone, false)
     //const dateZoned = utcToZonedTime(new Date(localDateTimeString), timezone)
     //const launchDate = zonedTimeToUtc(dateZoned, timezone)
     //launchDate.setHours(launchDate.getHours() + 3) // Ajuste para UTC
@@ -232,15 +232,15 @@ export async function POST(request: NextRequest) {
 //console.log(launchDate)
     // 2. Verificação de Data Futura (usando apenas o dia para comparação)
 
-    const dataStringUTC = date.replace(' ', 'T') + 'Z';
-    const dataObjeto = new Date(dataStringUTC);
+    // const dataStringUTC = date.replace(' ', 'T') + 'Z';
+    // const dataObjeto = new Date(dataStringUTC);
 
     // Agora, para exibição, você pode usar métodos que consideram o fuso horário local ou UTC
-    const dia = dataObjeto.getDate();
-    const mes = dataObjeto.getMonth() + 1; // getMonth() é de 0 a 11
-    const ano = dataObjeto.getFullYear();
-    const launchDate = new Date(ano, mes - 1, dia + 1); // Meses são baseados em zero
-    console.log(launchDate)
+    // const dia = dataObjeto.getDate();
+    // const mes = dataObjeto.getMonth() + 1; // getMonth() é de 0 a 11
+    // const ano = dataObjeto.getFullYear();
+    // const launchDate = new Date(ano, mes - 1, dia + 1); // Meses são baseados em zero
+    //console.log(launchDate)
     const today = new Date();
     // Comparar apenas a data (ignorando a hora)
     if (new Date(date) > today) {
