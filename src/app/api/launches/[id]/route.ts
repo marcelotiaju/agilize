@@ -14,7 +14,7 @@ export async function PUT(request: NextRequest, props: any) {
       const params = await props.params; // Await the params Promise
       const id = params.id;
       const body = await request.json();
-      
+      console.log(body)
       // if (body.status !== undefined) {
       //   body.status = body.status;
       // }
@@ -101,11 +101,7 @@ export async function PUT(request: NextRequest, props: any) {
       const updatedLaunch = await prisma.launch.update({
         where: { id },
         data: {
-          offerValue: body.offerValue ? parseFloat(body.offerValue) : null,
-          votesValue: body.votesValue ? parseFloat(body.votesValue) : null,
-          ebdValue: body.ebdValue ? parseFloat(body.ebdValue) : null,
           value: body.value ? parseFloat(body.value) : null,
-          campaignValue: body.campaignValue ? parseFloat(body.campaignValue) : null,
           // status: body.status ? body.status : undefined,
           congregationId: body.congregationId ? body.congregationId : null,
           supplierId: body.supplierId ? body.supplierId : null,

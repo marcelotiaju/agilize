@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import{ authOptions }from "../auth/[...nextauth]/route";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "next-auth/next";
 import { zonedTimeToUtc, utcToZonedTime } from 'date-fns-tz';
 import { startOfDay, endOfDay } from 'date-fns';
-import { start } from "repl";
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -159,6 +158,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
+    console.log('POST /api/launches body:', body)
 
     const {
       congregationId,
@@ -222,9 +222,9 @@ export async function POST(request: NextRequest) {
 
     const timezone = 'America/Sao_Paulo'
     
+    const launchDate = parseDateToUtcInstant(date, timezone, false)
     // 1. Criar um ponto no tempo seguro (Meio-dia local) para a data escolhida.
     //const localDateTimeString = `${date}T12:00:00`; 
-    const launchDate = parseDateToUtcInstant(date, timezone, false)
     //const dateZoned = utcToZonedTime(new Date(localDateTimeString), timezone)
     //const launchDate = zonedTimeToUtc(dateZoned, timezone)
     //launchDate.setHours(launchDate.getHours() + 3) // Ajuste para UTC
@@ -242,8 +242,9 @@ export async function POST(request: NextRequest) {
     // const launchDate = new Date(ano, mes - 1, dia + 1); // Meses são baseados em zero
     //console.log(launchDate)
     const today = new Date();
-    // Comparar apenas a data (ignorando a hora)
-    if (new Date(date) > today) {
+    // Comparar apenas a data (ignorando a hora) usando a data já parseada
+    const todayStart = startOfDay(new Date())
+    if (startOfDay(launchDate) > todayStart) {
       return NextResponse.json({ error: "Não é permitido lançar com data futura" }, { status: 400 })
     }
     // if (launchDate > today) {
@@ -333,24 +334,22 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(launch, { status: 201 })
   } catch (error) {
-    console.log(error);
+    console.error("Erro ao criar lançamento:", error ?? error, { stack: (error as any)?.stack })
     return NextResponse.json({ error: "Erro ao criar lançamento" }, { status: 500 })
   }
 }
 
-export async function PUT(
-  request: NextRequest
-) {
+export async function PUT(request: NextRequest) {
   const session = await getServerSession(authOptions);
-
   if (!session) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
 
-  try {
+  // ler o body uma vez e usar
+  const body = await request.json();
 
-    const body = await request.json();
-    const { id, status, approved, ...updateData } = body;
+  try {
+    const { id, status, ...updateData } = body;
 
     const launch = await prisma.launch.findUnique({
       where: { id },
@@ -384,52 +383,86 @@ export async function PUT(
       return NextResponse.json({ error: "Não é possível reverter um lançamento cancelado" }, { status: 400 })
     }
 
-    // Verificar permissões de aprovação
-    // if (approved !== undefined) {
-    //   if (launch.type === "ENTRADA" && !session.user.canApproveEntry) {
-    //     return NextResponse.json({ error: "Sem permissão para aprovar entradas" }, { status: 403 })
-    //   }
-    //   if (launch.type === "DIZIMO" && !session.user.canApproveTithe) {
-    //     return NextResponse.json({ error: "Sem permissão para aprovar dízimos" }, { status: 403 })
-    //   }
-    //   if (launch.type === "SAIDA" && !session.user.canApproveExpense) {
-    //     return NextResponse.json({ error: "Sem permissão para aprovar saídas" }, { status: 403 })
-    //   }
-    // }
+    // Build update payload avoiding invalid type conversions (ids are strings)
+    const timezone = 'America/Sao_Paulo'
+    const dataToUpdate: any = {}
 
-    // const updatedLaunch = await prisma.launch.update({
-    //   where: { id },
-    //   data: { status }
-    // })
-
-    //const updateData: any = {}
-    if (status !== undefined) updateData.status = status
-    if (approved !== undefined) updateData.approved = approved
+    if (status !== undefined) dataToUpdate.status = status
+    if (updateData.value !== undefined) {
+      // 1. Garantir que é string e trata a vírgula para decimal
+      const cleanValueString = String(updateData.value).replace('.', '').replace(',', '.')
+      
+      // 2. Tentar parsear para float
+      const parsedValue = parseFloat(cleanValueString)
+      
+      // 3. Se for NaN (valor inválido ou vazio), define para 0 (se o campo for NOT NULL)
+      //    Se for nullable, 'null' é a opção mais limpa, mas '0' é mais seguro contra 500.
+      if (Number.isNaN(parsedValue)) {
+          // SE `value` for NOT NULL no seu schema do Prisma, USE 0
+          dataToUpdate.value = 0; 
+          // SE `value` for NULLABLE no seu schema do Prisma, USE null (mas verifique o front-end)
+          // dataToUpdate.value = null;
+      } else {
+          dataToUpdate.value = parsedValue
+      }
+    }
+    if (updateData.supplierId !== undefined) {
+      dataToUpdate.supplierId = updateData.supplierId || null // keep string IDs
+    }
+    if (updateData.contributorId !== undefined) {
+      dataToUpdate.contributorId = updateData.contributorId || null
+    }
+    if (updateData.classificationId !== undefined) {
+      dataToUpdate.classificationId = updateData.classificationId || null
+    }
+    if (updateData.talonNumber !== undefined) {
+      dataToUpdate.talonNumber = updateData.talonNumber || null
+    }
+    if (updateData.date !== undefined && updateData.date !== null && updateData.date !== '') {
+      // reuse same parsing strategy as POST (support yyyy-MM-dd, dd/MM/yyyy, ISO)
+      function parseDateToUtcInstantLocal(dateStr: string, timezoneLocal = timezone, endOfDayFlag = false): Date {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+          return zonedTimeToUtc(`${dateStr}T${endOfDayFlag ? '23:59:59.999' : '00:00:00'}`, timezoneLocal)
+        }
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+          const [dd, mm, yyyy] = dateStr.split('/')
+          const iso = `${yyyy}-${mm}-${dd}`
+          return zonedTimeToUtc(`${iso}T${endOfDayFlag ? '23:59:59.999' : '00:00:00'}`, timezoneLocal)
+        }
+        const parsed = new Date(dateStr)
+        if (!isNaN(parsed.getTime())) return parsed
+        throw new Error('Invalid date format')
+      }
+      try {
+        dataToUpdate.date = parseDateToUtcInstantLocal(updateData.date)
+        console.log(dataToUpdate)
+        //const launchDate = parseDateToUtcInstant(date, 'America/Sao_Paulo', false);
+      } catch (err) {
+        return NextResponse.json({ error: "Formato de data inválido" }, { status: 400 })
+      }
+    }
+    if (updateData.type !== undefined) dataToUpdate.type = updateData.type
+    if (updateData.description !== undefined) dataToUpdate.description = updateData.description
 
     const updatedLaunch = await prisma.launch.update({
       where: { id },
-      data: { 
-        ...updateData, 
-        status, 
-        approved,
-        value: updateData.value ? parseFloat(updateData.value) : null,
-        supplierId: updateData.supplierId ? parseInt(updateData.supplierId) : null,
-        contributorId: updateData.contributorId ? parseInt(updateData.contributorId) : null,
-        talonNumber: updateData.talonNumber ? updateData.talonNumber : null,
-        classificationId: updateData.classificationId ? updateData.classificationId : null,
-        date: updateData.date ? new Date(updateData.date) : undefined,
-        type: updateData.type ? updateData.type : undefined,
-        description: body.description ? body.description : undefined
-      },
+      data: dataToUpdate,
       include: {
         congregation: true,
         contributor: true,
         supplier: true
       }
     })
-
     return NextResponse.json(updatedLaunch)
   } catch (error) {
-    return NextResponse.json({ error: "Erro ao atualizar lançamento" }, { status: 500 })
+    console.error("Erro ao atualizar lançamento:", error ?? error, { stack: (error as any)?.stack })
+    // Se for um erro do Prisma (ex: falha de constraint)
+      if ((error as any).code) {
+          console.error("Código do erro Prisma:", (error as any).code);
+          console.error("Meta do erro Prisma:", (error as any).meta);
+          // Você pode até retornar um 400 se for um erro de validação de dados:
+          // return NextResponse.json({ error: "Dados inválidos ou faltando (DB Constraint Error)" }, { status: 400 });
+      }    
+    return NextResponse.json({ error: "Erro ao atualizar lançamento..." }, { status: 500 })
   }
 }

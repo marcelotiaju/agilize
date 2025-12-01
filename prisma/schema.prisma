@@ -171,7 +171,7 @@ model Launch {
   type             LaunchType
   date             DateTime             @db.DateTime(0)
   talonNumber      String?
-  value            Float?
+  value            Float?               @default(0)
   description      String?              @db.VarChar(255)
   status           LaunchStatus         @default(NORMAL)
   contributorId    String?

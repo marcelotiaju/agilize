@@ -300,7 +300,7 @@ export default function Launches() {
     try {
       const url = editingLaunch ? `/api/launches/${editingLaunch.id}` : '/api/launches'
       const method = editingLaunch ? 'PUT' : 'POST'
-
+console.log(url, method, formData)
       // enviar value como número
       const bodyToSend = {
         ...formData,
