@@ -41,9 +41,9 @@ interface Congregation {
   dizimoFinancialEntity?: string
   dizimoPaymentMethod?: string
   // Campos para Saída
-  saidaAccountPlan?: string
   saidaFinancialEntity?: string
   saidaPaymentMethod?: string
+  // Outros campos
   matriculaEnergisa?: String
   matriculaIgua?: String
   // Campos Missao e Circulo podem ser adicionados aqui
@@ -89,7 +89,6 @@ export default function Congregations() {
     dizimoFinancialEntity: '',
     dizimoPaymentMethod: '',
     // Campos para Saída
-    saidaAccountPlan: '',
     saidaFinancialEntity: '',
     saidaPaymentMethod: '',
     // matriculas agora gerenciadas como listas abaixo
@@ -207,7 +206,6 @@ export default function Congregations() {
       dizimoFinancialEntity: congregation.dizimoFinancialEntity || '',
       dizimoPaymentMethod: congregation.dizimoPaymentMethod || '',
       // Campos para Saída
-      saidaAccountPlan: congregation.saidaAccountPlan || '',
       saidaFinancialEntity: congregation.saidaFinancialEntity || '',
       saidaPaymentMethod: congregation.saidaPaymentMethod || '',
       // Novos campos
@@ -290,7 +288,6 @@ export default function Congregations() {
       dizimoFinancialEntity: '',
       dizimoPaymentMethod: '',
       // Campos para Saída
-      saidaAccountPlan: '',
       saidaFinancialEntity: '',
       saidaPaymentMethod: '',
       // Novos campos

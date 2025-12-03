@@ -66,9 +66,6 @@ export async function POST(request: NextRequest) {
       entradaOfferAccountPlan,
       entradaOfferFinancialEntity,
       entradaOfferPaymentMethod,
-      serviceOfferAccountPlan,
-      serviceOfferFinancialEntity,
-      serviceOfferPaymentMethod,
       entradaEbdAccountPlan,
       entradaEbdFinancialEntity,
       entradaEbdPaymentMethod,
@@ -99,9 +96,9 @@ export async function POST(request: NextRequest) {
 
     // Map serviceOffer* from client into the existing entradaOffer* DB columns for backward compatibility.
     // If your DB has been migrated to serviceOffer* columns, replace the keys below accordingly.
-    const entradaOfferAccountPlanToSave = serviceOfferAccountPlan ?? entradaOfferAccountPlan ?? null
-    const entradaOfferFinancialEntityToSave = serviceOfferFinancialEntity ?? entradaOfferFinancialEntity ?? null
-    const entradaOfferPaymentMethodToSave = serviceOfferPaymentMethod ?? entradaOfferPaymentMethod ?? null
+    // const entradaOfferAccountPlanToSave =  entradaOfferAccountPlan ?? null
+    // const entradaOfferFinancialEntityToSave = entradaOfferFinancialEntity ?? null
+    // const entradaOfferPaymentMethodToSave = entradaOfferPaymentMethod ?? null
 
     const congregation = await prisma.congregation.create({
       data: {
@@ -109,9 +106,9 @@ export async function POST(request: NextRequest) {
         name,
         regionalName,
         // store into existing entradaOffer* fields (compat)
-        entradaOfferAccountPlan: entradaOfferAccountPlanToSave,
-        entradaOfferFinancialEntity: entradaOfferFinancialEntityToSave,
-        entradaOfferPaymentMethod: entradaOfferPaymentMethodToSave,
+        entradaOfferAccountPlan,
+        entradaOfferFinancialEntity,
+        entradaOfferPaymentMethod,
         entradaEbdAccountPlan,
         entradaEbdFinancialEntity,
         entradaEbdPaymentMethod,
@@ -170,9 +167,6 @@ export async function PUT(request: NextRequest) {
       entradaOfferAccountPlan,
       entradaOfferFinancialEntity,
       entradaOfferPaymentMethod,
-      serviceOfferAccountPlan,
-      serviceOfferFinancialEntity,
-      serviceOfferPaymentMethod,
       entradaEbdAccountPlan,
       entradaEbdFinancialEntity,
       entradaEbdPaymentMethod,
@@ -198,9 +192,9 @@ export async function PUT(request: NextRequest) {
     } = body
 
     // Map serviceOffer* from client into the existing entradaOffer* DB columns for backward compatibility.
-    const entradaOfferAccountPlanToSave = serviceOfferAccountPlan ?? entradaOfferAccountPlan ?? null
-    const entradaOfferFinancialEntityToSave = serviceOfferFinancialEntity ?? entradaOfferFinancialEntity ?? null
-    const entradaOfferPaymentMethodToSave = serviceOfferPaymentMethod ?? entradaOfferPaymentMethod ?? null
+    // const entradaOfferAccountPlanToSave = serviceOfferAccountPlan ?? entradaOfferAccountPlan ?? null
+    // const entradaOfferFinancialEntityToSave = serviceOfferFinancialEntity ?? entradaOfferFinancialEntity ?? null
+    // const entradaOfferPaymentMethodToSave = serviceOfferPaymentMethod ?? entradaOfferPaymentMethod ?? null
 
     const congregation = await prisma.congregation.update({
       where: { id },
@@ -208,9 +202,9 @@ export async function PUT(request: NextRequest) {
         code,
         name,
         regionalName,
-        entradaOfferAccountPlan: entradaOfferAccountPlanToSave,
-        entradaOfferFinancialEntity: entradaOfferFinancialEntityToSave,
-        entradaOfferPaymentMethod: entradaOfferPaymentMethodToSave,
+        entradaOfferAccountPlan,
+        entradaOfferFinancialEntity,
+        entradaOfferPaymentMethod,
         entradaEbdAccountPlan,
         entradaEbdFinancialEntity,
         entradaEbdPaymentMethod,

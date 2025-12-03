@@ -119,9 +119,6 @@ model Congregation {
   entradaOfferFinancialEntity    String?
   entradaOfferPaymentMethod      String?
   // Novos campos dedicados para "Oferta do Culto" (mantemos legados para compatibilidade)
-  serviceOfferAccountPlan        String?
-  serviceOfferFinancialEntity    String?
-  serviceOfferPaymentMethod      String?
   entradaEbdAccountPlan          String?
   entradaEbdFinancialEntity      String?
   entradaEbdPaymentMethod        String?
