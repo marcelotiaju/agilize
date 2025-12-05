@@ -139,10 +139,12 @@ export default function CongregationSummary() {
     if (!congregationIds || congregationIds.length === 0) return
     setIsLoading(true)
     try {
-      const params = new URLSearchParams({ congregationIds: congregationIds.join(',') })
+      const params = new URLSearchParams()
       params.append('timezone', USER_TIMEZONE)
-      
-      // usar as datas do calendário (Date) e enviar como yyyy-MM-dd no timezone do usuário
+      // enviar apenas CSV, sem repetir parâmetros
+      params.append('congregationIds', congregationIds.join(','))
+
+      // datas no timezone do usuário
       if (startSummaryDate) {
         params.append('startSummaryDate', formatDate(utcToZonedTime(startSummaryDate, USER_TIMEZONE), 'yyyy-MM-dd'))
       }
@@ -150,14 +152,18 @@ export default function CongregationSummary() {
         params.append('endSummaryDate', formatDate(utcToZonedTime(endSummaryDate, USER_TIMEZONE), 'yyyy-MM-dd'))
       }
 
+      console.log('fetchSummaries params:', params.toString())
       const response = await fetch(`/api/congregation-summaries?${params.toString()}`)
       if (response.ok) {
         const data = await response.json()
-        // API retorna summaries com datas ISO UTC -> usar utcToZonedTime para exibir
         setSummaries(data.summaries || [])
+      } else {
+        //console.error('fetchSummaries failed', response.status, await response.text())
+        setSummaries([])
       }
     } catch (err) {
       console.error(err)
+      setSummaries([])
     } finally {
       setIsLoading(false)
     }
@@ -953,7 +959,6 @@ export default function CongregationSummary() {
                                           </div>
                                       </div>
                                   </div>
-                              </div>
                             </div>
                         </CardContent>
                       </Card>
@@ -991,15 +996,15 @@ export default function CongregationSummary() {
                 </TabsList>
 
                 {/* Área rolável: ocupa o espaço restante entre header e footer */}
-                <div className="flex-1 min-h-0 overflow-y-auto pt-2 pb-4">
+                <div className="flex-1 min-h-0 overflow-y-auto pt-0 pb-4">
                   <TabsContent value="summaries" className="min-h-0">
-                  <div className="space-y-2 py-2">
+                  <div className="space-y-2 py-0">
                       {/* Totais */}
                       {editFormData && (
                         <div className="pt-0 mt-0">
-                          <h4 className="font-medium mb-2">Totais</h4>
+                          <h4 className="font-medium mb-0">Totais</h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="flex flex-col gap-2">
+                              <div className="flex flex-col gap-1">
                                   {/* 1. CARD DE OUTRAS RECEITAS (DETALHADO) */}
                                   {/* <div className="bg-blue-50 p-3 rounded-lg">
                                       <h5 className="font-medium text-blue-700">Outras Receitas</h5>
@@ -1112,7 +1117,7 @@ export default function CongregationSummary() {
                               <div className="flex flex-col gap-4">
                                   
                                   {/* 3. CARD TOTAL DE SAÍDAS */}
-                                  <div className="bg-red-50 p-1 *:rounded-lg flex justify-between items-center md:mb-56">
+                                  <div className="bg-red-50 p-1 *:rounded-lg flex justify-between items-center md:mb-49">
                                       <h5 className="font-medium text-red-700">Saídas</h5>
                                       <div className="text-sm font-semibold ">
                                           R$ {Number(editFormData.exitTotal).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -1137,7 +1142,7 @@ export default function CongregationSummary() {
                         </div>
                       )}
                     </div>
-                      <div className='grid grid-cols-1 md:grid-cols-3 space-x-4'>
+                      <div className='grid grid-cols-1 md:grid-cols-3 space-x-4 mt-2'>
 
                         <div className='col-span-1'>
                             <Label htmlFor="talonNumber">Nr. Talão</Label>
@@ -1199,7 +1204,7 @@ export default function CongregationSummary() {
                       </div>
 
                       {/* ⭐️ NOVO: CARD TOTAL DE DEPÓSITO + ESPÉCIE ⭐️ */}
-                      <div className="bg-yellow-50 p-1 rounded-lg">
+                      <div className="bg-yellow-50 p-1 rounded-lg mt-2">
                           <div className="flex justify-between items-center">
                               <h5 className="font-small text-yellow-700">Total Depósito + Espécie</h5>
                               <div className="text-sm font-semibold text-yellow-800">
@@ -1217,7 +1222,7 @@ export default function CongregationSummary() {
                               type="checkbox"
                               id="treasurerApproved"
                               checked={editFormData.treasurerApproved}
-                              disabled={!session.user.canApproveTreasury || editFormData.directorApproved}
+                              disabled={!session.user.canApproveTreasury || editFormData.accountantApproved || editFormData.directorApproved}
                               onChange={(e) => setEditFormData(prev => ({ ...prev, treasurerApproved: e.target.checked }))}
                             />
                             <Label htmlFor="treasurerApproved">Tesoureiro</Label>

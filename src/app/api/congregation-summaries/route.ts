@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
+import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import prisma from "@/lib/prisma"
 import { zonedTimeToUtc, utcToZonedTime } from 'date-fns-tz';
@@ -35,19 +35,19 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url)
+    // aceitar tanto "congregationIds=1,2,3" quanto múltiplos "congregationId=1&congregationId=2"
     const congregationIdsString = searchParams.get('congregationIds')
     const startSummaryDate = searchParams.get('startSummaryDate')
     const endSummaryDate = searchParams.get('endSummaryDate')
     const timezone = searchParams.get('timezone') || 'America/Sao_Paulo'
 
-    if (!congregationIdsString) {
-      return NextResponse.json({ error: "ID da congregação é obrigatório" }, { status: 400 })
+    let congregationIds: string[] = []
+    if (congregationIdsString && congregationIdsString.trim() !== '') {
+      congregationIds = congregationIdsString.split(',').map(s => s.trim()).filter(Boolean)
     }
 
-    const congregationIds = congregationIdsString.split(',').filter(id => id.trim() !== '');
-
     if (congregationIds.length === 0) {
-       return NextResponse.json({ error: "IDs das congregações são obrigatórios" }, { status: 400 })
+      return NextResponse.json({ error: "IDs das congregações são obrigatórios" }, { status: 400 })
     }
 
     let where: any = {}
@@ -63,6 +63,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Acesso não autorizado a estas congregações" }, { status: 403 })
     }
 
+    // restringir àquelas congregações que o usuário realmente tem acesso
+    const allowedIds = userCongregations.map(c => c.congregationId)
+    const filteredIds = congregationIds.filter(id => allowedIds.includes(id))
+    if (filteredIds.length === 0) {
+      return NextResponse.json({ error: "Nenhuma das congregações selecionadas está autorizada para o usuário" }, { status: 403 })
+    }
+
     if (startSummaryDate && endSummaryDate) {
       try {
         const startUtc = parseDateToUtcInstant(startSummaryDate, timezone, false)
@@ -75,7 +82,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    where.congregationId = { in: congregationIds }
+    where.congregationId = { in: filteredIds }
 
     const summaries = await prisma.congregationSummary.findMany({
       where: { ...where },
@@ -153,7 +160,7 @@ export async function POST(request: NextRequest) {
       where: {
         congregationId,
         date: { gte: startUtc, lte: endUtc },
-        status: { in: ["NORMAL", "APPROVED"] },
+        status: { in: ["NORMAL", "APPROVED", "EXPORTED"] },
         summaryId: null
       },
       include: { congregation: true },
@@ -236,7 +243,7 @@ export async function POST(request: NextRequest) {
             congregationId: summary.congregationId,
             date: { gte: startUtc, lte: endUtc },
             summaryId: null,
-            status:  { in: ["NORMAL", "APPROVED"] },
+            status:  { in: ["NORMAL", "APPROVED", "EXPORTED"] },
         },
         data: { summaryId: summary.id },
     });

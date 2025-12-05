@@ -105,13 +105,13 @@ export async function POST(request: NextRequest) {
       if (launch.contributorId && !launch.contributor?.ecclesiasticalPosition.includes('MEMBRO','CONGREGADO')) {
         const cargoMap = {
           'AUXILIAR': 'Aux',
-          'DIACONO': 'Dc',
-          'PRESBITERO': 'Pb',
+          'DIÁCONO': 'Dc',
+          'PRESBÍTERO': 'Pb',
           'EVANGELISTA': 'Ev',
           'PASTOR': 'Pr',
         };
         const cargoAbreviado = cargoMap[launch.contributor.ecclesiasticalPosition] || '';
-        return `DÍZIMOS E OFERTAS DE ${cargoAbreviado} - ${launch.contributor.name}`;
+        return `DÍZIMOS E OFERTAS DE ${cargoAbreviado} - ${launch.contributor.name} - ${launch.contributor?.cpf}`;
       } else {
         if (launch.contributorName) {
           return `DÍZIMOS E OFERTAS DE ${launch.contributorName}`;
@@ -123,15 +123,15 @@ export async function POST(request: NextRequest) {
       } 
 
       const launchData = launches.map(launch => ({
-        "CPF/CNPJ Fornecedor": launch.type === "SAIDA" ? launch.supplier?.cpfCnpj : "" ,
-        "Codigo do Membro": launch.type === "DIZIMO" ? launch.contributor?.tipo === 'MEMBRO' ? launch.contributor?.code : "": "",
-        "Codigo do Congregado": launch.type === "DIZIMO" ? launch.contributor?.tipo === 'CONGREGADO' ? launch.contributor?.code : "": "",
+        "CNPJ/CPF do Fornecedor": launch.type === "SAIDA" ? launch.supplier?.cpfCnpj : "" ,
+        "Código do Membro": launch.type === "DIZIMO" ? launch.contributor?.tipo === 'MEMBRO' ? launch.contributor?.code : "": "",
+        "Código do Congregado": launch.type === "DIZIMO" ? launch.contributor?.tipo === 'CONGREGADO' ? launch.contributor?.code : "": "",
         "Nome de Outros": launch.type === "DIZIMO" ? launch.contributorName : launch.type === "SAIDA" ? launch.supplierName : "",
-        "Numero do Documento": launch.talonNumber,
-        "Data de Emissao": formatDate(launch.date),
+        "Número do Documento": launch.talonNumber,
+        "Data de Emissão": formatDate(launch.date),
         "Data de Vencimento": "",
         //"Codigo da Conta a Pagar": "",
-        "Codigo do Caixa": launch.type === "OFERTA_CULTO" ? launch.congregation?.entradaOfferFinancialEntity : 
+        "Código do Caixa": launch.type === "OFERTA_CULTO" ? launch.congregation?.entradaOfferFinancialEntity : 
                            launch.type === "MISSAO" ? launch.congregation?.missionFinancialEntity :
                            launch.type === "CIRCULO" ? launch.congregation?.circleFinancialEntity :
                            launch.type === "VOTO" ? launch.congregation?.entradaVotesFinancialEntity :
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
                            launch.type === "DIZIMO" ? launch.congregation?.dizimoFinancialEntity : 
                            launch.type === "SAIDA" ? launch.congregation?.saidaFinancialEntity : "",
         "Código da Congregação": launch.congregation.code,
-        "Codigo da Forma de Pagamento": launch.type === "OFERTA_CULTO" ? launch.congregation?.entradaOfferPaymentMethod : 
+        "Código da Forma de Pagamento": launch.type === "OFERTA_CULTO" ? launch.congregation?.entradaOfferPaymentMethod : 
                                         launch.type === "MISSAO" ? launch.congregation?.missionPaymentMethod :
                                         launch.type === "CIRCULO" ? launch.congregation?.circlePaymentMethod :
                                         launch.type === "VOTO" ? launch.congregation?.entradaVotesPaymentMethod :
@@ -165,6 +165,30 @@ export async function POST(request: NextRequest) {
       }))
 
       const launchSheet = XLSX.utils.json_to_sheet(launchData)
+      
+     // Configurar tamanho de fonte para 10 em todas as células
+     const range = XLSX.utils.decode_range(launchSheet['!ref'] || 'A1');
+     for (let row = range.s.r; row <= range.e.r; row++) {
+       for (let col = range.s.c; col <= range.e.c; col++) {
+         const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
+         const cell = launchSheet[cellAddress];
+         if (cell) {
+           cell.s = { font: { size: 10 } };
+         }
+       }
+     }
+
+     // Configurar coluna de data como formato de data (dd/mm/yyyy)
+     const dataColIndex = 5; // "Data de Emissao" está na coluna 5 (índice 5)
+     for (let row = 1; row <= launchData.length; row++) {
+       const cellAddress = XLSX.utils.encode_cell({ r: row, c: dataColIndex });
+       const cell = launchSheet[cellAddress];
+       if (cell) {
+         cell.z = 'dd/mm/yyyy'; // formato de data
+       }
+     }
+ 
+ 
       XLSX.utils.book_append_sheet(workbook, launchSheet, "Planilha1")
 
       await prisma.launch.updateMany({
@@ -213,16 +237,18 @@ export async function POST(request: NextRequest) {
     //   })
     // }
 
-    const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' })
-
-    const headers = new Headers()
-    headers.set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    headers.set('Content-Disposition', `attachment; filename=export_${new Date().toISOString().split('T')[0]}.xlsx`)
-
-    return new NextResponse(excelBuffer, {
-      status: 200,
-      headers
-    })
+    // Incluir cellStyles e cellDates para preservar estilos e tipos de data
+     const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "buffer", cellStyles: true, cellDates: true })
+ 
+       //const fileName = `export_${format(new Date(), 'yyyyMMddHHmmss')}.xlsx`
+       const fileName = `export_${new Date().toISOString().split('T')[0]}.xlsx`
+       return new Response(buffer, {
+         status: 200,
+         headers: {
+           "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+           "Content-Disposition": `attachment; filename="${fileName}"`,
+         },
+       })
   } catch (error) {
     return NextResponse.json({ error: "Erro ao exportar dados" }, { status: 500 })
   }

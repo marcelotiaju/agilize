@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import{ authOptions }from "../../../auth/[...nextauth]/route";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "next-auth/next";
 
 export async function PUT(request: NextRequest, props: any) {
     const session = await getServerSession(authOptions);
@@ -11,79 +11,81 @@ export async function PUT(request: NextRequest, props: any) {
     }
   
     try {
-      const params = await props.params; // Await the params Promise
+      const params = await props.params;
       const id = params.id;
       const body = await request.json();
+      const { status, approvedBy, approvedAt } = body;
       
-      if (body.status !== undefined) {
-        body.status = body.status;
-      }
-      // if (body.approved !== undefined) {
-      //   body.approved = body.approved;
-      // }
-
-      // Se não houver dados para atualizar, retorne um erro
-      if (Object.keys(body).length === 0) {
-        return NextResponse.json({ error: "Nenhum campo para atualizar foi fornecido" }, { status: 400 })
-      }
-
-      // Verifique se o lançamento já foi exportado
+      // Verifique se o lançamento existe
       const existingLaunch = await prisma.launch.findUnique({
-          where: { id },
-          select: { type: true, status: true }
+        where: { id },
+        select: { type: true, status: true }
       });
 
       if (!existingLaunch) {
-          return NextResponse.json({ error: "Lançamento não encontrado" }, { status: 404 });
+        return NextResponse.json({ error: "Lançamento não encontrado" }, { status: 404 });
       }
 
- 
-      if (body.status !== undefined && existingLaunch.status === "EXPORTED") {
+      // Não pode alterar lançamento já exportado
+      if (existingLaunch.status === "EXPORTED") {
         return NextResponse.json({ error: "Lançamento já exportado não pode ser alterado" }, { status: 400 })
       }
-  
-      // Verificação para reverter status
-      if (body.status === "CANCELED" && body.status === "NORMAL") {
-          return NextResponse.json({ error: "Não é possível reverter um lançamento cancelado" }, { status: 400 });
+
+      // Não pode reverter um lançamento cancelado
+      if (existingLaunch.status === "CANCELED" && status === "NORMAL") {
+        return NextResponse.json({ error: "Não é possível reverter um lançamento cancelado" }, { status: 400 });
       }
 
-  
-      // Verificar permissões de aprovação
-      if (body.status === "APPROVED" !== undefined) {
-          if (body.type === "ENTRADA" && !session.user.canApproveEntry) {
-              return NextResponse.json({ error: "Sem permissão para aprovar entradas" }, { status: 403 });
-          }
-          if (body.type === "DIZIMO" && !session.user.canApproveTithe) {
-              return NextResponse.json({ error: "Sem permissão para aprovar dízimos" }, { status: 403 });
-          }
-          if (body.type === "SAIDA" && !session.user.canApproveExpense) {
-              return NextResponse.json({ error: "Sem permissão para aprovar saídas" }, { status: 403 });
-          }
+      // Verificar permissões de aprovação conforme o tipo
+      if (status === "APPROVED") {
+        if (existingLaunch.type === "VOTO" && !session.user.canApproveEntry) {
+          return NextResponse.json({ error: "Sem permissão para aprovar votos" }, { status: 403 });
+        }
+        if (existingLaunch.type === "EBD" && !session.user.canApproveEntry) {
+          return NextResponse.json({ error: "Sem permissão para aprovar EBD" }, { status: 403 });
+        }
+        if (existingLaunch.type === "CAMPANHA" && !session.user.canApproveEntry) {
+          return NextResponse.json({ error: "Sem permissão para aprovar campanhas" }, { status: 403 });
+        }
+        if (existingLaunch.type === "DIZIMO" && !session.user.canApproveTithe) {
+          return NextResponse.json({ error: "Sem permissão para aprovar dízimos" }, { status: 403 });
+        }
+        if (existingLaunch.type === "SAIDA" && !session.user.canApproveExpense) {
+          return NextResponse.json({ error: "Sem permissão para aprovar saídas" }, { status: 403 });
+        }
+        if (existingLaunch.type === "MISSAO" && !session.user.canApproveMission) {
+          return NextResponse.json({ error: "Sem permissão para aprovar missões" }, { status: 403 });
+        }
+        if (existingLaunch.type === "CIRCULO" && !session.user.canApproveCircle) {
+          return NextResponse.json({ error: "Sem permissão para aprovar círculos" }, { status: 403 });
+        }
+        if (existingLaunch.type === "OFERTA_CULTO" && !session.user.canApproveServiceOffer) {
+          return NextResponse.json({ error: "Sem permissão para aprovar ofertas" }, { status: 403 });
+        }
       }
-  
-      // const updatedLaunch = await prisma.launch.update({
-      //   where: { id },
-      //   data: { status }
-      // })
-  
-      //const updateData: any = {}
-      // if (status !== undefined) body.status = status
-      // if (approved !== undefined) body.approved = approved
+
+      const updateData: any = { status }
+      
+      // Se aprovando, adicionar informações de aprovação
+      if (status === "APPROVED" && approvedBy && approvedAt) {
+        updateData.approvedBy = approvedBy
+        updateData.approvedAt = new Date(approvedAt)
+      }
+      
+      // Se desaprovando (voltando para NORMAL), limpar informações de aprovação
+      if (status === "NORMAL") {
+        updateData.approvedBy = null
+        updateData.approvedAt = null
+      }
 
       const updatedLaunch = await prisma.launch.update({
         where: { id },
-        data: {
-            status: body.status,
-            // approved: body.approved
-        },
-        // include: {
-        //   congregation: true,
-        //    contributor: true,
-        //    supplier: true
-        // }
+        data: updateData
       })
+      
       return NextResponse.json(updatedLaunch)
     } catch (error) {
+      console.error("Erro ao atualizar status do lançamento:", error)
       return NextResponse.json({ error: "Erro ao atualizar lançamento" }, { status: 500 })
     }
   }

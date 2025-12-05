@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, Building, Upload } from 'lucide-react'
+import { Plus, Edit, Trash2, Building, Upload, Copy } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { PermissionGuard } from '@/components/auth/PermissionGuard'
@@ -23,7 +23,6 @@ interface UserData {
   login?: string | null
   name: string
   email: string
-  cpf: string
   phone?: string
   password?: string
   validFrom: string
@@ -84,7 +83,6 @@ export default function Users() {
     login: '',
     name: '',
     email: '',
-    cpf: '',
     phone: '',
     password: '',
     validFrom: format(new Date(), 'yyyy-MM-dd'),
@@ -220,7 +218,6 @@ export default function Users() {
       login: user.login || '',
       name: user.name || '',
       email: user.email,
-      cpf: user.cpf,
       phone: user.phone || '',
       password: '',
       validFrom: format(new Date(user.validFrom), 'yyyy-MM-dd'),
@@ -297,7 +294,6 @@ export default function Users() {
       login: '',
       name: '',
       email: '',
-      cpf: '',
       phone: '',
       password: '',
       validFrom: format(new Date(), 'yyyy-MM-dd'),
@@ -437,11 +433,31 @@ export default function Users() {
     } catch (e) { console.error(e); alert('Erro ao copiar perfil') }
   }
 
+  const handleProfileDelete = async (p: Profile) => {
+    if (!confirm(`Deseja excluir o perfil "${p.name}"? Esta ação é irreversível.`)) return
+    try {
+      const res = await fetch(`/api/profiles?id=${p.id}`, { method: 'DELETE' })
+      if (res.ok) {
+        fetchProfiles()
+        // se estivermos editando o mesmo perfil, fechar/resetar
+        if (editingProfile?.id === p.id) {
+          resetProfileForm()
+          setIsProfileDialogOpen(false)
+        }
+      } else {
+        const err = await res.json()
+        alert(err.error || 'Erro ao excluir perfil')
+      }
+    } catch (e) {
+      console.error('Erro ao excluir perfil', e)
+      alert('Erro ao excluir perfil')
+    }
+  }
+
   const filteredUsers = useMemo(() => {
     if (!searchTerm) return users
     return users.filter(user =>
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.cpf.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()))
     )
   }, [users, searchTerm])
@@ -523,6 +539,10 @@ export default function Users() {
                     <div className="grid gap-4 py-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
+                         <Label htmlFor="name">Nome Completo</Label>
+                         <Input id="name" name="name" value={formData.name ?? ''} onChange={handleInputChange} placeholder="Nome completo do usuário" required />
+                       </div>
+                        <div>
                           <Label htmlFor="login">Login</Label>
                           <Input id="login" name="login" value={(formData as any).login ?? ''} onChange={handleInputChange} placeholder="Qualquer texto para login" />
                         </div>
@@ -530,19 +550,11 @@ export default function Users() {
                           <Label htmlFor="email">Email</Label>
                           <Input id="email" name="email" type="email" value={formData.email ?? ''} onChange={handleInputChange} required />
                         </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="cpf">CPF</Label>
-                          <Input id="cpf" name="cpf" value={formData.cpf ?? ''} onChange={handleInputChange} required />
-                        </div>
                         <div>
                           <Label htmlFor="phone">Telefone</Label>
                           <Input id="phone" name="phone" value={formData.phone ?? ''} onChange={handleInputChange} />
                         </div>
                       </div>
-
                       <div>
                         <Label htmlFor="password">Senha</Label>
                         <Input id="password" name="password" type="password" value={formData.password ?? ''} onChange={handleInputChange} placeholder={editingUser ? 'Deixe em branco para não alterar' : ''} required={!editingUser} />
@@ -688,7 +700,7 @@ export default function Users() {
           </div>
 
           <div className="mb-6">
-            <SearchInput placeholder="Pesquisar usuários por nome, CPF ou e-mail..." value={searchTerm} onChange={setSearchTerm} className="max-w-md" />
+            <SearchInput placeholder="Pesquisar usuários por nome ou e-mail..." value={searchTerm} onChange={setSearchTerm} className="max-w-md" />
           </div>
 
           <Card>
@@ -705,9 +717,8 @@ export default function Users() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Nome</TableHead>
+                      <TableHead>Nome Completo</TableHead>
                       <TableHead>Email</TableHead>
-                      <TableHead>CPF</TableHead>
                       <TableHead>Validade</TableHead>
                       <TableHead>Ações</TableHead>
                     </TableRow>
@@ -717,7 +728,6 @@ export default function Users() {
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">{user.name}</TableCell>
                         <TableCell>{user.email}</TableCell>
-                        <TableCell>{user.cpf}</TableCell>
                         <TableCell>
                           <div className="text-sm">
                             <div>De: {format(new Date(user.validFrom), 'dd/MM/yyyy', { locale: ptBR })}</div>
@@ -774,177 +784,202 @@ export default function Users() {
 
           {/* Profile management dialog */}
           <Dialog open={isProfileDialogOpen} onOpenChange={(v) => { setIsProfileDialogOpen(v); if (!v) resetProfileForm() }}>
-            <DialogContent className="sm:max-w-[700px]">
+            <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-hidden">
               <DialogHeader>
                 <DialogTitle>{editingProfile ? 'Editar Perfil' : 'Novo Perfil'}</DialogTitle>
                 <DialogDescription>Gerencie perfis e permissões</DialogDescription>
               </DialogHeader>
               
-              <div className="grid gap-4 py-4">
-                <div>
-                  <Label>Nome do Perfil</Label>
-                  <Input value={profileForm.name ?? ''} onChange={(e) => setProfileForm(prev => ({ ...prev, name: e.target.value }))} />
-                </div>
-                <div>
-                  <Label>Descrição</Label>
-                  <Input value={profileForm.description ?? ''} onChange={(e) => setProfileForm(prev => ({ ...prev, description: e.target.value }))} />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col max-h-[72vh]">
+                {/* Área rolável com todo o formulário */}
+                <div className="overflow-y-auto p-4 space-y-4">
                   <div>
-                    <h4 className="font-medium mb-2">Lançamentos</h4>
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox checked={profileForm.canLaunchTithe} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchTithe: v as boolean }))} />
-                        <Label>Lançar Dízimo</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox checked={profileForm.canLaunchServiceOffer} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchServiceOffer: v as boolean }))} />
-                        <Label>Lançar Oferta do Culto</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox checked={profileForm.canLaunchMission} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchMission: v as boolean }))} />
-                        <Label>Lançar Missão</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox checked={profileForm.canLaunchCircle} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchCircle: v as boolean }))} />
-                        <Label>Lançar Círculo</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox checked={profileForm.canLaunchVote} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchVote: v as boolean }))} />
-                        <Label>Lançar Votos</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox checked={profileForm.canLaunchEbd} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchEbd: v as boolean }))} />
-                        <Label>Lançar EBD</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox checked={profileForm.canLaunchCampaign} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchCampaign: v as boolean }))} />
-                        <Label>Lançar Campanha</Label>
-                      </div>                                            
-                      <div className="flex items-center space-x-2">
-                        <Checkbox checked={profileForm.canLaunchExpense} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchExpense: v as boolean }))} />
-                        <Label>Lançar Saída</Label>
-                      </div>
-                    </div>
+                    <Label>Nome do Perfil</Label>
+                    <Input value={profileForm.name ?? ''} onChange={(e) => setProfileForm(prev => ({ ...prev, name: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label>Descrição</Label>
+                    <Input value={profileForm.description ?? ''} onChange={(e) => setProfileForm(prev => ({ ...prev, description: e.target.value }))} />
                   </div>
 
-                  <div>
-                    <h4 className="font-medium mb-2">Aprovação</h4>
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox checked={profileForm.canApproveTithe} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveTithe: v as boolean }))} />
-                        <Label>Aprovar Dízimo</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox checked={profileForm.canApproveServiceOffer} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveServiceOffer: v as boolean }))} />
-                        <Label>Aprovar Oferta do Culto</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox checked={profileForm.canApproveMission} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveMission: v as boolean }))} />
-                        <Label>Aprovar Missão</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox checked={profileForm.canApproveCircle} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveCircle: v as boolean }))} />
-                        <Label>Aprovar Círculo</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox checked={profileForm.canApproveVote} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveVote: v as boolean }))} />
-                        <Label>Aprovar Votos</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox checked={profileForm.canApproveEbd} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveEbd: v as boolean }))} />
-                        <Label>Aprovar EBD</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox checked={profileForm.canApproveCampaign} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveCampaign: v as boolean }))} />
-                        <Label>Aprovar Campanha</Label>
-                      </div>                                            
-                      <div className="flex items-center space-x-2">
-                        <Checkbox checked={profileForm.canApproveExpense} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveExpense: v as boolean }))} />
-                        <Label>Aprovar Saída</Label>
-                      </div>
-
-                      <div className="mt-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="font-medium mb-2">Lançamentos</h4>
+                      <div className="space-y-2">
                         <div className="flex items-center space-x-2">
-                          <Checkbox checked={profileForm.canManageSummary} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canManageSummary: v as boolean }))} />
-                          <Label>Gerenciar Resumo</Label>
+                          <Checkbox checked={profileForm.canLaunchTithe} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchTithe: v as boolean }))} />
+                          <Label>Lançar Dízimo</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox checked={profileForm.canLaunchServiceOffer} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchServiceOffer: v as boolean }))} />
+                          <Label>Lançar Oferta do Culto</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox checked={profileForm.canLaunchMission} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchMission: v as boolean }))} />
+                          <Label>Lançar Missão</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox checked={profileForm.canLaunchCircle} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchCircle: v as boolean }))} />
+                          <Label>Lançar Círculo</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox checked={profileForm.canLaunchVote} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchVote: v as boolean }))} />
+                          <Label>Lançar Votos</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox checked={profileForm.canLaunchEbd} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchEbd: v as boolean }))} />
+                          <Label>Lançar EBD</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox checked={profileForm.canLaunchCampaign} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchCampaign: v as boolean }))} />
+                          <Label>Lançar Campanha</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox checked={profileForm.canLaunchExpense} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchExpense: v as boolean }))} />
+                          <Label>Lançar Saída</Label>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-medium mb-2">Aprovação</h4>
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox checked={profileForm.canApproveTithe} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveTithe: v as boolean }))} />
+                          <Label>Aprovar Dízimo</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox checked={profileForm.canApproveServiceOffer} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveServiceOffer: v as boolean }))} />
+                          <Label>Aprovar Oferta do Culto</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox checked={profileForm.canApproveMission} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveMission: v as boolean }))} />
+                          <Label>Aprovar Missão</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox checked={profileForm.canApproveCircle} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveCircle: v as boolean }))} />
+                          <Label>Aprovar Círculo</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox checked={profileForm.canApproveVote} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveVote: v as boolean }))} />
+                          <Label>Aprovar Votos</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox checked={profileForm.canApproveEbd} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveEbd: v as boolean }))} />
+                          <Label>Aprovar EBD</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox checked={profileForm.canApproveCampaign} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveCampaign: v as boolean }))} />
+                          <Label>Aprovar Campanha</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox checked={profileForm.canApproveExpense} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveExpense: v as boolean }))} />
+                          <Label>Aprovar Saída</Label>
+                        </div>
+
+                        <div className="mt-4">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox checked={profileForm.canManageSummary} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canManageSummary: v as boolean }))} />
+                            <Label>Gerenciar Resumo</Label>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Cadastros e Sistema */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <h4 className="font-medium mb-2">Cadastros (CRUD)</h4>
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox checked={profileForm.canCreate} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canCreate: v as boolean }))} />
-                        <Label>Incluir Registros</Label>
+                  {/* Cadastros e Sistema */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="font-medium mb-2">Cadastros (CRUD)</h4>
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox checked={profileForm.canCreate} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canCreate: v as boolean }))} />
+                          <Label>Incluir Registros</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox checked={profileForm.canEdit} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canEdit: v as boolean }))} />
+                          <Label>Editar Registros</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox checked={profileForm.canExclude} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canExclude: v as boolean }))} />
+                          <Label>Excluir Registros</Label>
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox checked={profileForm.canEdit} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canEdit: v as boolean }))} />
-                        <Label>Editar Registros</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox checked={profileForm.canExclude} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canExclude: v as boolean }))} />
-                        <Label>Excluir Registros</Label>
+                    </div>
+
+                    <div>
+                      <h4 className="font-medium mb-2">Sistema / Outras</h4>
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox checked={profileForm.canExport} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canExport: v as boolean }))} />
+                          <Label>Exportar Dados</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox checked={profileForm.canDelete} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canDelete: v as boolean }))} />
+                          <Label>Excluir Histórico</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox checked={profileForm.canApproveTreasury} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveTreasury: v as boolean }))} />
+                          <Label>Aprovar como Tesoureiro</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox checked={profileForm.canApproveAccountant} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveAccountant: v as boolean }))} />
+                          <Label>Aprovar como Contador</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox checked={profileForm.canApproveDirector} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveDirector: v as boolean }))} />
+                          <Label>Aprovar como Dirigente</Label>
+                        </div>
                       </div>
                     </div>
                   </div>
-
-                  <div>
-                    <h4 className="font-medium mb-2">Sistema / Outras</h4>
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox checked={profileForm.canExport} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canExport: v as boolean }))} />
-                        <Label>Exportar Dados</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox checked={profileForm.canDelete} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canDelete: v as boolean }))} />
-                        <Label>Excluir Histórico</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox checked={profileForm.canApproveTreasury} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveTreasury: v as boolean }))} />
-                        <Label>Aprovar como Tesoureiro</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox checked={profileForm.canApproveAccountant} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveAccountant: v as boolean }))} />
-                        <Label>Aprovar como Contador</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox checked={profileForm.canApproveDirector} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveDirector: v as boolean }))} />
-                        <Label>Aprovar como Dirigente</Label>
-                      </div>
+                  {/* <div className="mt-4">
+                    <h5 className="font-medium">Perfis Existentes</h5>
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {profiles.map(p => (
+                        <div key={p.id} className="flex items-center justify-between border p-2 rounded">
+                          <div>{p.name}</div>
+                          <div className="flex space-x-2">
+                            <Button size="sm" variant="ghost" onClick={() => handleProfileEdit(p)}><Edit className="h-4 w-4" /></Button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                </div>
+                  </div>*/}
+             
 
-                <div className="flex space-x-2">
-                  <Button onClick={handleProfileSave}>{editingProfile ? 'Atualizar' : 'Criar'}</Button>
-                  {editingProfile && <Button variant="outline" onClick={() => handleCopyProfile(editingProfile)}>Copiar Perfil</Button>}
-                </div>
 
-                <div className="mt-4">
-                  <h5 className="font-medium">Perfis Existentes</h5>
+                {/* Footer fixo com ações */}
                   <div className="space-y-2 max-h-40 overflow-y-auto">
                     {profiles.map(p => (
                       <div key={p.id} className="flex items-center justify-between border p-2 rounded">
                         <div>{p.name}</div>
                         <div className="flex space-x-2">
-                          <Button size="sm" variant="ghost" onClick={() => handleProfileEdit(p)}><Edit className="h-4 w-4" /></Button>
-                          {/* <Button size="sm" variant="ghost" onClick={() => handleCopyProfile(p)}>Copiar</Button> */}
+                          <Button size="sm" variant="ghost" onClick={() => handleProfileEdit(p)} title="Editar perfil">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => handleCopyProfile(p)} title="Copiar perfil">
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => handleProfileDelete(p)} title="Excluir perfil">
+                            <Trash2 className="h-4 w-4 text-red-600" />
+                          </Button>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
+
+
+              <div className="p-4 border-t bg-white flex justify-end gap-2">
+                  <div className="flex gap-2">
+                    <Button onClick={handleProfileSave}>{editingProfile ? 'Atualizar' : 'Criar'}</Button>
+                    {/* {editingProfile && <Button variant="outline" onClick={() => handleCopyProfile(editingProfile)}>Copiar Perfil</Button>} */}
+                  </div>
               </div>
+            </div>
             </DialogContent>
           </Dialog>
-
         </div>
       </div>
     </div>

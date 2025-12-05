@@ -86,6 +86,8 @@ export default function Launches() {
     classification?: { id: string; name: string }
     approved?: boolean
     summaryId?: string
+    approvedBy?: string
+    approvedAt?: string
   }
 
   // Permissões (mantém nomes existentes)
@@ -117,6 +119,7 @@ export default function Launches() {
     contributorId: '',
     contributorName: '',
     isContributorRegistered: false,
+    isAnonymous: false,
     supplierId: '',
     supplierName: '',
     isSupplierRegistered: false,
@@ -266,6 +269,12 @@ export default function Launches() {
       return
     }
 
+    if (name === 'contributorName' || name === 'description') {
+      const upperValue = value.toUpperCase()
+      setFormData((prev) => ({ ...prev, [name]: upperValue }))
+      return
+    }
+
     setFormData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
   }
 
@@ -300,7 +309,7 @@ export default function Launches() {
     try {
       const url = editingLaunch ? `/api/launches/${editingLaunch.id}` : '/api/launches'
       const method = editingLaunch ? 'PUT' : 'POST'
-console.log(url, method, formData)
+
       // enviar value como número
       const bodyToSend = {
         ...formData,
@@ -332,8 +341,6 @@ console.log(url, method, formData)
 
   const handleEdit = (launch: Launch) => {
     setEditingLaunch(launch)
-    // compatibilidade: usar launch.value ou fallback para antigos campos se existirem
-    //const fallbackValue = (launch as any).value ?? (launch as any).votesValue ?? (launch as any).ebdValue ?? (launch as any).campaignValue ?? (launch as any).offerValue ?? ''
     setFormData({
       congregationId: launch.congregationId,
       type: launch.type,
@@ -344,6 +351,7 @@ console.log(url, method, formData)
       contributorId: launch.contributorId?.toString() || '',
       contributorName: launch.contributorName || '',
       isContributorRegistered: !!launch.contributorId,
+      isAnonymous: launch.contributorName === 'ANÔNIMO' && !launch.contributorId,
       supplierId: launch.supplierId?.toString() || '',
       supplierName: launch.supplierName || '',
       isSupplierRegistered: !!launch.supplierId,
@@ -392,7 +400,12 @@ console.log(url, method, formData)
       const response = await fetch(`/api/launches/status/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status: 'APPROVED' }),
+        body: JSON.stringify({ 
+          id, 
+          status: 'APPROVED',
+          approvedBy: session?.user?.name,
+          approvedAt: new Date().toISOString()
+        }),
       })
 
       if (response.ok) fetchLaunches()
@@ -445,6 +458,7 @@ console.log(url, method, formData)
       contributorId: '',
       contributorName: '',
       isContributorRegistered: false,
+      isAnonymous: false,
       supplierId: '',
       supplierName: '',
       isSupplierRegistered: false,
@@ -492,15 +506,28 @@ console.log(url, method, formData)
              launch.type === 'OFERTA_CULTO' ? 'Oferta do Culto' :
              launch.type === 'CIRCULO' ? 'Círculo de Oração' : ''}
           </div>
-          <Badge variant={
-            launch.status === 'NORMAL' ? 'default' :
-            launch.status === 'APPROVED' ? 'default' :
-            launch.status === 'EXPORTED' ? 'secondary' : 'destructive'
-          }>
-            {launch.status === 'NORMAL' ? 'Normal' :
-             launch.status === 'APPROVED' ? 'Aprovado' :
-             launch.status === 'EXPORTED' ? 'Exportado' : 'Cancelado'}
-          </Badge>
+          <div className="flex items-center space-x-2">
+            <Badge variant={
+              launch.status === 'NORMAL' ? 'default' :
+              launch.status === 'APPROVED' ? 'default' :
+              launch.status === 'EXPORTED' ? 'secondary' : 'destructive'
+            }>
+              {launch.status === 'NORMAL' ? 'Normal' :
+               launch.status === 'APPROVED' ? 'Aprovado' :
+               launch.status === 'EXPORTED' ? 'Exportado' : 'Cancelado'}
+            </Badge>
+            {launch.approvedBy && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="text-xs text-gray-500 cursor-help">ℹ️</div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Aprovado por: {launch.approvedBy}</p>
+                  <p>{launch.approvedAt ? format(new Date(launch.approvedAt), 'dd/MM/yyyy HH:mm') : ''}</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
         </div>
 
         <div className="space-y-1 mb-1">
@@ -761,7 +788,7 @@ console.log(url, method, formData)
                         </div>
 
                         {/* Campo único de valor para todos os tipos */}
-                        <div className="grid grid-cols-1 gap-4">
+                        <div className="grid grid-cols-2 gap-4">
                           <div>
                             <Label htmlFor="value">{formData.type === 'VOTO' ? 'Valor Voto' : formData.type === 'EBD' ? 'Valor EBD' : formData.type === 'CAMPANHA' ? 'Valor Campanha' : formData.type === 'OFERTA_CULTO' ? 'Valor Oferta' : 'Valor'}</Label>
                             <NumericFormat
@@ -787,21 +814,47 @@ console.log(url, method, formData)
                         {/* Dízimo: contribuinte */}
                         {formData.type === 'DIZIMO' && (
                           <div>
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
-                                id="isContributorRegistered"
-                                name="isContributorRegistered"
-                                checked={formData.isContributorRegistered}
-                                disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
-                                onCheckedChange={(checked) =>
-                                  setFormData(prev => ({ ...prev, isContributorRegistered: checked }))
-                                }
-                              />
-                              <Label htmlFor="isContributorRegistered">Contribuinte cadastrado</Label>
+                            <div className="flex items-center space-x-4">
+                              <div className="flex items-center space-x-2">
+                                <Checkbox
+                                  id="isContributorRegistered"
+                                  name="isContributorRegistered"
+                                  checked={formData.isContributorRegistered}
+                                  disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
+                                  onCheckedChange={(checked) =>
+                                    setFormData(prev => ({ 
+                                      ...prev, 
+                                      isContributorRegistered: checked,
+                                      isAnonymous: false,
+                                      contributorName: checked ? '' : (prev.isAnonymous ? 'ANÔNIMO' : '')
+                                    }))
+                                  }
+                                />
+                                <Label htmlFor="isContributorRegistered">Contribuinte cadastrado</Label>
+                              </div>
+
+                              {!formData.isContributorRegistered && (
+                                <div className="flex items-center space-x-2">
+                                  <Checkbox
+                                    id="isAnonymous"
+                                    name="isAnonymous"
+                                    checked={formData.isAnonymous}
+                                    disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
+                                    onCheckedChange={(checked) =>
+                                      setFormData(prev => ({ 
+                                        ...prev, 
+                                        isAnonymous: checked,
+                                        contributorName: checked ? 'ANÔNIMO' : ''
+                                      }))
+                                    }
+                                  />
+                                  <Label htmlFor="isAnonymous">Anônimo</Label>
+                                </div>
+                              )}
                             </div>
 
                             {formData.isContributorRegistered ? (
-                              <div>
+                              <div className="mt-2">
                                 <Label htmlFor="contributorId">Contribuinte</Label>
                                 <SearchableSelect
                                   key={formData.contributorId}
@@ -816,15 +869,15 @@ console.log(url, method, formData)
                                 />
                               </div>
                             ) : (
-                              <div>
+                              <div className="mt-2">
                                 <Label htmlFor="contributorName">Nome do Contribuinte</Label>
                                 <Input
                                   id="contributorName"
                                   name="contributorName"
                                   value={formData.contributorName ?? ''}
                                   onChange={handleInputChange}
-                                  disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
-                                  required
+                                  disabled={formData.isAnonymous || (editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null))}
+                                  required={!formData.isAnonymous}
                                 />
                               </div>
                             )}
@@ -1028,15 +1081,28 @@ console.log(url, method, formData)
                             <TableCell>{launch.contributor?.name || launch.supplier?.razaoSocial || launch.contributorName || launch.supplierName || '-'}</TableCell>
                             <TableCell>{launch.talonNumber}</TableCell>
                             <TableCell>
-                              <Badge className={`w-full py-1.5 px-1 rounded text-center ${launch.status === 'EXPORTED' ? 'text-black' : 'text-white'} font-medium`} variant={
-                                launch.status === 'NORMAL' ? 'default' :
-                                  launch.status === 'APPROVED' ? 'default' :
-                                    launch.status === 'EXPORTED' ? 'secondary' : 'destructive'
-                              }>
-                                {launch.status === 'NORMAL' ? 'Normal' :
-                                  launch.status === 'APPROVED' ? 'Aprovado' :
-                                    launch.status === 'EXPORTED' ? 'Exportado' : 'Cancelado'}
-                              </Badge>
+                              <div className="flex items-center space-x-2">
+                                <Badge className={`w-32 text-center py-1.5 px-1 rounded ${launch.status === 'EXPORTED' ? 'text-black' : 'text-white'} font-medium`} variant={
+                                  launch.status === 'NORMAL' ? 'default' :
+                                    launch.status === 'APPROVED' ? 'default' :
+                                      launch.status === 'EXPORTED' ? 'secondary' : 'destructive'
+                                }>
+                                  {launch.status === 'NORMAL' ? 'Normal' :
+                                    launch.status === 'APPROVED' ? 'Aprovado' :
+                                      launch.status === 'EXPORTED' ? 'Exportado' : 'Cancelado'}
+                                </Badge>
+                               {launch.approvedBy && (
+                                 <Tooltip>
+                                   <TooltipTrigger asChild>
+                                     <div className="text-xs text-gray-500 cursor-help">ℹ️</div>
+                                   </TooltipTrigger>
+                                   <TooltipContent>
+                                     <p>Aprovado por: {launch.approvedBy}</p>
+                                     <p>{launch.approvedAt ? format(new Date(launch.approvedAt), 'dd/MM/yyyy HH:mm') : ''}</p>
+                                   </TooltipContent>
+                                 </Tooltip>
+                               )}
+                             </div>
                             </TableCell>
                             <TableCell>
                               <div className="flex space-x-2">
