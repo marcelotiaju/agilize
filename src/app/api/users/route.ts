@@ -61,7 +61,6 @@ export async function GET(request: NextRequest) {
         login: user.login ?? null,
         name: user.name,
         email: user.email,
-        cpf: user.cpf,
         phone: user.phone,
         validFrom: user.validFrom,
         validTo: user.validTo,
@@ -87,12 +86,12 @@ export async function POST(request: NextRequest) {
   try {
     const payload = await request.json()
     const {
-      login, name, email, cpf, phone, password, validFrom, validTo, historyDays,
+      login, name, email, phone, password, validFrom, validTo, historyDays,
       profileId, defaultPage
     } = payload
 
-    if (!email || !cpf || !password) {
-      return NextResponse.json({ error: "Email, CPF e senha são obrigatórios" }, { status: 400 })
+    if (!email || !password) {
+      return NextResponse.json({ error: "Email, e senha são obrigatórios" }, { status: 400 })
     }
 
     // Unicidades
@@ -102,9 +101,6 @@ export async function POST(request: NextRequest) {
     const existingEmail = await prisma.user.findUnique({ where: { email } })
     if (existingEmail) return NextResponse.json({ error: "Email já cadastrado" }, { status: 400 })
 
-    const existingCpf = await prisma.user.findUnique({ where: { cpf } })
-    if (existingCpf) return NextResponse.json({ error: "CPF já cadastrado" }, { status: 400 })
-
     const hashedPassword = await bcrypt.hash(password, 12)
 
     const user = await prisma.user.create({
@@ -112,7 +108,6 @@ export async function POST(request: NextRequest) {
         login,
         name,
         email,
-        cpf,
         phone,
         password: hashedPassword,
         validFrom: new Date(validFrom),
@@ -153,10 +148,6 @@ export async function PUT(request: NextRequest) {
       if (existingEmail) return NextResponse.json({ error: "Email já cadastrado" }, { status: 400 })
     }
 
-    if (cpf && cpf !== existingUser.cpf) {
-      const existingCpf = await prisma.user.findUnique({ where: { cpf } })
-      if (existingCpf) return NextResponse.json({ error: "CPF já cadastrado" }, { status: 400 })
-    }
 
     const updated = await prisma.user.update({
       where: { id },
@@ -164,7 +155,6 @@ export async function PUT(request: NextRequest) {
         login,
         name,
         email,
-        cpf,
         phone,
         password: password ? await bcrypt.hash(password, 12) : existingUser.password,
         validFrom: new Date(validFrom),
