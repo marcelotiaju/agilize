@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
         "Código do Congregado": launch.type === "DIZIMO" ? launch.contributor?.tipo === 'CONGREGADO' ? parseInt(launch.contributor?.code) : "": "",
         "Nome de Outros": launch.type === "DIZIMO" ? launch.contributorName : launch.type === "SAIDA" ? launch.supplierName : launch.type === "OFERTA_CULTO" ? "OFERTA DO CULTO" : "",
         "Número do Documento": launch.talonNumber,
-        "Data de Emissão": launch.date,
+        "Data de Emissão": format(new Date(launch.date), 'dd/mm/yyyy'),
         "Data de Vencimento": "",
         //"Codigo da Conta a Pagar": "",
         "Código do Caixa": launch.type === "OFERTA_CULTO" ? parseInt(launch.congregation?.entradaOfferFinancialEntity) : 
