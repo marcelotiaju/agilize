@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '10')
+    const limit = parseInt(searchParams.get('limit') || '50')
     const congregationId = searchParams.get('congregationId')
     const searchTerm = searchParams.get('searchTerm') || ''
     const startDate = searchParams.get('startDate')
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
           gte: startDate ? startOfDay(utcToZonedTime(new Date(startDate), timezone)) : undefined,
           lte: endDate ? endOfDay(utcToZonedTime(new Date(endDate), timezone)) : undefined
         }
-        console.log(where.date)
+        //console.log(where.date)
       //where.date.gte;
       // where.date.gte.setHours(0, 0, 0, 0);
       // where.date.lte.setHours(20, 59, 0, 0);
@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    console.log('POST /api/launches body:', body)
+    //console.log('POST /api/launches body:', body)
 
     const {
       congregationId,
@@ -435,7 +435,7 @@ export async function PUT(request: NextRequest) {
       }
       try {
         dataToUpdate.date = parseDateToUtcInstantLocal(updateData.date)
-        console.log(dataToUpdate)
+        //console.log(dataToUpdate)
         //const launchDate = parseDateToUtcInstant(date, 'America/Sao_Paulo', false);
       } catch (err) {
         return NextResponse.json({ error: "Formato de data inválido" }, { status: 400 })
