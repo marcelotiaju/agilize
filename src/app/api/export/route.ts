@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
                                         launch.type === "DIZIMO" ? parseInt(launch.congregation?.dizimoPaymentMethod) : 
                                         launch.type === "SAIDA" ? parseInt(launch.congregation?.saidaPaymentMethod) : "",
         //"Nome da Congregação": launch.congregation.name,
-        "Valor": launch.value ,
+        "Valor": parseFloat(launch.value),
         "Codigo de Conta" : launch.type === "OFERTA_CULTO" ? launch.congregation?.entradaOfferAccountPlan : 
                             launch.type === "MISSAO" ? launch.congregation?.missionAccountPlan :
                             launch.type === "CIRCULO" ? launch.congregation?.circleAccountPlan :
@@ -160,32 +160,32 @@ export async function POST(request: NextRequest) {
           cell.s.font = { name: 'Calibri', sz: 10 } //, bold: r === range.s.r }
 
           // alinhar colunas específicas à direita
-          const headerName = headers[c] || ''
-          if (rightAlign.includes(headerName)) {
-            cell.s.alignment = { horizontal: 'right', vertical: 'center' }
-          } else {
-            cell.s.alignment = cell.s.alignment || { horizontal: 'left', vertical: 'center' }
-          }
+          // const headerName = headers[c] || ''
+          // if (rightAlign.includes(headerName)) {
+          //   cell.s.alignment = { horizontal: 'right', vertical: 'center' }
+          // } else {
+          //   cell.s.alignment = cell.s.alignment || { horizontal: 'left', vertical: 'center' }
+          // }
 
           // tratar datas: garantir formato e tipo de célula
-          if (cell.v instanceof Date || (typeof cell.v === 'string' && /\d{4}-\d{2}-\d{2}T/.test(cell.v))) {
-            // converter string ISO para Date se necessário
-            const dateVal = cell.v instanceof Date ? cell.v : new Date(cell.v)
-            if (!isNaN(dateVal.getTime())) {
-              cell.t = 'd'
-              cell.v = dateVal
-              cell.z = 'dd/mm/yyyy'
-              // alinhar data à direita também
-              cell.s.alignment = { horizontal: 'right', vertical: 'center' }
-            }
-          }
+          // if (cell.v instanceof Date || (typeof cell.v === 'string' && /\d{4}-\d{2}-\d{2}T/.test(cell.v))) {
+          //   // converter string ISO para Date se necessário
+          //   const dateVal = cell.v instanceof Date ? cell.v : new Date(cell.v)
+          //   if (!isNaN(dateVal.getTime())) {
+          //     cell.t = 'd'
+          //     cell.v = dateVal
+          //     cell.z = 'dd/mm/yyyy'
+          //     // alinhar data à direita também
+          //     cell.s.alignment = { horizontal: 'right', vertical: 'center' }
+          //   }
+          // }
 
-          // formatar coluna Valor como numérico com 2 casas
-          if (headerName === 'Valor') {
-            cell.t = typeof cell.v === 'number' ? 'n' : cell.t
-            cell.z = '#,##0.00'
-            cell.s.alignment = { horizontal: 'right', vertical: 'center' }
-          }
+          // // formatar coluna Valor como numérico com 2 casas
+          // if (headerName === 'Valor') {
+          //   cell.t = typeof cell.v === 'number' ? 'n' : cell.t
+          //   cell.z = '#,##0.00'
+          //   cell.s.alignment = { horizontal: 'right', vertical: 'center' }
+          // }
         }
       }
 
