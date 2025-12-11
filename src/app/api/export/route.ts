@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import prisma from "@/lib/prisma"
 import * as XLSX from 'xlsx-js-style'
 import{ authOptions }from "../auth/[...nextauth]/route";
+import { format } from "date-fns";
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
         "Código do Congregado": launch.type === "DIZIMO" ? launch.contributor?.tipo === 'CONGREGADO' ? parseInt(launch.contributor?.code) : "": "",
         "Nome de Outros": launch.type === "DIZIMO" ? launch.contributorName : launch.type === "SAIDA" ? launch.supplierName : launch.type === "OFERTA_CULTO" ? "OFERTA DO CULTO" : "",
         "Número do Documento": launch.talonNumber,
-        "Data de Emissão": format(new Date(launch.date), 'dd/mm/yyyy'),
+        "Data de Emissão": launch.date,
         "Data de Vencimento": "",
         //"Codigo da Conta a Pagar": "",
         "Código do Caixa": launch.type === "OFERTA_CULTO" ? parseInt(launch.congregation?.entradaOfferFinancialEntity) : 
@@ -111,7 +112,7 @@ export async function POST(request: NextRequest) {
                                         launch.type === "DIZIMO" ? parseInt(launch.congregation?.dizimoPaymentMethod) : 
                                         launch.type === "SAIDA" ? parseInt(launch.congregation?.saidaPaymentMethod) : "",
         //"Nome da Congregação": launch.congregation.name,
-        "Valor": parseFloat(launch.value),
+        "Valor": parseFloat(launch.value) || 0,
         "Codigo de Conta" : launch.type === "OFERTA_CULTO" ? launch.congregation?.entradaOfferAccountPlan : 
                             launch.type === "MISSAO" ? launch.congregation?.missionAccountPlan :
                             launch.type === "CIRCULO" ? launch.congregation?.circleAccountPlan :
@@ -167,7 +168,7 @@ export async function POST(request: NextRequest) {
           //   cell.s.alignment = cell.s.alignment || { horizontal: 'left', vertical: 'center' }
           // }
 
-          // tratar datas: garantir formato e tipo de célula
+          //tratar datas: garantir formato e tipo de célula
           // if (cell.v instanceof Date || (typeof cell.v === 'string' && /\d{4}-\d{2}-\d{2}T/.test(cell.v))) {
           //   // converter string ISO para Date se necessário
           //   const dateVal = cell.v instanceof Date ? cell.v : new Date(cell.v)
