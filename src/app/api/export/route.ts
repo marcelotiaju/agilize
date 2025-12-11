@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
         "Código do Congregado": launch.type === "DIZIMO" ? launch.contributor?.tipo === 'CONGREGADO' ? parseInt(launch.contributor?.code) : "": "",
         "Nome de Outros": launch.type === "DIZIMO" ? launch.contributorName : launch.type === "SAIDA" ? launch.supplierName : launch.type === "OFERTA_CULTO" ? "OFERTA DO CULTO" : "",
         "Número do Documento": launch.talonNumber,
-        "Data de Emissão": formatDate(new Date(launch.date)),
+        "Data de Emissão": launch.date,
         "Data de Vencimento": "",
         //"Codigo da Conta a Pagar": "",
         "Código do Caixa": launch.type === "OFERTA_CULTO" ? parseInt(launch.congregation?.entradaOfferFinancialEntity) : 
@@ -161,35 +161,35 @@ export async function POST(request: NextRequest) {
           cell.s.font = { name: 'Calibri', sz: 10 } //, bold: r === range.s.r }
 
           //alinhar colunas específicas à direita
-          const headerName = headers[c] || ''
-          if (rightAlign.includes(headerName)) {
-            cell.s.alignment = { horizontal: 'right', vertical: 'center' }
-          } else {
-            cell.s.alignment = cell.s.alignment || { horizontal: 'left', vertical: 'center' }
-          }
+          // const headerName = headers[c] || ''
+          // if (rightAlign.includes(headerName)) {
+          //   cell.s.alignment = { horizontal: 'right', vertical: 'center' }
+          // } else {
+          //   cell.s.alignment = cell.s.alignment || { horizontal: 'left', vertical: 'center' }
+          // }
 
         // Configurar coluna de data como formato de data (dd/mm/yyyy)
-         const dataColIndex = 5; // "Data de Emissao" está na coluna 5 (índice 5)
-         for (let row = 1; row <= launchData.length; row++) {
-           const cellAddress = XLSX.utils.encode_cell({ r: row, c: dataColIndex });
-           const cell = launchSheet[cellAddress];
-           if (cell) {
-             cell.z = 'dd/mm/yyyy'; // formato de data
-           }
-         }
+        //  const dataColIndex = 5; // "Data de Emissao" está na coluna 5 (índice 5)
+        //  for (let row = 1; row <= launchData.length; row++) {
+        //    const cellAddress = XLSX.utils.encode_cell({ r: row, c: dataColIndex });
+        //    const cell = launchSheet[cellAddress];
+        //    if (cell) {
+        //      cell.z = 'dd/mm/yyyy'; // formato de data
+        //    }
+        //  }
     // +     // Tentar garantir que campos de data venham como Date objects (p/ Excel)
-    // +     const normalized = launchData.map(row => {
-    // +       const copy: any = { ...row }
-    // +       // ajustar chaves comuns (adapte se o label na exportação for diferente)
-    // +       const dateKeys = Object.keys(copy).filter(k => /date|data|emissão|emissao/i.test(k))
-    // +       dateKeys.forEach(k => {
-    // +         if (copy[k]) {
-    // +           const d = new Date(copy[k])
-    // +           if (!isNaN(d.getTime())) copy[k] = d
-    // +         }
-    // +       })
-    // +       return copy
-    // +     })
+         const normalized = launchData.map(row => {
+           const copy: any = { ...row }
+           // ajustar chaves comuns (adapte se o label na exportação for diferente)
+           const dateKeys = Object.keys(copy).filter(k => /date|data|emissão|emissao/i.test(k))
+           dateKeys.forEach(k => {
+             if (copy[k]) {
+               const d = new Date(copy[k])
+               if (!isNaN(d.getTime())) copy[k] = d
+             }
+           })
+           return copy
+         })
 
           //tratar datas: garantir formato e tipo de célula
           // if (cell.v instanceof Date || (typeof cell.v === 'string' && /\d{4}-\d{2}-\d{2}T/.test(cell.v))) {
