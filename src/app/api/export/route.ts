@@ -160,26 +160,49 @@ export async function POST(request: NextRequest) {
           cell.s = cell.s || {}
           cell.s.font = { name: 'Calibri', sz: 10 } //, bold: r === range.s.r }
 
-          // alinhar colunas específicas à direita
-          // const headerName = headers[c] || ''
-          // if (rightAlign.includes(headerName)) {
-          //   cell.s.alignment = { horizontal: 'right', vertical: 'center' }
-          // } else {
-          //   cell.s.alignment = cell.s.alignment || { horizontal: 'left', vertical: 'center' }
-          // }
+          //alinhar colunas específicas à direita
+          const headerName = headers[c] || ''
+          if (rightAlign.includes(headerName)) {
+            cell.s.alignment = { horizontal: 'right', vertical: 'center' }
+          } else {
+            cell.s.alignment = cell.s.alignment || { horizontal: 'left', vertical: 'center' }
+          }
+
+        // Configurar coluna de data como formato de data (dd/mm/yyyy)
+         const dataColIndex = 5; // "Data de Emissao" está na coluna 5 (índice 5)
+         for (let row = 1; row <= launchData.length; row++) {
+           const cellAddress = XLSX.utils.encode_cell({ r: row, c: dataColIndex });
+           const cell = launchSheet[cellAddress];
+           if (cell) {
+             cell.z = 'dd/mm/yyyy'; // formato de data
+           }
+         }
+    // +     // Tentar garantir que campos de data venham como Date objects (p/ Excel)
+    // +     const normalized = launchData.map(row => {
+    // +       const copy: any = { ...row }
+    // +       // ajustar chaves comuns (adapte se o label na exportação for diferente)
+    // +       const dateKeys = Object.keys(copy).filter(k => /date|data|emissão|emissao/i.test(k))
+    // +       dateKeys.forEach(k => {
+    // +         if (copy[k]) {
+    // +           const d = new Date(copy[k])
+    // +           if (!isNaN(d.getTime())) copy[k] = d
+    // +         }
+    // +       })
+    // +       return copy
+    // +     })
 
           //tratar datas: garantir formato e tipo de célula
-          if (cell.v instanceof Date || (typeof cell.v === 'string' && /\d{4}-\d{2}-\d{2}T/.test(cell.v))) {
-            // converter string ISO para Date se necessário
-            const dateVal = cell.v instanceof Date ? cell.v : new Date(cell.v)
-            if (!isNaN(dateVal.getTime())) {
-              cell.t = 'd'
-              cell.v = dateVal
-              cell.z = 'dd/mm/yyyy'
-              // alinhar data à direita também
-              cell.s.alignment = { horizontal: 'right', vertical: 'center' }
-            }
-          }
+          // if (cell.v instanceof Date || (typeof cell.v === 'string' && /\d{4}-\d{2}-\d{2}T/.test(cell.v))) {
+          //   // converter string ISO para Date se necessário
+          //   const dateVal = cell.v instanceof Date ? cell.v : new Date(cell.v)
+          //   if (!isNaN(dateVal.getTime())) {
+          //     cell.t = 'd'
+          //     cell.v = dateVal
+          //     cell.z = 'dd/mm/yyyy'
+          //     // alinhar data à direita também
+          //     cell.s.alignment = { horizontal: 'right', vertical: 'center' }
+          //   }
+          // }
 
           // // formatar coluna Valor como numérico com 2 casas
           // if (headerName === 'Valor') {
@@ -200,7 +223,7 @@ export async function POST(request: NextRequest) {
      })
      
     // gerar buffer com estilos (xlsx-js-style preserva .s)
-    const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "buffer", cellDates: true })
+    const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "buffer" })
  
        //const fileName = `export_${format(new Date(), 'yyyyMMddHHmmss')}.xlsx`
        const fileName = `export_${new Date().toISOString().split('T')[0]}.xlsx`
