@@ -169,17 +169,17 @@ export async function POST(request: NextRequest) {
           // }
 
           //tratar datas: garantir formato e tipo de célula
-          if (cell.v instanceof Date || (typeof cell.v === 'string' && /\d{4}-\d{2}-\d{2}T/.test(cell.v))) {
-            // converter string ISO para Date se necessário
-            const dateVal = cell.v instanceof Date ? cell.v : new Date(cell.v)
-            if (!isNaN(dateVal.getTime())) {
-              cell.t = 'd'
-              cell.v = dateVal
-              cell.z = 'dd/mm/yyyy'
-              // alinhar data à direita também
-              cell.s.alignment = { horizontal: 'right', vertical: 'center' }
-            }
-          }
+          // if (cell.v instanceof Date || (typeof cell.v === 'string' && /\d{4}-\d{2}-\d{2}T/.test(cell.v))) {
+          //   // converter string ISO para Date se necessário
+          //   const dateVal = cell.v instanceof Date ? cell.v : new Date(cell.v)
+          //   if (!isNaN(dateVal.getTime())) {
+          //     cell.t = 'd'
+          //     cell.v = dateVal
+          //     cell.z = 'dd/mm/yyyy'
+          //     // alinhar data à direita também
+          //     cell.s.alignment = { horizontal: 'right', vertical: 'center' }
+          //   }
+          // }
 
           // // formatar coluna Valor como numérico com 2 casas
           // if (headerName === 'Valor') {
