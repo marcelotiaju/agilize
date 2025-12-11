@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
         "Código do Congregado": launch.type === "DIZIMO" ? launch.contributor?.tipo === 'CONGREGADO' ? parseInt(launch.contributor?.code) : "": "",
         "Nome de Outros": launch.type === "DIZIMO" ? launch.contributorName : launch.type === "SAIDA" ? launch.supplierName : launch.type === "OFERTA_CULTO" ? "OFERTA DO CULTO" : "",
         "Número do Documento": launch.talonNumber,
-        "Data de Emissão": new Date(launch.date),
+        "Data de Emissão": launch.date,
         "Data de Vencimento": "",
         //"Codigo da Conta a Pagar": "",
         "Código do Caixa": launch.type === "OFERTA_CULTO" ? parseInt(launch.congregation?.entradaOfferFinancialEntity) : 
@@ -169,17 +169,17 @@ export async function POST(request: NextRequest) {
           // }
 
           //tratar datas: garantir formato e tipo de célula
-          // if (cell.v instanceof Date || (typeof cell.v === 'string' && /\d{4}-\d{2}-\d{2}T/.test(cell.v))) {
-          //   // converter string ISO para Date se necessário
-          //   const dateVal = cell.v instanceof Date ? cell.v : new Date(cell.v)
-          //   if (!isNaN(dateVal.getTime())) {
-          //     cell.t = 'd'
-          //     cell.v = dateVal
-          //     cell.z = 'dd/mm/yyyy'
-          //     // alinhar data à direita também
-          //     cell.s.alignment = { horizontal: 'right', vertical: 'center' }
-          //   }
-          // }
+          if (cell.v instanceof Date || (typeof cell.v === 'string' && /\d{4}-\d{2}-\d{2}T/.test(cell.v))) {
+            // converter string ISO para Date se necessário
+            const dateVal = cell.v instanceof Date ? cell.v : new Date(cell.v)
+            if (!isNaN(dateVal.getTime())) {
+              cell.t = 'd'
+              cell.v = dateVal
+              cell.z = 'dd/mm/yyyy'
+              // alinhar data à direita também
+              cell.s.alignment = { horizontal: 'right', vertical: 'center' }
+            }
+          }
 
           // // formatar coluna Valor como numérico com 2 casas
           // if (headerName === 'Valor') {
@@ -200,7 +200,7 @@ export async function POST(request: NextRequest) {
      })
      
     // gerar buffer com estilos (xlsx-js-style preserva .s)
-    const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "buffer" })
+    const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "buffer", cellDates: true })
  
        //const fileName = `export_${format(new Date(), 'yyyyMMddHHmmss')}.xlsx`
        const fileName = `export_${new Date().toISOString().split('T')[0]}.xlsx`
