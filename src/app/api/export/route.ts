@@ -88,14 +88,15 @@ export async function POST(request: NextRequest) {
       const launchData = launches.map(launch => {
         // criar Date no meio do dia UTC (12:00 UTC) para evitar mudança de dia por fuso horário
         const dt = new Date(launch.date)
-        const exportDate = new Date(Date.UTC(dt.getFullYear(), dt.getMonth(), dt.getDate(), 12, 0, 0))
+        //const exportDate = new Date(Date.UTC(dt.getFullYear(), dt.getMonth(), dt.getDate(), 12, 0, 0))
+        const exportDate = format(dt, 'yyyy-MM-dd')
 
         return ({
           "CNPJ/CPF do Fornecedor": launch.type === "SAIDA" ? launch.supplier?.cpfCnpj : "" ,
           "Código do Membro": launch.type === "DIZIMO" ? launch.contributor?.tipo === 'MEMBRO' ? parseInt(launch.contributor?.code) : "": "",
           "Código do Congregado": launch.type === "DIZIMO" ? launch.contributor?.tipo === 'CONGREGADO' ? parseInt(launch.contributor?.code) : "": "",
           "Nome de Outros": launch.type === "DIZIMO" ? launch.contributorName : launch.type === "SAIDA" ? launch.supplierName : launch.type === "OFERTA_CULTO" ? "OFERTA DO CULTO" : "",
-          "Número do Documento": launch.talonNumber,
+          "Número do Documento": parseInt(launch.talonNumber) || "",
           "Data de Emissão": exportDate,
           "Data de Vencimento": "",
           //"Codigo da Conta a Pagar": "",
@@ -181,7 +182,7 @@ export async function POST(request: NextRequest) {
             cell.v = dateOnly
           }
           // formatar coluna Valor como numérico com 2 casas
-          if (headerName === 'Valor') {
+          if (headerName === 'Valor' || headerName === 'Número do Documento') {
             if (typeof cell.v === 'number') cell.t = 'n'
             //cell.z = '#,##0.00'
             cell.s.alignment = { horizontal: 'right', vertical: 'center' }
