@@ -88,11 +88,11 @@ export async function POST(request: NextRequest) {
       const launchData = launches.map(launch => {
         // criar Date no meio do dia UTC (12:00 UTC) para evitar mudança de dia por fuso horário
         const dt = new Date(launch.date)
-        //const exportDate = new Date(Date.UTC(dt.getFullYear(), dt.getMonth(), dt.getDate(), 12, 0, 0))
-        const exportDate = format(dt, 'yyyy-MM-dd')
+        const exportDate = new Date(Date.UTC(dt.getFullYear(), dt.getMonth(), dt.getDate(), 12, 0, 0))
+        //const exportDate = format(dt, 'yyyy-MM-dd')
 
         return ({
-          "CNPJ/CPF do Fornecedor": launch.type === "SAIDA" ? launch.supplier?.cpfCnpj : "" ,
+          "CNPJ/CPF do Fornecedor": launch.type === "SAIDA" ? parseInt(launch.supplier?.cpfCnpj) : "",
           "Código do Membro": launch.type === "DIZIMO" ? launch.contributor?.tipo === 'MEMBRO' ? parseInt(launch.contributor?.code) : "": "",
           "Código do Congregado": launch.type === "DIZIMO" ? launch.contributor?.tipo === 'CONGREGADO' ? parseInt(launch.contributor?.code) : "": "",
           "Nome de Outros": launch.type === "DIZIMO" ? launch.contributorName : launch.type === "SAIDA" ? launch.supplierName : launch.type === "OFERTA_CULTO" ? "OFERTA DO CULTO" : "",
@@ -149,6 +149,7 @@ export async function POST(request: NextRequest) {
         "Código da Forma de Pagamento",
         "Número do Documento",
         "Código do Congregado",
+        "CPF/CNPJ do Fornecedor",
       ]
 
       // garantir referência !ref
