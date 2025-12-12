@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
         })
       })
       // Criar sheet (preservando objetos Date em launchData)
-      const launchSheet = XLSX.utils.json_to_sheet(launchData, { dateNF: 'yyyy/mm/dd' })
+      const launchSheet = XLSX.utils.json_to_sheet(launchData, { dateNF: 'yyyy-mm-dd' })
 
       // cabeçalhos e colunas que devem ficar alinhadas à direita
       const headers = Object.keys(launchData[0] || {})
@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
           //tratar datas: garantir tipo e formato (usamos Date no launchData com 12:00 UTC para evitar shift)
           if (cell.v instanceof Date) {
             cell.t = 'd'
-            cell.z = 'yyyy/mm/dd' // formato data sem hora
+            cell.z = 'yyyy-mm-dd' // formato data sem hora
             // garantir que só exibe data, sem hora
             const dateOnly = new Date(cell.v.getFullYear(), cell.v.getMonth(), cell.v.getDate())
             cell.v = dateOnly
