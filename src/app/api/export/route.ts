@@ -188,11 +188,11 @@ export async function POST(request: NextRequest) {
            cell.z = 'dd/mm/yyyy'
          }
          // formatar coluna Valor como numérico com 2 casas
-        //  if (headerName === 'Valor') {
-        //    if (typeof cell.v === 'number') cell.t = 'n'
-        //    cell.z = '#,##0.00'
-        //    cell.s.alignment = { horizontal: 'right', vertical: 'center' }
-        //  }
+         if (headerName === 'Valor') {
+           if (typeof cell.v === 'number') cell.t = 'n'
+           //cell.z = '#,##0.00'
+           cell.s.alignment = { horizontal: 'right', vertical: 'center' }
+         }
         }
       }
 
