@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
           "Código do Membro": launch.type === "DIZIMO" ? launch.contributor?.tipo === 'MEMBRO' ? parseInt(launch.contributor?.code) : "": "",
           "Código do Congregado": launch.type === "DIZIMO" ? launch.contributor?.tipo === 'CONGREGADO' ? parseInt(launch.contributor?.code) : "": "",
           "Nome de Outros": launch.type === "DIZIMO" ? launch.contributorName : launch.type === "SAIDA" ? launch.supplierName : launch.type === "OFERTA_CULTO" ? "OFERTA DO CULTO" : "",
-          "Número do Documento": parseInt(launch.talonNumber) || "",
+          "Número do Documento": parseInt(launch.talonNumber),
           "Data de Emissão": exportDate,
           "Data de Vencimento": "",
           //"Codigo da Conta a Pagar": "",
@@ -146,7 +146,9 @@ export async function POST(request: NextRequest) {
         "Data de Emissão",
         "Código do Caixa",
         "Código da Congregação",
-        "Código da Forma de Pagamento"
+        "Código da Forma de Pagamento",
+        "Número do Documento",
+        "Código do Congregado",
       ]
 
       // garantir referência !ref
