@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
         })
       })
       // Criar sheet (preservando objetos Date em launchData)
-      const launchSheet = XLSX.utils.json_to_sheet(launchData, { dateNF: 'dd/mm/yyyy' })
+      const launchSheet = XLSX.utils.json_to_sheet(launchData, { dateNF: 'yyyy/mm/dd' })
 
       // cabeçalhos e colunas que devem ficar alinhadas à direita
       const headers = Object.keys(launchData[0] || {})
@@ -172,27 +172,20 @@ export async function POST(request: NextRequest) {
             cell.s.alignment = cell.s.alignment || { horizontal: 'left', vertical: 'center' }
           }
 
-        // Configurar coluna de data como formato de data (dd/mm/yyyy)
-        //  const dataColIndex = 5; // "Data de Emissao" está na coluna 5 (índice 5)
-        //  for (let row = 1; row <= launchData.length; row++) {
-        //    const cellAddress = XLSX.utils.encode_cell({ r: row, c: dataColIndex });
-        //    const cell = launchSheet[cellAddress];
-        //    if (cell) {
-        //      cell.z = 'dd/mm/yyyy'; // formato de data
-        //    }
-        //  }
-    // +     // Tentar garantir que campos de data venham como Date objects (p/ Excel)
-         // tratar datas: garantir tipo e formato (usamos Date no launchData com 12:00 UTC para evitar shift)
-         if (cell.v instanceof Date) {
-           cell.t = 'd'
-           cell.z = 'dd/mm/yyyy'
-         }
-         // formatar coluna Valor como numérico com 2 casas
-         if (headerName === 'Valor') {
-           if (typeof cell.v === 'number') cell.t = 'n'
-           //cell.z = '#,##0.00'
-           cell.s.alignment = { horizontal: 'right', vertical: 'center' }
-         }
+          //tratar datas: garantir tipo e formato (usamos Date no launchData com 12:00 UTC para evitar shift)
+          if (cell.v instanceof Date) {
+            cell.t = 'd'
+            cell.z = 'yyyy/mm/dd' // formato data sem hora
+            // garantir que só exibe data, sem hora
+            const dateOnly = new Date(cell.v.getFullYear(), cell.v.getMonth(), cell.v.getDate())
+            cell.v = dateOnly
+          }
+          // formatar coluna Valor como numérico com 2 casas
+          if (headerName === 'Valor') {
+            if (typeof cell.v === 'number') cell.t = 'n'
+            //cell.z = '#,##0.00'
+            cell.s.alignment = { horizontal: 'right', vertical: 'center' }
+          }
         }
       }
 
