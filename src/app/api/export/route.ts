@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
         //const exportDate = format(dt, 'yyyy-MM-dd')
 
         return ({
-          "CNPJ/CPF do Fornecedor": launch.type === "SAIDA" ? parseInt(launch.supplier?.cpfCnpj) : "",
+          "CNPJ/CPF do Fornecedor": launch.type === "SAIDA" ? (launch.supplier?.cpfCnpj || "") : "",
           "Código do Membro": launch.type === "DIZIMO" ? launch.contributor?.tipo === 'MEMBRO' ? parseInt(launch.contributor?.code) : "": "",
           "Código do Congregado": launch.type === "DIZIMO" ? launch.contributor?.tipo === 'CONGREGADO' ? parseInt(launch.contributor?.code) : "": "",
           "Nome de Outros": launch.type === "DIZIMO" ? launch.contributorName : launch.type === "SAIDA" ? launch.supplierName : launch.type === "OFERTA_CULTO" ? "OFERTA DO CULTO" : "",
@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
         "Código da Forma de Pagamento",
         "Número do Documento",
         "Código do Congregado",
-        "CPF/CNPJ do Fornecedor",
+        "CNPJ/CPF do Fornecedor",
       ]
 
       // garantir referência !ref
@@ -185,7 +185,9 @@ export async function POST(request: NextRequest) {
             cell.v = dateOnly
           }
           // formatar coluna Valor como numérico com 2 casas
-          if (headerName === 'Valor' || headerName === 'Número do Documento') {
+          if (headerName === 'Valor' || headerName === 'Número do Documento' || headerName === 'Código do Membro' || headerName === 'Código da Congregação' ||
+              headerName === 'Código do Caixa' || headerName === 'Código da Forma de Pagamento' ||
+              headerName === 'CNPJ/CPF do Fornecedor' || headerName === 'Código do Congregado') {
             if (typeof cell.v === 'number') cell.t = 'n'
             //cell.z = '#,##0.00'
             cell.s.alignment = { horizontal: 'right', vertical: 'center' }
