@@ -150,6 +150,7 @@ export async function POST(request: NextRequest) {
 
       // cabeçalhos e colunas que devem ficar alinhadas à direita
       const headers = Object.keys(launchData[0] || {})
+      launchSheet['!cols'] = headers.map(() => ({ wch: 18 }))
       const rightAlign = [
         "Código do Membro",
         "Data de Emissão",
