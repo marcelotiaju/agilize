@@ -92,13 +92,16 @@ export async function POST(request: NextRequest) {
       }
 
       const launchData = launches.map(launch => {
+        // limpar cpf/cnpj e, se seguro (<=15 dígitos), converter para número
+        const rawCpfCnpj = cleanCpfCnpj(launch.supplier?.cpfCnpj)
+        const cpfCnpjValue = rawCpfCnpj === '' ? '' : (rawCpfCnpj.length <= 15 ? Number(rawCpfCnpj) : rawCpfCnpj)
         // criar Date no meio do dia UTC (12:00 UTC) para evitar mudança de dia por fuso horário
         const dt = new Date(launch.date)
         const exportDate = new Date(Date.UTC(dt.getFullYear(), dt.getMonth(), dt.getDate(), 12, 0, 0))
         //const exportDate = format(dt, 'yyyy-MM-dd')
 
         return ({
-          "CNPJ/CPF do Fornecedor": launch.type === "SAIDA" ? cleanCpfCnpj(launch.supplier?.cpfCnpj) : "",
+          "CNPJ/CPF do Fornecedor": launch.type === "SAIDA" ? cpfCnpjValue : "",
           "Código do Membro": launch.type === "DIZIMO" ? launch.contributor?.tipo === 'MEMBRO' ? parseInt(launch.contributor?.code) : "": "",
           "Código do Congregado": launch.type === "DIZIMO" ? launch.contributor?.tipo === 'CONGREGADO' ? parseInt(launch.contributor?.code) : "": "",
           "Nome de Outros": launch.type === "DIZIMO" ? launch.contributorName : launch.type === "SAIDA" ? launch.supplierName : launch.type === "OFERTA_CULTO" ? "OFERTA DO CULTO" : "",
