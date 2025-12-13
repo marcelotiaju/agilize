@@ -85,6 +85,12 @@ export async function POST(request: NextRequest) {
       }
       } 
 
+      // função para remover caracteres especiais de CPF/CNPJ
+      const cleanCpfCnpj = (value: string | null | undefined): string => {
+        if (!value) return ""
+        return value.replace(/\D/g, '') // remove tudo que não é dígito
+      }
+
       const launchData = launches.map(launch => {
         // criar Date no meio do dia UTC (12:00 UTC) para evitar mudança de dia por fuso horário
         const dt = new Date(launch.date)
@@ -92,7 +98,7 @@ export async function POST(request: NextRequest) {
         //const exportDate = format(dt, 'yyyy-MM-dd')
 
         return ({
-          "CNPJ/CPF do Fornecedor": launch.type === "SAIDA" ? (launch.supplier?.cpfCnpj || "") : "",
+          "CNPJ/CPF do Fornecedor": launch.type === "SAIDA" ? cleanCpfCnpj(launch.supplier?.cpfCnpj) : "",
           "Código do Membro": launch.type === "DIZIMO" ? launch.contributor?.tipo === 'MEMBRO' ? parseInt(launch.contributor?.code) : "": "",
           "Código do Congregado": launch.type === "DIZIMO" ? launch.contributor?.tipo === 'CONGREGADO' ? parseInt(launch.contributor?.code) : "": "",
           "Nome de Outros": launch.type === "DIZIMO" ? launch.contributorName : launch.type === "SAIDA" ? launch.supplierName : launch.type === "OFERTA_CULTO" ? "OFERTA DO CULTO" : "",
@@ -187,7 +193,7 @@ export async function POST(request: NextRequest) {
           // formatar coluna Valor como numérico com 2 casas
           if (headerName === 'Valor' || headerName === 'Número do Documento' || headerName === 'Código do Membro' || headerName === 'Código da Congregação' ||
               headerName === 'Código do Caixa' || headerName === 'Código da Forma de Pagamento' ||
-              headerName === 'CNPJ/CPF do Fornecedor' || headerName === 'Código do Congregado') {
+              headerName === 'Código do Congregado') {
             if (typeof cell.v === 'number') cell.t = 'n'
             //cell.z = '#,##0.00'
             cell.s.alignment = { horizontal: 'right', vertical: 'center' }
