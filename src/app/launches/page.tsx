@@ -323,16 +323,19 @@ export default function Launches() {
       })
 
       if (response.ok) {
-        fetchLaunches()
-        setIsDialogOpen(false)
-        resetForm()
-        setSalvando(false)
-      } else {
-        const error = await response.json()
-        alert(error.error || 'Erro ao salvar lançamento')
-        setSalvando(false)
-      }
-    } catch (error) {
+        // Scroll para o topo da página no mobile
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+        
+         fetchLaunches()
+         setIsDialogOpen(false)
+         resetForm()
+         setSalvando(false)
+       } else {
+         const error = await response.json()
+         alert(error.error || 'Erro ao salvar lançamento')
+         setSalvando(false)
+       }
+     } catch (error) {
       console.error('Erro ao salvar lançamento:', error)
       alert('Erro ao salvar lançamento')
       setSalvando(false)
@@ -652,305 +655,319 @@ export default function Launches() {
       }}
     >
 
-      <div className="min-h-screen bg-gray-50">
-        <Sidebar />
+      <div className="min-h-screen bg-gray-50" style={{ fontSize: '16px' }}>
+         <Sidebar />
 
-        <div className="lg:pl-64">
-          <div className="p-2">
-            <div className="flex justify-end mb-2">
-              <div className="flex space-x-2">
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button onClick={resetForm} disabled={!canLaunchVote && !canLaunchEbd && !canLaunchCampaign && !canLaunchTithe && !canLaunchExpense && !canLaunchMission && !canLaunchCircle && !canLaunchServiceOffer}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Novo
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle>{editingLaunch ? 'Editar' : 'Novo'}</DialogTitle>
-                      <DialogDescription asChild>
-                        {editingLaunch && editingLaunch.status !== 'NORMAL' && (
-                          <div className="mt-2 p-2 bg-yellow-50 text-red-800 rounded-md flex items-center">
-                            <AlertCircle className="h-4 w-4 mr-2" />
-                            Este lançamento não pode ser editado porque está com status "{editingLaunch.status === 'CANCELED' ? 'CANCELADO' : editingLaunch.status === 'APPROVED' ? 'APROVADO': editingLaunch.status === 'EXPORTED' ? 'EXPORTADO' : '' }"
-                          </div>
-                        )}
-                      </DialogDescription>
-                      <DialogDescription asChild>
-                        {editingLaunch && editingLaunch.summaryId != null && (
-                          <div className="mt-2 p-2 bg-yellow-50 text-red-800 rounded-md flex items-center">
-                            <AlertCircle className="h-4 w-4 mr-2" />
-                            Este lançamento faz parte de um resumo e não pode ser alterado."
-                          </div>
-                        )}
-                      </DialogDescription>
-                    </DialogHeader>
+         <div className="lg:pl-64">
+           <div className="p-2">
+             <div className="flex justify-end mb-2">
+               <div className="flex space-x-2">
+                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                   <DialogTrigger asChild>
+                     <Button onClick={resetForm} disabled={!canLaunchVote && !canLaunchEbd && !canLaunchCampaign && !canLaunchTithe && !canLaunchExpense && !canLaunchMission && !canLaunchCircle && !canLaunchServiceOffer}>
+                       <Plus className="mr-2 h-4 w-4" />
+                       Novo
+                     </Button>
+                   </DialogTrigger>
+                   <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto p-0 sm:p-6 fixed" style={{ fontSize: '16px' }}>
+                     <DialogHeader>
+                       <DialogTitle>{editingLaunch ? 'Editar' : 'Novo'}</DialogTitle>
+                       <DialogDescription asChild style={{ fontSize: '14px' }}>
+                         {editingLaunch && editingLaunch.status !== 'NORMAL' && (
+                           <div className="mt-2 p-2 bg-yellow-50 text-red-800 rounded-md flex items-center">
+                             <AlertCircle className="h-4 w-4 mr-2" />
+                             Este lançamento não pode ser editado porque está com status "{editingLaunch.status === 'CANCELED' ? 'CANCELADO' : editingLaunch.status === 'APPROVED' ? 'APROVADO': editingLaunch.status === 'EXPORTED' ? 'EXPORTADO' : '' }"
+                           </div>
+                         )}
+                       </DialogDescription>
+                       <DialogDescription asChild style={{ fontSize: '14px' }}>
+                         {editingLaunch && editingLaunch.summaryId != null && (
+                           <div className="mt-2 p-2 bg-yellow-50 text-red-800 rounded-md flex items-center">
+                             <AlertCircle className="h-4 w-4 mr-2" />
+                             Este lançamento faz parte de um resumo e não pode ser alterado."
+                           </div>
+                         )}
+                         </DialogDescription>
+                       </DialogHeader>
 
-                    {error && (
-                      <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md flex items-center">
-                        <AlertCircle className="h-4 w-4 mr-2" />
-                        {error}
-                      </div>
-                    )}
+                     {error && (
+                       <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md flex items-center">
+                         <AlertCircle className="h-4 w-4 mr-2" />
+                         {error}
+                       </div>
+                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-2">
-                      <div className="space-y-2">
-                        <div>
-                          <Label htmlFor="congregationId">Congregação</Label>
-                          <SearchableSelect
-                            label="Buscar Congregação"
-                            placeholder="Selecione a Congregação"
-                            value={formData.congregationId}
-                            disabled={editingLaunch ? (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null) : false}
-                            onChange={(value) => handleSelectChange('congregationId', value)}
-                            name="congregationId"
-                            data={congregations.map(s => ({ id: s.id, name: s.name }))}
-                            searchKeys={['name']}
-                            required
-                          />
-                        </div>
+                     <form onSubmit={handleSubmit} className="space-y-2 px-4 sm:px-0">
+                       <div className="space-y-2">
+                         <div>
+                           <Label htmlFor="congregationId">Congregação</Label>
+                           <SearchableSelect
+                             label="Buscar Congregação"
+                             placeholder="Selecione a Congregação"
+                             value={formData.congregationId}
+                             disabled={editingLaunch ? (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null) : false}
+                             onChange={(value) => handleSelectChange('congregationId', value)}
+                             name="congregationId"
+                             data={congregations.map(s => ({ id: s.id, name: s.name }))}
+                             searchKeys={['name']}
+                             required
+                           />
+                         </div>
 
-                        <div className="grid grid-cols-3 gap-1">
-                          <div>
-                            <Label htmlFor="type">Tipo</Label>
-                            <Select
-                              value={formData.type}
-                              onValueChange={(value) => handleSelectChange('type', value)}
-                              disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {canLaunchTithe && <SelectItem value="DIZIMO">Dízimos</SelectItem>}
-                                {canLaunchServiceOffer && <SelectItem value="OFERTA_CULTO">Oferta do Culto</SelectItem>}
-                                {canLaunchVote && <SelectItem value="VOTO">Voto</SelectItem>}
-                                {canLaunchEbd && <SelectItem value="EBD">EBD</SelectItem>}
-                                {canLaunchCampaign && <SelectItem value="CAMPANHA">Campanha</SelectItem>}
-                                {canLaunchMission && <SelectItem value="MISSAO">Missão</SelectItem>}
-                                {canLaunchCircle && <SelectItem value="CIRCULO">Círculo de Oração</SelectItem>}
-                                {canLaunchExpense && <SelectItem value="SAIDA">Saídas</SelectItem>}
-                              </SelectContent>
-                            </Select>
-                          </div>
+                         <div className="grid grid-cols-3 gap-1">
+                           <div>
+                             <Label htmlFor="type">Tipo</Label>
+                             <Select
+                               value={formData.type}
+                               onValueChange={(value) => handleSelectChange('type', value)}
+                               disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
+                             >
+                               <SelectTrigger>
+                                 <SelectValue />
+                               </SelectTrigger>
+                               <SelectContent>
+                                 {canLaunchTithe && <SelectItem value="DIZIMO">Dízimos</SelectItem>}
+                                 {canLaunchServiceOffer && <SelectItem value="OFERTA_CULTO">Oferta do Culto</SelectItem>}
+                                 {canLaunchVote && <SelectItem value="VOTO">Voto</SelectItem>}
+                                 {canLaunchEbd && <SelectItem value="EBD">EBD</SelectItem>}
+                                 {canLaunchCampaign && <SelectItem value="CAMPANHA">Campanha</SelectItem>}
+                                 {canLaunchMission && <SelectItem value="MISSAO">Missão</SelectItem>}
+                                 {canLaunchCircle && <SelectItem value="CIRCULO">Círculo de Oração</SelectItem>}
+                                 {canLaunchExpense && <SelectItem value="SAIDA">Saídas</SelectItem>}
+                               </SelectContent>
+                             </Select>
+                           </div>
 
-                          {formData.type === 'SAIDA' && (
-                            <div>
-                              <Label htmlFor="classificationId">Classificação</Label>
-                              <Select
-                                key={formData.classificationId}
-                                value={formData.classificationId}
-                                onValueChange={(value) => handleSelectChange('classificationId', value)}
-                                disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Selecione uma classificação" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {classifications.map((classification) => (
-                                    <SelectItem key={classification.id} value={classification.id}>
-                                      {classification.description}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          )}
-                        </div>
+                           {formData.type === 'SAIDA' && (
+                             <div>
+                               <Label htmlFor="classificationId">Classificação</Label>
+                               <Select
+                                 key={formData.classificationId}
+                                 value={formData.classificationId}
+                                 onValueChange={(value) => handleSelectChange('classificationId', value)}
+                                 disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
+                               >
+                                 <SelectTrigger>
+                                   <SelectValue placeholder="Selecione uma classificação" />
+                                 </SelectTrigger>
+                                 <SelectContent>
+                                   {classifications.map((classification) => (
+                                     <SelectItem key={classification.id} value={classification.id}>
+                                       {classification.description}
+                                     </SelectItem>
+                                   ))}
+                                 </SelectContent>
+                               </Select>
+                             </div>
+                           )}
+                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="date">Data</Label>
-                            <Input
-                              id="date"
-                              name="date"
-                              type="date"
-                              value={formData.date ?? ''}
-                              onChange={handleInputChange}
-                              disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
-                            />
-                          </div>
+                         <div className="grid grid-cols-2 gap-4">
+                           <div>
+                             <Label htmlFor="date">Data</Label>
+                             <Input
+                               id="date"
+                               name="date"
+                               type="date"
+                               inputMode="none"
+                               value={formData.date ?? ''}
+                               onChange={handleInputChange}
+                               disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
+                               style={{ fontSize: '16px' }}
+                             />
+                           </div>
 
-                          <div>
-                            {formData.type === 'SAIDA' ? <Label htmlFor="talonNumber">Nr Doc</Label> : <Label htmlFor="talonNumber">Nr. Talão</Label>}
-                            <Input
-                              id="talonNumber"
-                              name="talonNumber"
-                              type="text"
-                              inputMode="numeric"
-                              pattern="[0-9]*"
-                              value={formData.talonNumber ?? ''}
-                              onChange={handleInputChange}
-                              disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
-                            />
-                          </div>
-                        </div>
+                           <div>
+                             {formData.type === 'SAIDA' ? <Label htmlFor="talonNumber">Nr Doc</Label> : <Label htmlFor="talonNumber">Nr. Talão</Label>}
+                             <Input
+                               id="talonNumber"
+                               name="talonNumber"
+                               type="text"
+                               inputMode="numeric"
+                               pattern="[0-9]*"
+                               value={formData.talonNumber ?? ''}
+                               onChange={handleInputChange}
+                               disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
+                               style={{ fontSize: '16px' }}
+                             />
+                           </div>
+                         </div>
 
-                        {/* Campo único de valor para todos os tipos */}
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="value">{formData.type === 'VOTO' ? 'Valor Voto' : formData.type === 'EBD' ? 'Valor EBD' : formData.type === 'CAMPANHA' ? 'Valor Campanha' : formData.type === 'OFERTA_CULTO' ? 'Valor Oferta' : 'Valor'}</Label>
-                            <NumericFormat
-                              id="value"
-                              name="value"
-                              className="col-span-3 h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                              value={formData.value ?? ''}
-                              onValueChange={(values) => {
-                                const { floatValue, value } = values;
-                                // armazenar como string normalizada
-                                setFormData(prev => ({ ...prev, value: (floatValue !== undefined ? floatValue : value) as any }))
+                         {/* Campo único de valor para todos os tipos */}
+                         <div className="grid grid-cols-2 gap-4">
+                           <div>
+                             <Label htmlFor="value">{formData.type === 'VOTO' ? 'Valor Voto' : formData.type === 'EBD' ? 'Valor EBD' : formData.type === 'CAMPANHA' ? 'Valor Campanha' : formData.type === 'OFERTA_CULTO' ? 'Valor Oferta' : 'Valor'}</Label>
+                             <NumericFormat
+                               id="value"
+                               name="value"
+                               inputMode="decimal"
+                               className="col-span-3 h-10 w-full rounded-md border border-input bg-background px-3 py-2"
+                               value={formData.value ?? ''}
+                               onValueChange={(values) => {
+                                 const { floatValue, value } = values;
+                                 // armazenar como string normalizada
+                                 setFormData(prev => ({ ...prev, value: (floatValue !== undefined ? floatValue : value) as any }))
+                               }}
+                               thousandSeparator="."
+                               decimalSeparator=","
+                               prefix="R$ "
+                               decimalScale={2}
+                               fixedDecimalScale={true}
+                               disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
+                               style={{ fontSize: '16px' }}
+                               onFocus={(e) => {
+                                // Scroll para o input quando focado no mobile
+                                setTimeout(() => {
+                                  e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                                }, 300)
                               }}
-                              thousandSeparator="."
-                              decimalSeparator=","
-                              prefix="R$ "
-                              decimalScale={2}
-                              fixedDecimalScale={true}
-                              disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
-                            />
-                          </div>
-                        </div>
+                             />
+                           </div>
+                         </div>
 
-                        {/* Dízimo: contribuinte */}
-                        {formData.type === 'DIZIMO' && (
-                          <div>
-                            <div className="flex items-center space-x-4">
-                              <div className="flex items-center space-x-2">
-                                <Checkbox
-                                  id="isContributorRegistered"
-                                  name="isContributorRegistered"
-                                  checked={formData.isContributorRegistered}
-                                  disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
-                                  onCheckedChange={(checked) =>
-                                    setFormData(prev => ({ 
-                                      ...prev, 
-                                      isContributorRegistered: checked,
-                                      isAnonymous: false,
-                                      contributorName: checked ? '' : (prev.isAnonymous ? 'ANÔNIMO' : '')
-                                    }))
-                                  }
-                                />
-                                <Label htmlFor="isContributorRegistered">Contribuinte cadastrado</Label>
-                              </div>
+                         {/* Dízimo: contribuinte */}
+                         {formData.type === 'DIZIMO' && (
+                           <div>
+                             <div className="flex items-center space-x-4">
+                               <div className="flex items-center space-x-2">
+                                 <Checkbox
+                                   id="isContributorRegistered"
+                                   name="isContributorRegistered"
+                                   checked={formData.isContributorRegistered}
+                                   disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
+                                   onCheckedChange={(checked) =>
+                                     setFormData(prev => ({ 
+                                       ...prev, 
+                                       isContributorRegistered: checked,
+                                       isAnonymous: false,
+                                       contributorName: checked ? '' : (prev.isAnonymous ? 'ANÔNIMO' : '')
+                                     }))
+                                   }
+                                 />
+                                 <Label htmlFor="isContributorRegistered">Contribuinte cadastrado</Label>
+                               </div>
 
-                              {!formData.isContributorRegistered && (
-                                <div className="flex items-center space-x-2">
-                                  <Checkbox
-                                    id="isAnonymous"
-                                    name="isAnonymous"
-                                    checked={formData.isAnonymous}
-                                    disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
-                                    onCheckedChange={(checked) =>
-                                      setFormData(prev => ({ 
-                                        ...prev, 
-                                        isAnonymous: checked,
-                                        contributorName: checked ? 'ANÔNIMO' : ''
-                                      }))
-                                    }
-                                  />
-                                  <Label htmlFor="isAnonymous">Anônimo</Label>
-                                </div>
-                              )}
-                            </div>
+                               {!formData.isContributorRegistered && (
+                                 <div className="flex items-center space-x-2">
+                                   <Checkbox
+                                     id="isAnonymous"
+                                     name="isAnonymous"
+                                     checked={formData.isAnonymous}
+                                     disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
+                                     onCheckedChange={(checked) =>
+                                       setFormData(prev => ({ 
+                                         ...prev, 
+                                         isAnonymous: checked,
+                                         contributorName: checked ? 'ANÔNIMO' : ''
+                                       }))
+                                     }
+                                   />
+                                   <Label htmlFor="isAnonymous">Anônimo</Label>
+                                 </div>
+                               )}
+                             </div>
 
-                            {formData.isContributorRegistered ? (
-                              <div className="mt-2">
-                                <Label htmlFor="contributorId">Contribuinte</Label>
-                                <SearchableSelect
-                                  key={formData.contributorId}
-                                  label="Buscar Contribuinte"
-                                  placeholder="Selecione o contribuinte"
-                                  value={formData.contributorId ?? ''}
-                                  disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
-                                  onChange={(value) => handleSelectChange('contributorId', value)}
-                                  name="contributorId"
-                                  data={contributors.filter(f => (f.congregationId == formData.congregationId)).map(c => ({ key: c.id, id: c.id, name: c.name, document: c.cpf, cargo: c.ecclesiasticalPosition, photoUrl: c.photoUrl, photoExists: c.photoExists }))}
-                                  searchKeys={['name', 'document']}
-                                />
-                              </div>
-                            ) : (
-                              <div className="mt-2">
-                                <Label htmlFor="contributorName">Nome do Contribuinte</Label>
-                                <Input
-                                  id="contributorName"
-                                  name="contributorName"
-                                  value={formData.contributorName ?? ''}
-                                  onChange={handleInputChange}
-                                  disabled={formData.isAnonymous || (editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null))}
-                                  required={!formData.isAnonymous}
-                                />
-                              </div>
-                            )}
-                          </div>
-                        )}
+                             {formData.isContributorRegistered ? (
+                               <div className="mt-2">
+                                 <Label htmlFor="contributorId">Contribuinte</Label>
+                                 <SearchableSelect
+                                   key={formData.contributorId}
+                                   label="Buscar Contribuinte"
+                                   placeholder="Selecione o contribuinte"
+                                   value={formData.contributorId ?? ''}
+                                   disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
+                                   onChange={(value) => handleSelectChange('contributorId', value)}
+                                   name="contributorId"
+                                   data={contributors.filter(f => (f.congregationId == formData.congregationId)).map(c => ({ key: c.id, id: c.id, name: c.name, document: c.cpf, cargo: c.ecclesiasticalPosition, photoUrl: c.photoUrl, photoExists: c.photoExists }))}
+                                   searchKeys={['name', 'document']}
+                                 />
+                               </div>
+                             ) : (
+                               <div className="mt-2">
+                                 <Label htmlFor="contributorName">Nome do Contribuinte</Label>
+                                 <Input
+                                   id="contributorName"
+                                   name="contributorName"
+                                   value={formData.contributorName ?? ''}
+                                   onChange={handleInputChange}
+                                   disabled={formData.isAnonymous || (editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null))}
+                                   required={!formData.isAnonymous}
+                                   style={{ fontSize: '16px' }}
+                                 />
+                               </div>
+                             )}
+                           </div>
+                         )}
 
-                        {/* Fornecedor para SAIDA */}
-                        {['SAIDA'].includes(formData.type) && (
-                          <>
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
-                                id="isSupplierRegistered"
-                                name="isSupplierRegistered"
-                                checked={formData.isSupplierRegistered}
-                                disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
-                                onCheckedChange={(checked) =>
-                                  setFormData(prev => ({ ...prev, isSupplierRegistered: checked }))
-                                }
-                              />
-                              <Label htmlFor="isSupplierRegistered">Fornecedor cadastrado</Label>
-                            </div>
-                            {formData.isSupplierRegistered ? (
-                              <div>
-                                <Label htmlFor="supplierId">Fornecedor</Label>
-                                <SearchableSelect
-                                  key={formData.supplierId}
-                                  label="Buscar Fornecedor"
-                                  placeholder="Selecione o fornecedor"
-                                  value={formData.supplierId ?? ''}
-                                  disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
-                                  onChange={(value) => handleSelectChange('supplierId', value)}
-                                  name="supplierId"
-                                  data={suppliers.map(s => ({ key: s.id, id: s.id, name: s.razaoSocial, document: s.cpfcnpj }))}
-                                  searchKeys={['name', 'document']}
-                                />
-                              </div>
-                            ) : (
-                              <div>
-                                <Label htmlFor="supplierName">Nome do Fornecedor</Label>
-                                <Input
-                                  id="supplierName"
-                                  name="supplierName"
-                                  value={formData.supplierName ?? ''}
-                                  onChange={handleInputChange}
-                                  disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
-                                />
-                              </div>
-                            )}
-                          </>
-                        )}
+                         {/* Fornecedor para SAIDA */}
+                         {['SAIDA'].includes(formData.type) && (
+                           <>
+                             <div className="flex items-center space-x-2">
+                               <Checkbox
+                                 id="isSupplierRegistered"
+                                 name="isSupplierRegistered"
+                                 checked={formData.isSupplierRegistered}
+                                 disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
+                                 onCheckedChange={(checked) =>
+                                   setFormData(prev => ({ ...prev, isSupplierRegistered: checked }))
+                                 }
+                               />
+                               <Label htmlFor="isSupplierRegistered">Fornecedor cadastrado</Label>
+                             </div>
+                             {formData.isSupplierRegistered ? (
+                               <div>
+                                 <Label htmlFor="supplierId">Fornecedor</Label>
+                                 <SearchableSelect
+                                   key={formData.supplierId}
+                                   label="Buscar Fornecedor"
+                                   placeholder="Selecione o fornecedor"
+                                   value={formData.supplierId ?? ''}
+                                   disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
+                                   onChange={(value) => handleSelectChange('supplierId', value)}
+                                   name="supplierId"
+                                   data={suppliers.map(s => ({ key: s.id, id: s.id, name: s.razaoSocial, document: s.cpfcnpj }))}
+                                   searchKeys={['name', 'document']}
+                                 />
+                               </div>
+                             ) : (
+                               <div>
+                                 <Label htmlFor="supplierName">Nome do Fornecedor</Label>
+                                 <Input
+                                   id="supplierName"
+                                   name="supplierName"
+                                   value={formData.supplierName ?? ''}
+                                   onChange={handleInputChange}
+                                   disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
+                                   style={{ fontSize: '16px' }}
+                                 />
+                               </div>
+                             )}
+                           </>
+                         )}
 
-                        <div>
-                          <Label htmlFor="description">Descrição</Label>
-                          <Textarea
-                            id="description"
-                            name="description"
-                            value={formData.description ?? ''}
-                            onChange={handleInputChange}
-                            disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
-                          />
-                        </div>
+                         <div>
+                           <Label htmlFor="description">Descrição</Label>
+                           <Textarea
+                             id="description"
+                             name="description"
+                             value={formData.description ?? ''}
+                             onChange={handleInputChange}
+                             disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
+                             style={{ fontSize: '16px' }}
+                           />
+                         </div>
 
-                        <DialogFooter>
-                          <Button type="submit" disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null) || salvando}>
-                            {editingLaunch ? 'Atualizar' : 'Salvar'}
-                          </Button>
-                        </DialogFooter>
-                      </div>
-                    </form>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </div>
+                         <DialogFooter>
+                           <Button type="submit" disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null) || salvando}>
+                             {editingLaunch ? 'Atualizar' : 'Salvar'}
+                           </Button>
+                         </DialogFooter>
+                       </div>
+                     </form>
+                   </DialogContent>
+                 </Dialog>
+               </div>
+             </div>
 
             {/* Filtros */}
             <div className="mb-6 flex flex-col sm:flex-row gap-4">
