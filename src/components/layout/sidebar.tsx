@@ -44,7 +44,8 @@ const navigation = [
     { name: 'Fornecedores', href: '/suppliers', icon: Building2, permission: 'canCreate' },
     { name: 'Classificações', href: '/classifications', icon: List, permission: 'canCreate' },
     { name: 'Usuários', href: '/users', icon: UserCheck, permission: 'canManageUsers' },
-    { name: 'Perfil', href: '/profile', icon: User }, // Adicione esta linha
+    { name: 'Perfis', href: '/profiles', icon: UserCheck, permission: 'canManageUsers' },
+    { name: 'Acesso', href: '/profile', icon: User }, // Adicione esta linha
     { name: 'Exportar Dados', href: '/export', icon: Download, permission: 'canExport' },
     { name: 'Excluir Histórico', href: '/delete-history', icon: Trash2, permission: 'canDelete' },
     { name: 'Resumo Diário', href: '/congregation-summary', icon: PieChart, permission: 'canManageSummary' }, 
