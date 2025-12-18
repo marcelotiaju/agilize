@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(bytes)
 
     // Garantir que o diretório de uploads exista
-    const uploadDir = join(process.cwd(), "public", "uploads")
+    const uploadDir = join(process.cwd(), 'public', "uploads")
     try {
       await mkdir(uploadDir, { recursive: true })
     } catch (error) {

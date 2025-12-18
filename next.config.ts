@@ -18,6 +18,7 @@ const nextConfig: NextConfig = {
     ],*/
      staticPageGenerationTimeout: 1000,
      bundlePagesRouterDependencies: true,
+     outputFileTracingRoot: __dirname,
 };
 
 export default nextConfig;
