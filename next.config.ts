@@ -18,7 +18,9 @@ const nextConfig: NextConfig = {
     ],*/
      staticPageGenerationTimeout: 1000,
      bundlePagesRouterDependencies: true,
-     outputFileTracingRoot: __dirname,
+     outputFileTracingIncludes: {
+       'src/app/api/contributors/upload/route.ts': ['fs', 'path'],
+     },
 };
 
 export default nextConfig;
