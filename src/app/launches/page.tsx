@@ -778,7 +778,7 @@ export default function Launches() {
                            </div>
 
                            <div>
-                             {formData.type === 'SAIDA' ? <Label htmlFor="talonNumber">Nr Doc</Label> : <Label htmlFor="talonNumber">Nr. Talão</Label>}
+                             {formData.type === 'SAIDA' ? <Label htmlFor="talonNumber">Nr. Doc</Label> : formData.type === 'DIZIMO' ? <Label htmlFor="talonNumber">Nr. Recibo</Label> : <Label htmlFor="talonNumber">Nr. Talão</Label>}
                              <Input
                                id="talonNumber"
                                name="talonNumber"

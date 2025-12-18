@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, Building, Upload, Copy } from 'lucide-react'
+import { Plus, Edit, Trash2, Building, Upload, Copy, Eye, EyeOff } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { PermissionGuard } from '@/components/auth/PermissionGuard'
@@ -77,6 +77,7 @@ export default function Users() {
   const [importing, setImporting] = useState(false)
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
   const [isImportAssDialogOpen, setIsImportAssDialogOpen] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   // user form: removed individual permission toggles (now managed by Profile)
   const [formData, setFormData] = useState({
@@ -498,7 +499,25 @@ export default function Users() {
                       </div>
                       <div>
                         <Label htmlFor="password">Senha</Label>
-                        <Input id="password" name="password" type="password" value={formData.password ?? ''} onChange={handleInputChange} placeholder={editingUser ? 'Deixe em branco para não alterar' : ''} required={!editingUser} />
+                        <div className="relative flex items-center">
+                          <Input 
+                            id="password" 
+                            name="password" 
+                            type={showPassword ? 'text' : 'password'} 
+                            value={formData.password ?? ''} 
+                            onChange={handleInputChange} 
+                            placeholder={editingUser ? 'Deixe em branco para não alterar' : ''} 
+                            required={!editingUser}
+                            className="pr-10"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 text-gray-500 hover:text-gray-700"
+                          >
+                            {!showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
