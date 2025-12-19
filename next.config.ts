@@ -23,7 +23,7 @@ const nextConfig: NextConfig = {
     //    'src/app/api/contributors/upload/route.ts': ['fs', 'path'],
     //    'src/app/api/contributors/route.ts': ['fs', 'path'],
     //    '/public/uploads': ['fs', 'path'],
-     },
+    // },
 };
 
 export default nextConfig;
