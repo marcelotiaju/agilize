@@ -6,6 +6,8 @@ import Congregations from "@/app/congregations/page";
 import path from 'path';
 import fs from 'fs';
 
+const UPLOADS_FOLDER = "public/uploads";
+
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
 
@@ -60,8 +62,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Caminho absoluto para o diretório de uploads
-    const folder = 'public/uploads';
-    const UPLOADS_DIR = path.join(process.cwd(), folder);
+    const UPLOADS_DIR = path.join(process.cwd(), UPLOADS_FOLDER);
     //console.log('Uploads Dir:', UPLOADS_DIR);
     const contributorsWithPhotos = contributors.map(c => {
       if (!c.photoUrl) {

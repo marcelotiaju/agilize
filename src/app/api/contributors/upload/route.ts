@@ -6,6 +6,8 @@ import { writeFile } from "fs/promises"
 import { join } from "path"
 import { mkdir } from "fs/promises"
 
+const UPLOADS_FOLDER = "public/uploads";
+
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions)
 
@@ -25,7 +27,7 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(bytes)
 
     // Garantir que o diretório de uploads exista
-    const uploadDir = join(process.cwd(), 'public', "uploads")
+    const uploadDir = join(process.cwd(), UPLOADS_FOLDER)
     try {
       await mkdir(uploadDir, { recursive: true })
     } catch (error) {
