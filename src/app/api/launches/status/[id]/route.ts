@@ -14,7 +14,7 @@ export async function PUT(request: NextRequest, props: any) {
       const params = await props.params;
       const id = params.id;
       const body = await request.json();
-      const { status, approvedBy, approvedAt } = body;
+      const { status, approvedBy, approvedAt,approvedByTreasury,approvedByAccountant,approvedByDirector,cancelledBy,cancelledAt } = body;
       
       // Verifique se o lançamento existe
       const existingLaunch = await prisma.launch.findUnique({
@@ -68,16 +68,35 @@ export async function PUT(request: NextRequest, props: any) {
       
       // Se aprovando, adicionar informações de aprovação
       if (status === "APPROVED" && approvedBy && approvedAt) {
-        updateData.approvedBy = approvedBy
-        updateData.approvedAt = new Date(approvedAt)
+        if (approvedByTreasury) {
+          updateData.approvedByTreasury = approvedBy
+          updateData.approvedAtTreasury = new Date(approvedAt)
+        }
+        if (approvedByAccountant) {
+          updateData.approvedByAccountant = approvedBy
+          updateData.approvedAtAccountant = new Date(approvedAt)
+        }
+        if (approvedByDirector) {
+          updateData.approvedByDirector = approvedBy
+          updateData.approvedAtDirector = new Date(approvedAt)
+        }
       }
       
       // Se desaprovando (voltando para NORMAL), limpar informações de aprovação
       if (status === "NORMAL") {
-        updateData.approvedBy = null
-        updateData.approvedAt = null
+          updateData.approvedByTreasury = null
+          updateData.approvedAtTreasury = null
+          updateData.approvedByAccountant = null
+          updateData.approvedAtAccountant = null
+          updateData.approvedByDirector = null
+          updateData.approvedAtDirector = null
       }
 
+
+      if (status === "CANCELED") {
+          updateData.cancelledBy = cancelledBy
+          updateData.cancelledAt = new Date(cancelledAt)
+      }
       const updatedLaunch = await prisma.launch.update({
         where: { id },
         data: updateData

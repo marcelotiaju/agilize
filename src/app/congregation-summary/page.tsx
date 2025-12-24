@@ -19,7 +19,8 @@ import { NumericFormat } from 'react-number-format';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-
+import { cn } from "@/lib/utils"
+import format from "date-fns/format";
 // Definindo o tipo de Congregação para usar no estado
 type Congregation = {
   id: string;
@@ -48,6 +49,14 @@ type Summary = {
   accountantApproved?: boolean;
   directorApproved?: boolean;
   launches?: any[];
+  createdAt: string;
+  createdBy?: string;
+  approvedByTreasury?: string;
+  approvedAtTreasury?: string;
+  approvedByAccountant?: string;
+  approvedAtAccountant?: string;
+  approvedByDirector?: string;
+  approvedAtDirector?: string;
   // Add other properties as needed
 };
 
@@ -85,12 +94,20 @@ export default function CongregationSummary() {
     exitTotal: '',
     totalTithe: 0,
     totalExit: 0,
-    depositValue: '',
-    cashValue: '',
+    depositValue: 0,
+    cashValue: 0,
     treasurerApproved: false,
     accountantApproved: false,
     directorApproved: false,
     status: 'PENDING',
+    createdAt: '',
+    createdBy: '',
+    approvedByTreasury: '',
+    approvedAtTreasury: '',
+    approvedByAccountant: '',
+    approvedAtAccountant: '',
+    approvedByDirector: '',
+    approvedAtDirector: '',
   })
   const [isLoading, setIsLoading] = useState(false)
 
@@ -251,7 +268,15 @@ export default function CongregationSummary() {
       titheTotal: summary.titheTotal ?? '',
       exitTotal: summary.exitTotal ?? '',
       totalTithe: summary.titheTotal ?? 0,
-      totalExit: summary.exitTotal ?? 0
+      totalExit: summary.exitTotal ?? 0,
+      createdAt: summary.createdAt || '',
+      createdBy: summary.createdBy || '',
+      approvedByTreasury: summary.approvedByTreasury || '',
+      approvedAtTreasury: summary.approvedAtTreasury || '',
+      approvedByAccountant: summary.approvedByAccountant || '',
+      approvedAtAccountant: summary.approvedAtAccountant || '',
+      approvedByDirector: summary.approvedByDirector || '',
+      approvedAtDirector: summary.approvedAtDirector || '',
     })
     setLaunches(summary.Launch || [])
     setIsEditDialogOpen(true)
@@ -366,7 +391,7 @@ export default function CongregationSummary() {
   //   })
   // }
 
-  if (!session?.user?.canManageSummary) {
+  if (!session?.user?.canListSummary && !session?.user?.canGenerateSummary) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Sidebar />
@@ -396,7 +421,7 @@ export default function CongregationSummary() {
           {/* Filtros */}
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>Filtros</CardTitle>
+              <CardTitle>Gerar Resumo</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -429,7 +454,9 @@ export default function CongregationSummary() {
                   </div>
                 </div>
                 {/* FIM MUDANÇA 2 */}
-                
+
+                {session?.user?.canGenerateSummary && (
+                <>
                 <div>
                   <Label htmlFor="startDate">Data Início</Label>
                   <Input
@@ -451,18 +478,21 @@ export default function CongregationSummary() {
                 </div>
 
                 <div className="flex items-start md:mt-3">
-                  <Button onClick={handleCreateSummary} disabled={isLoading}>
+                  <Button onClick={handleCreateSummary} disabled={isLoading} visible={editFormData.canGenerateSummary}>
                     {isLoading ? 'Listando...' : 'Gerar Resumo'}
                   </Button>
                 </div>
+                </>
+                )}
               </div>
             </CardContent>
           </Card>
-
           {/* Lista de Resumos */}
+          {session?.user?.canListSummary && (
+          <>
           <Card>
             <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-start gap-3">
-              <CardTitle>Resumos</CardTitle>
+              <CardTitle>Filtrar Resumos</CardTitle>
               <CardDescription>
                 {summaries.length > 0 
                   ? `Mostrando ${summaries.length} resumo(s)` 
@@ -721,7 +751,8 @@ export default function CongregationSummary() {
               )}
             </CardContent>
           </Card>
-          
+          </>
+          )}
           {/* Diálogo de Edição */}
           <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
             <DialogContent className="max-h-[85vh] overflow-y-auto h-[90vh]">
@@ -736,7 +767,7 @@ export default function CongregationSummary() {
             <div className="flex flex-col flex-1 min-h-0">
               {/* Tabs header (sempre visível) */}
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="summaries" className="flex items-center">
                     <FileText className="mr-2 h-4 w-4" />
                     Resumos
@@ -745,6 +776,10 @@ export default function CongregationSummary() {
                     <List className="mr-2 h-4 w-4" />
                     Lançamentos
                   </TabsTrigger>
+                  <TabsTrigger value="logs" className="flex items-center" disabled={!selectedSummary}>
+                    <List className="mr-2 h-4 w-4" />
+                    Logs
+                  </TabsTrigger>                  
                 </TabsList>
 
                 {/* Área rolável: ocupa o espaço restante entre header e footer */}
@@ -916,6 +951,7 @@ export default function CongregationSummary() {
                         <NumericFormat
                             id="depositValue"
                             name="depositValue"
+                            inputMode="decimal"
                             className="col-span-3 h-10 w-full rounded-md border border-input bg-background px-2 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             value={editFormData.depositValue || 0}
                             onValueChange={(values) => {
@@ -928,7 +964,7 @@ export default function CongregationSummary() {
                             decimalScale={2}
                             fixedDecimalScale={true}
                             allowNegative={true}
-                            placeholder="R$ 0,00"
+                            //placeholder="R$ 0,00"
                             disabled={editFormData.status === 'APPROVED'}
                           />
                         </div>
@@ -937,6 +973,7 @@ export default function CongregationSummary() {
                           <NumericFormat
                               id="cashValue"
                               name="cashValue"
+                              inputMode="decimal"
                               className="col-span-3 h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                               value={editFormData.cashValue || 0}
                               onValueChange={(values) => {
@@ -949,7 +986,7 @@ export default function CongregationSummary() {
                               decimalScale={2}
                               fixedDecimalScale={true}
                               allowNegative={true}
-                              placeholder="R$ 0,00"
+                              //placeholder="R$ 0,00"
                               disabled={editFormData.status === 'APPROVED'}                              
                             />  
                         </div>                      
@@ -967,44 +1004,95 @@ export default function CongregationSummary() {
                       </div>
                      
                       <div className="space-y-2">
-                        <h4 className="font-medium">Aprovações</h4>
-                        <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              id="treasurerApproved"
-                              checked={editFormData.treasurerApproved}
-                              disabled={!session.user.canApproveTreasury || editFormData.accountantApproved || editFormData.directorApproved}
-                              onChange={(e) => setEditFormData(prev => ({ ...prev, treasurerApproved: e.target.checked }))}
-                            />
-                            <Label htmlFor="treasurerApproved">Tesoureiro</Label>
+                        {/* <h4 className="font-medium">Aprovações</h4> */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-2">
+                          {/* Botão Tesoureiro */}
+                          <div className="flex flex-col gap-2">
+                            {/* <Label>Tesoureiro</Label> */}
+                            <Button
+                              type="button"
+                              // Se aprovado, usa a cor verde. Se não, usa o estilo 'outline'
+                              variant={editFormData.treasurerApproved ? "default" : "outline"}
+                              className={cn(
+                                "w-full transition-all",
+                                editFormData.treasurerApproved && "bg-green-600 hover:bg-green-700 text-white border-green-700"
+                              )}
+                              // Verifica se o usuário tem permissão para clicar (opcional)
+                              disabled={!session?.user?.canApproveTreasury}
+                              onClick={() => {
+                                const isApproving = !editFormData.treasurerApproved;
+                                setEditFormData(prev => ({
+                                  ...prev, // Mantém todos os outros dados (incluindo aprovação do contador)
+                                  treasurerApproved: isApproving,
+                                  approvedByTreasury: isApproving ? (session?.user?.name || '') : '',
+                                  approvedAtTreasury: isApproving ? new Date().toISOString() : ''
+                                }));
+                              }}
+                            >
+                              {editFormData.treasurerApproved ? (
+                                <><Check className="mr-2 h-4 w-4" /> Aprovado</>
+                              ) : (
+                                "Aprovar Tesoureiro"
+                              )}
+                            </Button>
                           </div>
-                        
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              id="accountantApproved"
-                              checked={editFormData.accountantApproved}
-                              disabled={!session.user.canApproveAccountant || editFormData.treasurerApproved || editFormData.directorApproved}
-                              onChange={(e) => setEditFormData(prev => ({ ...prev, accountantApproved: e.target.checked }))}
-                            />
-                            <Label htmlFor="accountantApproved">Contador</Label>
+
+                          {/* Botão Contador */}
+                          <div className="flex flex-col gap-2">
+                            {/* <Label>Contador</Label> */}
+                            <Button
+                              type="button"
+                              variant={editFormData.accountantApproved ? "default" : "outline"}
+                              className={cn(
+                                "w-full transition-all",
+                                editFormData.accountantApproved && "bg-green-600 hover:bg-green-700 text-white border-green-700"
+                              )}
+                              disabled={!session?.user?.canApproveAccountant}
+                              onClick={() => {
+                                const isApproving = !editFormData.accountantApproved;
+                                setEditFormData(prev => ({
+                                  ...prev, // Mantém todos os outros dados (incluindo aprovação do tesoureiro)
+                                  accountantApproved: isApproving,
+                                  approvedByAccountant: isApproving ? (session?.user?.name || '') : '',
+                                  approvedAtAccountant: isApproving ? new Date().toISOString() : ''
+                                }));
+                              }}
+                            >
+                              {editFormData.accountantApproved ? (
+                                <><Check className="mr-2 h-4 w-4" /> Aprovado</>
+                              ) : (
+                                "Aprovar Contador"
+                              )}
+                            </Button>
                           </div>
-                        
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              id="directorApproved"
-                              checked={editFormData.directorApproved}
-                              disabled={
-                                // Se o usuário não tem permissão DE DIRETOR OU
-                                !session.user.canApproveDirector || 
-                                // Se nenhuma das aprovações necessárias (Contador OU Tesoureiro) foi dada.
-                                !(editFormData.accountantApproved || editFormData.treasurerApproved)
-                              }
-                              onChange={(e) => setEditFormData(prev => ({ ...prev, directorApproved: e.target.checked }))}
-                            />
-                            <Label htmlFor="directorApproved">Dirigente</Label>
+
+                          {/* Botão Dirigente */}
+                          <div className="flex flex-col gap-2">
+                            {/*<Label>Dirigente</Label>*/}
+                            <Button
+                              type="button"
+                              variant={editFormData.directorApproved ? "default" : "outline"}
+                              className={cn(
+                                "w-full transition-all",
+                                editFormData.directorApproved && "bg-green-600 hover:bg-green-700 text-white border-green-700"
+                              )}
+                              disabled={!session?.user?.canApproveDirector}
+                              onClick={() => {
+                                const isApproving = !editFormData.directorApproved;
+                                setEditFormData(prev => ({
+                                  ...prev, // Mantém todos os outros dados (incluindo aprovação do tesoureiro)
+                                  directorApproved: isApproving,
+                                  approvedByDirector: isApproving ? (session?.user?.name || '') : '',
+                                  approvedAtDirector: isApproving ? new Date().toISOString() : ''
+                                }));
+                              }}
+                            >
+                              {editFormData.directorApproved ? (
+                                <><Check className="mr-2 h-4 w-4" /> Aprovado</>
+                              ) : (
+                                "Aprovar Dirigente"
+                              )}
+                            </Button>
                           </div>
                         </div>
                       </div>
@@ -1080,6 +1168,41 @@ export default function CongregationSummary() {
                     </TableBody>
                   </Table>
                 </TabsContent>
+                <TabsContent value="logs" className="max-w-[400px] md:max-w-[600px] max-h-[50vh] h-[50vh] min-h-0">
+                      <div className="rounded-md border mt-4">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Ação</TableHead>
+                              <TableHead>Responsável</TableHead>
+                              <TableHead>Data/Hora</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow>
+                              <TableCell className="font-medium">Inclusão</TableCell>
+                              <TableCell>{editFormData?.createdBy || 'N/A'}</TableCell>
+                              <TableCell>{editFormData?.createdAt ? format(new Date(editFormData.createdAt), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell className="font-medium">Tesoureiro</TableCell>
+                              <TableCell>{editFormData?.approvedByTreasury || '-'}</TableCell>
+                              <TableCell>{editFormData?.approvedAtTreasury ? format(new Date(editFormData.approvedAtTreasury), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell className="font-medium">Contador</TableCell>
+                              <TableCell>{editFormData?.approvedByAccountant || '-'}</TableCell>
+                              <TableCell>{editFormData?.approvedAtAccountant ? format(new Date(editFormData.approvedAtAccountant), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell className="font-medium">Dirigente</TableCell>
+                              <TableCell>{editFormData?.approvedByDirector || '-'}</TableCell>
+                              <TableCell>{editFormData?.approvedAtDirector ? format(new Date(editFormData.approvedAtDirector), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </TabsContent>                
                 </div>
               </Tabs>
               

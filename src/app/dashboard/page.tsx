@@ -25,8 +25,9 @@ export default function Dashboard() {
   const router = useRouter()
 
     const canAccessLaunches = ['canLaunchEntry', 'canLaunchTithe', 'canLaunchExpense', 'canApproveEntry', 'canApproveTithe', 'canApproveExpense'];
-
+    const canAccesSummary = ['canListSummary', 'canGenerateSummary'];
     const hasLaunchPermission = canAccessLaunches.find(perm => session?.user?.[perm]);
+    const hasSummaryPermission = canAccesSummary.find(perm => session?.user?.[perm]);
 
   const menuOptions = [
     {
@@ -98,7 +99,7 @@ export default function Dashboard() {
       icon: PieChart,
       href: "/congregation-summary",
       color: "from-yellow-600 to-amber-700",
-      permission: "canManageSummary"
+      permission: `${hasSummaryPermission}`
     },
   ]
 

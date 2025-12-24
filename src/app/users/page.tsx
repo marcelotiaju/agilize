@@ -584,7 +584,7 @@ export default function Users() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="/dashboard">Dashboard</SelectItem>
+                          <SelectItem value="/dashboard">Pagina Inicial</SelectItem>
                           <SelectItem value="/launches">Lançamentos</SelectItem>
                           <SelectItem value="/contributors">Contribuintes</SelectItem>
                           <SelectItem value="/classifications">Classificações</SelectItem>

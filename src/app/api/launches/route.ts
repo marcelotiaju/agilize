@@ -322,7 +322,8 @@ export async function POST(request: NextRequest) {
         // Lógica ajustada para a Saída
         supplierName: type === "SAIDA" && !isSupplierRegistered ? supplierName : null,
         supplierId: type === "SAIDA" && isSupplierRegistered ? supplierId : null,
-        classificationId: type === "SAIDA" ? classificationId : null // Apenas para saída
+        classificationId: type === "SAIDA" ? classificationId : null, // Apenas para saída
+        createdBy: session.user.name,
       },
       include: {
         congregation: true,

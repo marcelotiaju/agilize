@@ -52,7 +52,8 @@ export default function Profiles() {
     canCreate: false,
     canEdit: false,
     canExclude: false,
-    canManageSummary: false,
+    canListSummary: false,
+    canGenerateSummary: false,
     canApproveTreasury: false,
     canApproveAccountant: false,
     canApproveDirector: false
@@ -103,7 +104,8 @@ export default function Profiles() {
       canCreate: false,
       canEdit: false,
       canExclude: false,
-      canManageSummary: false,
+      canListSummary: false,
+      canGenerateSummary: false,
       canApproveTreasury: false,
       canApproveAccountant: false,
       canApproveDirector: false
@@ -295,13 +297,6 @@ export default function Profiles() {
                             <Checkbox checked={profileForm.canApproveExpense} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveExpense: v as boolean }))} />
                             <Label>Aprovar Saída</Label>
                           </div>
-
-                          <div className="mt-4">
-                            <div className="flex items-center space-x-2">
-                              <Checkbox checked={profileForm.canManageSummary} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canManageSummary: v as boolean }))} />
-                              <Label>Gerenciar Resumo</Label>
-                            </div>
-                          </div>
                         </div>
                       </div>
                     </div>
@@ -336,6 +331,20 @@ export default function Profiles() {
                             <Checkbox checked={profileForm.canDelete} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canDelete: v as boolean }))} />
                             <Label>Excluir Histórico</Label>
                           </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="font-medium mb-2">Resumo Diário</h4>
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox checked={profileForm.canGenerateSummary} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canGenerateSummary: v as boolean }))} />
+                            <Label>Gerar Resumo</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox checked={profileForm.canListSummary} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canListSummary: v as boolean }))} />
+                            <Label>Listar Resumo</Label>
+                          </div>
                           <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canApproveTreasury} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveTreasury: v as boolean }))} />
                             <Label>Aprovar como Tesoureiro</Label>
@@ -347,7 +356,7 @@ export default function Profiles() {
                           <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canApproveDirector} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveDirector: v as boolean }))} />
                             <Label>Aprovar como Dirigente</Label>
-                          </div>
+                          </div>                          
                         </div>
                       </div>
                     </div>

@@ -35,7 +35,9 @@ export async function middleware(request: NextRequest) {
     '/delete-history',
     '/classifications',
     '/suppliers',
-    '/congregations'
+    '/congregations',
+    '/congregation-summary',
+    '/profiles',
   ]
 
   // Verificar se a rota atual exige autenticação

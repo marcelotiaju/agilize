@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Sistema Agilize",
-  description: "Sistema para controle de lançamentos financeiros de congregações",
+  description: "Sistema para controle de Congregações",
 }
 
 export default function RootLayout({

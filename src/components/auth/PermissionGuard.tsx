@@ -19,7 +19,10 @@ interface PermissionGuardProps {
     canCreate?: boolean
     canEdit?: boolean
     canExclude?: boolean,
-    defaultPage?: boolean
+    defaultPage?: boolean,
+    canListSummary?: boolean,
+    canGenerateSummary?: boolean,
+    
   }
   requireAuth?: boolean
   redirectTo?: string

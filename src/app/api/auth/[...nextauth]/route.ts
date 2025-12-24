@@ -61,7 +61,8 @@ export const authOptions : NextAuthOptions = {
           canEdit: !!p?.canEdit,
           canExclude: !!p?.canExclude,
           canManageUsers: !!p?.canManageUsers,
-          canManageSummary: !!p?.canManageSummary,
+          canListSummary: !!p?.canListSummary,
+          canGenerateSummary: !!p?.canGenerateSummary,
           canApproveTreasury: !!p?.canApproveTreasury,
           canApproveAccountant: !!p?.canApproveAccountant,
           canApproveDirector: !!p?.canApproveDirector
@@ -122,7 +123,8 @@ export const authOptions : NextAuthOptions = {
           canEdit: (user as any).canEdit,
           canExclude: (user as any).canExclude,
           canManageUsers: (user as any).canManageUsers,
-          canManageSummary: (user as any).canManageSummary,
+          canListSummary: (user as any).canListSummary,
+          canGenerateSummary: (user as any).canGenerateSummary,
           canApproveTreasury: (user as any).canApproveTreasury,
           canApproveAccountant: (user as any).canApproveAccountant,
           canApproveDirector: (user as any).canApproveDirector
@@ -167,7 +169,8 @@ export const authOptions : NextAuthOptions = {
         canExclude: typeof token.canExclude === "boolean" ?  token.canExclude : undefined,
         canManageUsers: typeof token.canManageUsers === "boolean" ? token.canManageUsers : undefined,
         defaultPage: typeof token.defaultPage === "string" ? token.defaultPage : undefined,
-        canManageSummary: typeof token.canManageSummary === "boolean" ? token.canManageSummary : undefined,
+        canListSummary: typeof token.canListSummary === "boolean" ? token.canListSummary : undefined,
+        canGenerateSummary: typeof token.canGenerateSummary === "boolean" ? token.canGenerateSummary : undefined,
         canApproveTreasury: typeof token.canApproveTreasury === "boolean" ? token.canApproveTreasury : undefined,
         canApproveAccountant: typeof token.canApproveAccountant === "boolean" ? token.canApproveAccountant : undefined,
         canApproveDirector: typeof token.canApproveDirector === "boolean" ? token.canApproveDirector : undefined

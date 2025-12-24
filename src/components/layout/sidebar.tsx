@@ -33,8 +33,9 @@ export function Sidebar() {
   const { data: session } = useSession()
 
       const canAccessLaunches = ['canLaunchEntry', 'canLaunchTithe', 'canLaunchExpense', 'canApproveEntry', 'canApproveTithe', 'canApproveExpense'];
-
+      const canAccesSummary = ['canListSummary', 'canGenerateSummary'];
     const hasLaunchPermission = canAccessLaunches.find(perm => session?.user?.[perm]);
+    const hasSummaryPermission = canAccesSummary.find(perm => session?.user?.[perm]);
 
 const navigation = [
     { name: 'Página Inicial', href: '/dashboard', icon: Home },
@@ -48,7 +49,7 @@ const navigation = [
     { name: 'Acesso', href: '/profile', icon: User }, // Adicione esta linha
     { name: 'Exportar Dados', href: '/export', icon: Download, permission: 'canExport' },
     { name: 'Excluir Histórico', href: '/delete-history', icon: Trash2, permission: 'canDelete' },
-    { name: 'Resumo Diário', href: '/congregation-summary', icon: PieChart, permission: 'canManageSummary' }, 
+    { name: 'Resumo Diário', href: '/congregation-summary', icon: PieChart, permission: `${hasSummaryPermission}` }, 
     //{ name: 'Configurações', href: '/settings', icon: Settings },
   ] 
 
@@ -106,7 +107,7 @@ const navigationItems = navigation
               ))}
             </nav>
           </div>
-          <div className="flex flex-shrink-0 border-t border-gray-200 p-4">
+          <div className="flex shrink-0 border-t border-gray-200 p-4">
             <Button
               variant="ghost"
               className="w-full justify-start"
@@ -135,7 +136,7 @@ const navigationItems = navigation
       {/* Desktop sidebar */}
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
         <div className="flex min-h-0 flex-1 flex-col border-r border-gray-200 bg-white">
-          <div className="flex h-16 flex-shrink-0 items-center px-4 mt-3">
+          <div className="flex h-16 shrink-0 items-center px-4 mt-3">
             {/* <h1 className="text-xl font-bold">Lance Fácil</h1> */}
             <Image 
               src="/images/LogoDashboard.png" // Caminho relativo a partir da pasta `public`
@@ -158,14 +159,14 @@ const navigationItems = navigation
                       : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                   )}
                 >
-                  <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
+                  <item.icon className="mr-3 h-5 w-5 shrink-0" />
                   {item.name}
                 </Link>
               ))}
             </nav>
           </div>
-          <div className="flex flex-shrink-0 border-t border-gray-200 p-4">
-            <div className="group block w-full flex-shrink-0">
+          <div className="flex shrink-0 border-t border-gray-200 p-4">
+            <div className="group block w-full shrink-0">
               <div className="flex items-center">
                 <div className="ml-3 flex-1">
                   <p className="text-sm font-medium text-gray-700">

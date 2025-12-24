@@ -46,22 +46,22 @@ model VerificationToken {
 }
 
 model User {
-  id            String             @id @default(cuid())
-  login         String?            @unique
+  id            String    @id @default(cuid())
+  login         String?   @unique
   name          String?
-  email         String             @unique
-  emailVerified DateTime?          @db.DateTime(0)
-  image         String?            @db.Text
+  email         String    @unique
+  emailVerified DateTime? @db.DateTime(0)
+  image         String?   @db.Text
   phone         String?
   password      String
-  validFrom     DateTime           @db.DateTime(0)
-  validTo       DateTime           @db.DateTime(0)
-  historyDays   Int                @default(30)
-  defaultPage   String             @default("/dashboard")
+  validFrom     DateTime  @db.DateTime(0)
+  validTo       DateTime  @db.DateTime(0)
+  historyDays   Int       @default(30)
+  defaultPage   String    @default("/dashboard")
 
   // relacionamento com Profile (permissões agora centralizadas em Profile)
-  profileId     String?
-  profile       Profile?           @relation(fields: [profileId], references: [id])
+  profileId String?
+  profile   Profile? @relation(fields: [profileId], references: [id])
 
   accounts      Account[]
   sessions      Session[]
@@ -71,41 +71,42 @@ model User {
 }
 
 model Profile {
-  id                     String   @id @default(cuid())
-  name                   String   @unique
-  description            String?
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
 
   // permissões centralizadas (migradas do User)
-  canExport              Boolean  @default(false)
-  canDelete              Boolean  @default(false)
-  canLaunchVote          Boolean  @default(false)
-  canLaunchEbd           Boolean  @default(false)
-  canLaunchCampaign      Boolean  @default(false)
-  canLaunchTithe         Boolean  @default(false)
-  canLaunchExpense       Boolean  @default(false)
-  canLaunchMission       Boolean  @default(false)
-  canLaunchCircle        Boolean  @default(false)
-  canLaunchServiceOffer  Boolean  @default(false)
-  canApproveVote         Boolean  @default(false)
-  canApproveEbd          Boolean  @default(false)
-  canApproveCampaign     Boolean  @default(false)
-  canApproveTithe        Boolean  @default(false)
-  canApproveExpense      Boolean  @default(false)
-  canApproveMission      Boolean  @default(false)
-  canApproveCircle       Boolean  @default(false)
-  canApproveServiceOffer Boolean  @default(false)
-  canCreate              Boolean  @default(false)
-  canEdit                Boolean  @default(false)
-  canExclude             Boolean  @default(false)
-  canManageSummary       Boolean  @default(false)
-  canApproveTreasury     Boolean  @default(false)
-  canApproveAccountant   Boolean  @default(false)
-  canApproveDirector     Boolean  @default(false)
-  canManageUsers         Boolean  @default(false)
+  canExport              Boolean @default(false)
+  canDelete              Boolean @default(false)
+  canLaunchVote          Boolean @default(false)
+  canLaunchEbd           Boolean @default(false)
+  canLaunchCampaign      Boolean @default(false)
+  canLaunchTithe         Boolean @default(false)
+  canLaunchExpense       Boolean @default(false)
+  canLaunchMission       Boolean @default(false)
+  canLaunchCircle        Boolean @default(false)
+  canLaunchServiceOffer  Boolean @default(false)
+  canApproveVote         Boolean @default(false)
+  canApproveEbd          Boolean @default(false)
+  canApproveCampaign     Boolean @default(false)
+  canApproveTithe        Boolean @default(false)
+  canApproveExpense      Boolean @default(false)
+  canApproveMission      Boolean @default(false)
+  canApproveCircle       Boolean @default(false)
+  canApproveServiceOffer Boolean @default(false)
+  canCreate              Boolean @default(false)
+  canEdit                Boolean @default(false)
+  canExclude             Boolean @default(false)
+  canListSummary         Boolean @default(false)
+  canGenerateSummary     Boolean @default(false)
+  canApproveTreasury     Boolean @default(false)
+  canApproveAccountant   Boolean @default(false)
+  canApproveDirector     Boolean @default(false)
+  canManageUsers         Boolean @default(false)
 
-  users                  User[]
-  createdAt              DateTime @default(now()) @db.DateTime(0)
-  updatedAt              DateTime @updatedAt @db.DateTime(0)
+  users     User[]
+  createdAt DateTime @default(now()) @db.DateTime(0)
+  updatedAt DateTime @updatedAt @db.DateTime(0)
 }
 
 model Congregation {
@@ -161,29 +162,36 @@ model UserCongregation {
 }
 
 model Launch {
-  id               String               @id @default(cuid())
-  congregationId   String
-  congregation     Congregation         @relation(fields: [congregationId], references: [id], onDelete: Cascade)
-  type             LaunchType
-  date             DateTime             @db.DateTime(0)
-  talonNumber      String?
-  value            Float?               @default(0)
-  description      String?              @db.VarChar(255)
-  status           LaunchStatus         @default(NORMAL)
-  contributorId    String?
-  contributor      Contributor?         @relation(fields: [contributorId], references: [id])
-  contributorName  String?
-  supplierId       String?
-  supplier         Supplier?            @relation(fields: [supplierId], references: [id])
-  supplierName     String?
-  classificationId String?
-  classification   Classification?      @relation(fields: [classificationId], references: [id])
-  summaryId        String?
-  summary          CongregationSummary? @relation(fields: [summaryId], references: [id])
-  createdAt        DateTime             @default(now()) @db.DateTime(0)
-  updatedAt        DateTime             @updatedAt @db.DateTime(0)
-  approvedBy       String?
-  approvedAt       DateTime?
+  id                   String               @id @default(cuid())
+  congregationId       String
+  congregation         Congregation         @relation(fields: [congregationId], references: [id], onDelete: Cascade)
+  type                 LaunchType
+  date                 DateTime             @db.DateTime(0)
+  talonNumber          String?
+  value                Float?               @default(0)
+  description          String?              @db.VarChar(255)
+  status               LaunchStatus         @default(NORMAL)
+  contributorId        String?
+  contributor          Contributor?         @relation(fields: [contributorId], references: [id])
+  contributorName      String?
+  supplierId           String?
+  supplier             Supplier?            @relation(fields: [supplierId], references: [id])
+  supplierName         String?
+  classificationId     String?
+  classification       Classification?      @relation(fields: [classificationId], references: [id])
+  summaryId            String?
+  summary              CongregationSummary? @relation(fields: [summaryId], references: [id])
+  createdAt            DateTime             @default(now()) @db.DateTime(0)
+  updatedAt            DateTime             @updatedAt @db.DateTime(0)
+  createdBy            String?
+  cancelledBy          String?
+  cancelledAt          DateTime?
+  approvedByTreasury   String?
+  approvedAtTreasury   DateTime?
+  approvedByAccountant String?
+  approvedAtAccountant DateTime?
+  approvedByDirector   String?
+  approvedAtDirector   DateTime?
 
   @@index([congregationId])
   @@index([summaryId])
@@ -232,34 +240,41 @@ model Classification {
 }
 
 model CongregationSummary {
-  id                 String        @id @default(cuid())
-  congregationId     String
-  congregation       Congregation  @relation(fields: [congregationId], references: [id], onDelete: Cascade)
-  date               DateTime      @default(now()) @db.DateTime(0)
-  startDate          DateTime      @db.DateTime(0)
-  endDate            DateTime      @db.DateTime(0)
-  launchCount        Int           @default(0)
-  entryTotal         Float         @default(0)
-  titheTotal         Float         @default(0)
-  exitTotal          Float         @default(0)
-  offerTotal         Float         @default(0)
-  votesTotal         Float         @default(0)
-  ebdTotal           Float         @default(0)
-  campaignTotal      Float         @default(0)
-  missionTotal       Float         @default(0)
-  circleTotal        Float         @default(0)
-  exitValue          Float         @default(0)
-  talonNumber        String?
-  depositValue       Float         @default(0)
-  cashValue          Float         @default(0)
-  totalValue         Float         @default(0)
-  treasurerApproved  Boolean       @default(false)
-  accountantApproved Boolean       @default(false)
-  directorApproved   Boolean       @default(false)
-  status             SummaryStatus @default(PENDING)
-  createdAt          DateTime      @default(now()) @db.DateTime(0)
-  updatedAt          DateTime      @updatedAt @db.DateTime(0)
-  Launch             Launch[]
+  id                   String        @id @default(cuid())
+  congregationId       String
+  congregation         Congregation  @relation(fields: [congregationId], references: [id], onDelete: Cascade)
+  date                 DateTime      @default(now()) @db.DateTime(0)
+  startDate            DateTime      @db.DateTime(0)
+  endDate              DateTime      @db.DateTime(0)
+  launchCount          Int           @default(0)
+  entryTotal           Float         @default(0)
+  titheTotal           Float         @default(0)
+  exitTotal            Float         @default(0)
+  offerTotal           Float         @default(0)
+  votesTotal           Float         @default(0)
+  ebdTotal             Float         @default(0)
+  campaignTotal        Float         @default(0)
+  missionTotal         Float         @default(0)
+  circleTotal          Float         @default(0)
+  exitValue            Float         @default(0)
+  talonNumber          String?
+  depositValue         Float         @default(0)
+  cashValue            Float         @default(0)
+  totalValue           Float         @default(0)
+  treasurerApproved    Boolean       @default(false)
+  accountantApproved   Boolean       @default(false)
+  directorApproved     Boolean       @default(false)
+  approvedByTreasury   String?
+  approvedAtTreasury   DateTime?
+  approvedByAccountant String?
+  approvedAtAccountant DateTime?
+  approvedByDirector   String?
+  approvedAtDirector   DateTime?
+  status               SummaryStatus @default(PENDING)
+  createdBy            String?
+  createdAt            DateTime      @default(now()) @db.DateTime(0)
+  updatedAt            DateTime      @updatedAt @db.DateTime(0)
+  Launch               Launch[]
 
   //@@unique([congregationId, startDate, endDate])
   //@@index([congregationId])

@@ -14,7 +14,7 @@ export async function PUT(request: NextRequest, props: any) {
       const params = await props.params; // Await the params Promise
       const id = params.id;
       const body = await request.json();
-      console.log(body)
+      //console.log(body)
       // if (body.status !== undefined) {
       //   body.status = body.status;
       // }
@@ -98,25 +98,82 @@ export async function PUT(request: NextRequest, props: any) {
       // if (status !== undefined) body.status = status
       // if (approved !== undefined) body.approved = approved
 
+      // Preparar dados de atualização
+      const dataToUpdate: any = {}
+      
+      if (body.value !== undefined) {
+        dataToUpdate.value = body.value ? parseFloat(body.value) : null
+      }
+      if (body.congregationId !== undefined) {
+        dataToUpdate.congregationId = body.congregationId || null
+      }
+      if (body.talonNumber !== undefined) {
+        dataToUpdate.talonNumber = body.talonNumber || null
+      }
+      if (body.classificationId !== undefined) {
+        dataToUpdate.classificationId = body.classificationId || null
+      }
+      if (body.date !== undefined && body.date !== null && body.date !== '') {
+        dataToUpdate.date = launchDate
+      }
+      if (body.type !== undefined) {
+        dataToUpdate.type = body.type
+      }
+      if (body.description !== undefined) {
+        dataToUpdate.description = body.description
+      }
+
+      // Lógica para contribuinte (Dízimo)
+      if (body.type === "DIZIMO") {
+        if (body.isContributorRegistered && body.contributorId) {
+          // Contribuinte cadastrado: salva contributorId e limpa contributorName
+          dataToUpdate.contributorId = body.contributorId
+          dataToUpdate.contributorName = null
+        } else if (body.contributorName !== undefined) {
+          // Contribuinte não cadastrado ou anônimo: salva contributorName e limpa contributorId
+          dataToUpdate.contributorName = body.contributorName || null
+          dataToUpdate.contributorId = null
+        }
+      } else {
+        // Para outros tipos, limpar campos de contribuinte se foram enviados
+        if (body.contributorId !== undefined) {
+          dataToUpdate.contributorId = null
+        }
+        if (body.contributorName !== undefined) {
+          dataToUpdate.contributorName = null
+        }
+      }
+
+      // Lógica para fornecedor (Saída)
+      if (body.type === "SAIDA") {
+        if (body.isSupplierRegistered && body.supplierId) {
+          // Fornecedor cadastrado: salva supplierId e limpa supplierName
+          dataToUpdate.supplierId = body.supplierId
+          dataToUpdate.supplierName = null
+        } else if (body.supplierName !== undefined) {
+          // Fornecedor não cadastrado: salva supplierName e limpa supplierId
+          dataToUpdate.supplierName = body.supplierName || null
+          dataToUpdate.supplierId = null
+        }
+      } else {
+        // Para outros tipos, limpar campos de fornecedor se foram enviados
+        if (body.supplierId !== undefined) {
+          dataToUpdate.supplierId = null
+        }
+        if (body.supplierName !== undefined) {
+          dataToUpdate.supplierName = null
+        }
+      }
+
       const updatedLaunch = await prisma.launch.update({
         where: { id },
-        data: {
-          value: body.value ? parseFloat(body.value) : null,
-          // status: body.status ? body.status : undefined,
-          congregationId: body.congregationId ? body.congregationId : null,
-          supplierId: body.supplierId ? body.supplierId : null,
-          contributorId: body.contributorId ? body.contributorId : null,
-          talonNumber: body.talonNumber ? body.talonNumber : null,
-          classificationId: body.classificationId ? body.classificationId : null,
-          date: body.date ? launchDate : undefined,
-          type: body.type ? body.type : undefined,
-          description: body.description ? body.description : undefined
-        },
-        // include: {
-        //   congregation: true,
-        //    contributor: true,
-        //    supplier: true
-        // }
+        data: dataToUpdate,
+        include: {
+          congregation: true,
+          contributor: true,
+          supplier: true,
+          classification: true
+        }
       })
       return NextResponse.json(updatedLaunch)
     } catch (error) {

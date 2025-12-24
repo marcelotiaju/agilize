@@ -12,8 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, Search, Check, X, AlertCircle, Tooltip as LucideTooltip, CalendarIcon, User } from 'lucide-react'
-import { format } from 'date-fns'
+import { Plus, Edit, Trash2, Search, Check, X, AlertCircle, Tooltip as LucideTooltip, CalendarIcon, User,Users, Ghost } from 'lucide-react'
+import { format, startOfDay } from 'date-fns'
 import { zonedTimeToUtc } from 'date-fns-tz'
 import { ptBR } from 'date-fns/locale'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -29,6 +29,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { cn } from "@/lib/utils";
 
 // Get the user's timezone
 const USER_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -84,10 +85,13 @@ export default function Launches() {
     supplierName?: string
     classificationId?: string
     classification?: { id: string; name: string }
-    approved?: boolean
+    //approved?: boolean
     summaryId?: string
-    approvedBy?: string
-    approvedAt?: string
+    createdBy?: String
+    cancelledBy?: string
+    approvedByTreasury?: boolean
+    approvedByAccountant?: boolean
+    approvedByDirector?: boolean
   }
 
   // Permissões (mantém nomes existentes)
@@ -107,6 +111,10 @@ export default function Launches() {
   const canApproveMission = session?.user?.canApproveMission
   const canApproveCircle = session?.user?.canApproveCircle
   const canApproveServiceOffer = session?.user?.canApproveServiceOffer
+  const canApproveTreasury = session?.user?.canApproveTreasury
+  const canApproveAccountant = session?.user?.canApproveAccountant
+  const canApproveDirector = session?.user?.canApproveDirector  
+
 
   const [editingLaunch, setEditingLaunch] = useState<Launch | null>(null)
   const [formData, setFormData] = useState({
@@ -269,7 +277,7 @@ export default function Launches() {
       return
     }
 
-    if (name === 'contributorName' || name === 'description') {
+    if (name === 'contributorName' || name === 'description' || name === 'supplierName') {
       const upperValue = value.toUpperCase()
       setFormData((prev) => ({ ...prev, [name]: upperValue }))
       return
@@ -277,6 +285,37 @@ export default function Launches() {
 
     setFormData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
   }
+
+    const toggleField = (name: string) => {
+    setFormData((prev) => {
+      const newValue = !prev[name];
+      
+      // Regra de negócio: Se marcar Anônimo, desmarca o Contribuinte e vice-versa
+      if (name === 'isAnonymous') {
+        return {
+          ...prev,
+          isAnonymous: newValue,
+          isContributorRegistered: newValue ? false : prev.isContributorRegistered,
+          contributorName: newValue ? 'ANÔNIMO' : '',
+          contributorId: newValue ? prev.contributorId : '',
+        };
+      }
+      if (name === 'isContributorRegistered') {
+        return { 
+          ...prev, 
+          isContributorRegistered: newValue, 
+          isAnonymous: false, 
+          contributorName: newValue ? '' : prev.contributorName,
+          contributorId: newValue ? prev.contributorId : '',
+        };
+      }
+      if (name === 'isSupplierRegistered' && newValue) {
+        return { ...prev, isSupplierRegistered: true};
+      }
+
+      return { ...prev, [name]: newValue };
+    });
+  };
 
   const handleSelectChange = (name: string, value: string) => {
     setFormData((prev) => ({ ...prev, [name]: value }))
@@ -288,21 +327,42 @@ export default function Launches() {
     setSalvando(true)
 
     // Validações
-    if (formData.type === 'DIZIMO' && !formData.contributorName && !formData.contributorId) {
-      setError('Nome do contribuinte é obrigatório para lançamentos do tipo Dízimo')
+    if (!formData.congregationId) {
+        alert("Congregação é obrigatória")
+        setSalvando(false)
+        return
+      }
+
+    if (formData.type === "SAIDA" && !formData.classificationId) {
+      alert("Classificação é obrigatória para lançamentos do tipo Saída")
       setSalvando(false)
       return
+    }      
+
+
+    // Comparar apenas a data (ignorando a hora) usando a data já parseada
+    const todayStart = startOfDay(new Date())
+    if (startOfDay(new Date(formData.date)) > todayStart) {
+      setSalvando(false)
+      return alert("Não é permitido lançar com data futura")
     }
 
     // Todos os tipos agora usam campo único "value" (exceto quando a regra específica difere)
     const numericValue = parseFloat(formData.value as any)
     if (['VOTO', 'EBD', 'CAMPANHA', 'DIZIMO', 'SAIDA', 'OFERTA_CULTO', 'MISSAO', 'CIRCULO'].includes(formData.type)) {
       if (!numericValue || Number.isNaN(numericValue)) {
-        setError('O campo Valor deve ser preenchido.')
+        alert('O campo Valor deve ser preenchido.')
         setSalvando(false)
         return
       }
     }
+
+    if (formData.type === 'DIZIMO' && !formData.contributorName && !formData.contributorId) {
+      alert('Nome do contribuinte é obrigatório para lançamentos do tipo Dízimo')
+      setSalvando(false)
+      return
+    }
+
     //var opcoesFormatacao = { timeZone: USER_TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit' } as const;
     //formData.date = formData.date.toLocaleString('pt-BR', opcoesFormatacao).split('/').reverse().join('-');
 
@@ -313,6 +373,11 @@ export default function Launches() {
       // enviar value como número
       const bodyToSend = {
         ...formData,
+        contributorName: formData.isAnonymous ? 'ANÔNIMO' : formData.contributorName,
+        // Limpar contributorId se não for contribuinte cadastrado
+        contributorId: formData.isContributorRegistered ? formData.contributorId : '',
+        // Limpar supplierId se não for fornecedor cadastrado
+        supplierId: formData.isSupplierRegistered ? formData.supplierId : '',
         value: Number(parseFloat(formData.value as any) || 0)
       }
 
@@ -377,7 +442,12 @@ export default function Launches() {
       const response = await fetch(`api/launches/status/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status: 'CANCELED' }),
+        body: JSON.stringify({ 
+          id, 
+          status: 'CANCELED', 
+          cancelledBy: session?.user?.name,
+          cancelledAt: new Date().toISOString()
+        }),
       })
 
       if (response.ok) fetchLaunches()
@@ -407,6 +477,9 @@ export default function Launches() {
           id, 
           status: 'APPROVED',
           approvedBy: session?.user?.name,
+          approvedByTreasury: canApproveTreasury,
+          approvedByAccountant: canApproveAccountant,
+          approvedByDirector: canApproveDirector,
           approvedAt: new Date().toISOString()
         }),
       })
@@ -620,7 +693,7 @@ export default function Launches() {
             </>
           )}
 
-          {launch.status == 'NORMAL' && (canLaunchVote || canLaunchEbd || canLaunchCampaign || canLaunchExpense || canLaunchTithe || canLaunchMission || canLaunchCircle || canLaunchServiceOffer) ? (
+          {launch.status == 'NORMAL' && launch.summaryId == null && (canLaunchVote || canLaunchEbd || canLaunchCampaign || canLaunchExpense || canLaunchTithe || canLaunchMission || canLaunchCircle || canLaunchServiceOffer) ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="outline" size="sm" onClick={() => handleCancel(launch.id)}><Trash2 className="h-4 w-4 mr-1" /></Button>
@@ -697,6 +770,12 @@ export default function Launches() {
                        </div>
                      )}
 
+                  <Tabs defaultValue="dados" className="w-full mt-4">
+                        <TabsList className="grid w-full grid-cols-2 px-4 sm:px-0">
+                          <TabsTrigger value="dados">Dados</TabsTrigger>
+                          <TabsTrigger value="logs">Logs</TabsTrigger>
+                        </TabsList>
+                    <TabsContent value="dados" className="p-4 sm:p-0">
                      <form onSubmit={handleSubmit} className="space-y-2 px-4 sm:px-0">
                        <div className="space-y-2">
                          <div>
@@ -705,7 +784,7 @@ export default function Launches() {
                              label="Buscar Congregação"
                              placeholder="Selecione a Congregação"
                              value={formData.congregationId}
-                             disabled={editingLaunch ? (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null) : false}
+                             disabled={editingLaunch ? (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null) : congregations.length === 1}
                              onChange={(value) => handleSelectChange('congregationId', value)}
                              name="congregationId"
                              data={congregations.map(s => ({ id: s.id, name: s.name }))}
@@ -830,39 +909,50 @@ export default function Launches() {
                            <div>
                              <div className="flex items-center space-x-4">
                                <div className="flex items-center space-x-2">
-                                 <Checkbox
-                                   id="isContributorRegistered"
-                                   name="isContributorRegistered"
-                                   checked={formData.isContributorRegistered}
-                                   disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
-                                   onCheckedChange={(checked) =>
-                                     setFormData(prev => ({ 
-                                       ...prev, 
-                                       isContributorRegistered: checked,
-                                       isAnonymous: false,
-                                       contributorName: checked ? '' : (prev.isAnonymous ? 'ANÔNIMO' : '')
-                                     }))
-                                   }
-                                 />
-                                 <Label htmlFor="isContributorRegistered">Contribuinte cadastrado</Label>
+                                <Button
+                                    type="button"
+                                    variant={formData.isContributorRegistered ? "default" : "outline"}
+                                    size="sm"
+                                    disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
+                                    className={cn(
+                                      "h-9 px-3 transition-all flex items-center gap-2",
+                                      formData.isContributorRegistered 
+                                          ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-800 shadow-sm" 
+                                          : "text-gray-600 border-gray-300 hover:bg-gray-50"
+                                    )}
+                                    onClick={() => toggleField('isContributorRegistered')}
+                                  >
+                                    {formData.isContributorRegistered ? (
+                                      <Check className="h-4 w-4 animate-in zoom-in duration-200" />
+                                    ) : (
+                                      <Users className="h-4 w-4" />
+                                    )}
+                                    Contribuinte cadastrado
+                                  </Button>
                                </div>
 
                                {!formData.isContributorRegistered && (
                                  <div className="flex items-center space-x-2">
-                                   <Checkbox
-                                     id="isAnonymous"
-                                     name="isAnonymous"
-                                     checked={formData.isAnonymous}
-                                     disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
-                                     onCheckedChange={(checked) =>
-                                       setFormData(prev => ({ 
-                                         ...prev, 
-                                         isAnonymous: checked,
-                                         contributorName: checked ? 'ANÔNIMO' : ''
-                                       }))
-                                     }
-                                   />
-                                   <Label htmlFor="isAnonymous">Anônimo</Label>
+                                  <Button
+                                      type="button"
+                                      variant={formData.isAnonymous ? "default" : "outline"}
+                                      size="sm"
+                                      disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
+                                      className={cn(
+                                        "h-9 px-3 transition-all flex items-center gap-2",
+                                        formData.isAnonymous 
+                                          ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-800 shadow-sm" 
+                                          : "text-gray-600 border-gray-300 hover:bg-gray-50"
+                                      )}
+                                      onClick={() => toggleField('isAnonymous')}
+                                    >
+                                      {formData.isAnonymous ? (
+                                        <Check className="h-4 w-4 animate-in zoom-in duration-200" />
+                                      ) : (
+                                        <Ghost className="h-4 w-4" />
+                                      )}
+                                      Anônimo
+                                    </Button>
                                  </div>
                                )}
                              </div>
@@ -891,7 +981,7 @@ export default function Launches() {
                                    value={formData.contributorName ?? ''}
                                    onChange={handleInputChange}
                                    disabled={formData.isAnonymous || (editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null))}
-                                   required={!formData.isAnonymous}
+                                   //required={!formData.isAnonymous}
                                    style={{ fontSize: '16px' }}
                                  />
                                </div>
@@ -903,20 +993,30 @@ export default function Launches() {
                          {['SAIDA'].includes(formData.type) && (
                            <>
                              <div className="flex items-center space-x-2">
-                               <Checkbox
-                                 id="isSupplierRegistered"
-                                 name="isSupplierRegistered"
-                                 checked={formData.isSupplierRegistered}
-                                 disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
-                                 onCheckedChange={(checked) =>
-                                   setFormData(prev => ({ ...prev, isSupplierRegistered: checked }))
-                                 }
-                               />
-                               <Label htmlFor="isSupplierRegistered">Fornecedor cadastrado</Label>
+                              <Button
+                                  type="button"
+                                  variant={formData.isSupplierRegistered ? "default" : "outline"}
+                                  size="sm"
+                                  disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
+                                  className={cn(
+                                    "h-9 px-3 transition-all flex items-center gap-2",
+                                    formData.isSupplierRegistered 
+                                          ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-800 shadow-sm" 
+                                          : "text-gray-600 border-gray-300 hover:bg-gray-50"
+                                  )}
+                                  onClick={() => toggleField('isSupplierRegistered')}
+                                >
+                                  {formData.isSupplierRegistered ? (
+                                    <Check className="h-4 w-4 animate-in zoom-in duration-200" />
+                                  ) : (
+                                    <User className="h-4 w-4" />
+                                  )}
+                                  Fornecedor
+                                </Button>
                              </div>
                              {formData.isSupplierRegistered ? (
                                <div>
-                                 <Label htmlFor="supplierId">Fornecedor</Label>
+                                 <Label htmlFor="supplierId">Fornecedor cadastrado</Label>
                                  <SearchableSelect
                                    key={formData.supplierId}
                                    label="Buscar Fornecedor"
@@ -964,7 +1064,56 @@ export default function Launches() {
                          </DialogFooter>
                        </div>
                      </form>
-                   </DialogContent>
+                    </TabsContent>
+                    <TabsContent value="logs" className="p-4 sm:p-0">
+                      <div className="space-y-4 py-4">
+                        <div className="rounded-md border">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Ação</TableHead>
+                                <TableHead>Usuário</TableHead>
+                                <TableHead>Data/Hora</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {/* Log de Inclusão */}
+                              <TableRow>
+                                <TableCell className="font-medium">Inclusão</TableCell>
+                                <TableCell>{editingLaunch?.createdBy || 'N/A'}</TableCell>
+                                <TableCell>{editingLaunch?.createdAt ? format(new Date(editingLaunch.createdAt), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
+                              </TableRow>
+                              {/* Log de Cancelamento */}
+                              {editingLaunch?.status === 'CANCELED' && (
+                                <TableRow className="text-red-600">
+                                  <TableCell className="font-medium">Cancelamento</TableCell>
+                                  <TableCell>{editingLaunch?.cancelledBy || '-'}</TableCell>
+                                  <TableCell>{editingLaunch?.cancelledAt ? format(new Date(editingLaunch.cancelledAt), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
+                                </TableRow>
+                              )}
+                              {/* Logs de Aprovação Específicos */}
+                              <TableRow>
+                                <TableCell className="font-medium">Tesoureiro</TableCell>
+                                <TableCell>{editingLaunch?.approvedByTreasury || '-'}</TableCell>
+                                <TableCell>{editingLaunch?.approvedAtTreasury ? format(new Date(editingLaunch.approvedAtTreasury), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell className="font-medium">Contador</TableCell>
+                                <TableCell>{editingLaunch?.approvedByAccountant || '-'}</TableCell>
+                                <TableCell>{editingLaunch?.approvedAtAccountant ? format(new Date(editingLaunch.approvedAtAccountant), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell className="font-medium">Dirigente</TableCell>
+                                <TableCell>{editingLaunch?.approvedByDirector || '-'}</TableCell>
+                                <TableCell>{editingLaunch?.approvedAtDirector ? format(new Date(editingLaunch.approvedAtDirector), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
+                              </TableRow>
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+                  </DialogContent>
                  </Dialog>
                </div>
              </div>
@@ -1108,7 +1257,7 @@ export default function Launches() {
                                     launch.status === 'APPROVED' ? 'Aprovado' :
                                       launch.status === 'EXPORTED' ? 'Exportado' : 'Cancelado'}
                                 </Badge>
-                               {launch.approvedBy && (
+                               {/* {launch.approvedBy && (
                                  <Tooltip>
                                    <TooltipTrigger asChild>
                                      <div className="text-xs text-gray-500 cursor-help">ℹ️</div>
@@ -1118,7 +1267,7 @@ export default function Launches() {
                                      <p>{launch.approvedAt ? format(new Date(launch.approvedAt), 'dd/MM/yyyy HH:mm') : ''}</p>
                                    </TooltipContent>
                                  </Tooltip>
-                               )}
+                               )} */}
                              </div>
                             </TableCell>
                             <TableCell>
@@ -1179,7 +1328,7 @@ export default function Launches() {
                                   </>
                                 )}
 
-                                {launch.status == 'NORMAL' && (canLaunchVote || canLaunchEbd || canLaunchCampaign || canLaunchExpense || canLaunchTithe || canLaunchMission || canLaunchCircle || canLaunchServiceOffer) ? (
+                                {launch.status == 'NORMAL' && launch.summaryId == null && (canLaunchVote || canLaunchEbd || canLaunchCampaign || canLaunchExpense || canLaunchTithe || canLaunchMission || canLaunchCircle || canLaunchServiceOffer) ? (
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <Button variant="outline" size="sm" onClick={() => handleCancel(launch.id)}><Trash2 className="h-4 w-4" /></Button>

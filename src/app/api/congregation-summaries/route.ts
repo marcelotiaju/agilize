@@ -116,8 +116,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
 
-  if (!session.user.canManageSummary) {
-    return NextResponse.json({ error: "Sem permissão para gerenciar resumos" }, { status: 403 })
+  if (!session.user.canGenerateSummary) {
+    return NextResponse.json({ error: "Sem permissão para gerar resumos" }, { status: 403 })
   }
 
   try {
@@ -234,7 +234,8 @@ export async function POST(request: NextRequest) {
         accountantApproved: false,
         directorApproved: false,
         totalValue: entradaSummary.total - saidaSummary.total,
-        status: "PENDING"
+        status: "PENDING",
+        createdBy: session.user.name
       }
     })
 
@@ -311,24 +312,112 @@ export async function PUT(request: NextRequest) {
     }
 
     // Verificar permissões para aprovação
-    if (treasurerApproved && !session.user.canApproveTreasury) {
-      return NextResponse.json({ error: "Sem permissão para aprovar como tesoureiro" }, { status: 403 })
+    // if (treasurerApproved && !session.user.canApproveTreasury) {
+    //   return NextResponse.json({ error: "Sem permissão para aprovar como tesoureiro" }, { status: 403 })
+    // }
+    // if (accountantApproved && !session.user.canApproveAccountant) {
+    //   return NextResponse.json({ error: "Sem permissão para aprovar como contador" }, { status: 403 })
+    // }
+    // if (directorApproved && !session.user.canApproveDirector) {
+    //   return NextResponse.json({ error: "Sem permissão para aprovar como dirigente" }, { status: 403 })
+    // }
+
+    let approvedByTreasury = null
+    let approvedAtTreasury = null
+    let approvedByAccountant = null
+    let approvedAtAccountant = null
+    let approvedByDirector = null
+    let approvedAtDirector = null
+
+    if (treasurerApproved && session.user.canApproveTreasury) {
+          approvedByTreasury = session.user?.name
+          approvedAtTreasury = new Date()
     }
-    if (accountantApproved && !session.user.canApproveAccountant) {
-      return NextResponse.json({ error: "Sem permissão para aprovar como contador" }, { status: 403 })
+    if (accountantApproved && session.user.canApproveAccountant) {
+          approvedByAccountant = session.user?.name
+          approvedAtAccountant = new Date()
     }
-    if (directorApproved && !session.user.canApproveDirector) {
-      return NextResponse.json({ error: "Sem permissão para aprovar como dirigente" }, { status: 403 })
+    if (directorApproved && session.user.canApproveDirector) {
+          approvedByDirector = session.user?.name
+          approvedAtDirector = new Date()
     }
 
-    if(directorApproved) {
+    if(treasurerApproved && session.user.canApproveTreasury) {
       await prisma.launch.updateMany({
         where: {
           summaryId: id,
           status: "NORMAL"
         },
         data: {
+          approvedByTreasury: approvedByTreasury || null,
+          approvedAtTreasury: approvedAtTreasury || null,
+        }
+      })
+    } 
+
+    if(!treasurerApproved && session.user.canApproveTreasury) {
+      await prisma.launch.updateMany({
+        where: {
+          summaryId: id,
+          status: "NORMAL"
+        },
+        data: {
+          approvedByTreasury: null,
+          approvedAtTreasury: null,
+        }
+      })
+    } 
+
+    if(accountantApproved && session.user.canApproveAccountant) {
+      await prisma.launch.updateMany({
+        where: {
+          summaryId: id,
+          status: "NORMAL"
+        },
+        data: {
+          approvedByAccountant: approvedByAccountant || null,
+          approvedAtAccountant: approvedAtAccountant || null,
+        }
+      })
+    } 
+    
+      if(!accountantApproved && session.user.canApproveAccountant) {
+      await prisma.launch.updateMany({
+        where: {
+          summaryId: id,
+          status: "NORMAL"
+        },
+        data: {
+          approvedByAccountant: null,
+          approvedAtAccountant: null,
+        }
+      })
+    } 
+
+    if(directorApproved && session.user.canApproveDirector) {
+      await prisma.launch.updateMany({
+        where: {
+          summaryId: id,
+          status: "NORMAL"
+        },
+        data: {
+          status: "APPROVED",
+          approvedByDirector: approvedByDirector || null,
+          approvedAtDirector: approvedAtDirector || null
+        }
+      })
+    } 
+    
+    if(!directorApproved && session.user.canApproveDirector) {
+      await prisma.launch.updateMany({
+        where: {
+          summaryId: id,
           status: "APPROVED"
+        },
+        data: {
+          status: "NORMAL",
+          approvedByDirector: null,
+          approvedAtDirector: null
         }
       })
     }
@@ -343,7 +432,14 @@ export async function PUT(request: NextRequest) {
         accountantApproved: accountantApproved,
         directorApproved: directorApproved,
         status: directorApproved ? "APPROVED" : "PENDING",
-        updatedAt: new Date()}
+        updatedAt: new Date(),
+        approvedByTreasury: body.approvedByTreasury || null,
+        approvedAtTreasury: body.approvedAtTreasury || null,
+        approvedByAccountant: body.approvedByAccountant || null,
+        approvedAtAccountant: body.approvedAtAccountant || null,
+        approvedByDirector: body.approvedByDirector || null,
+        approvedAtDirector: body.approvedAtDirector || null
+      }
     })
     //console.log("Resumo atualizado:", updatedSummary)
     return NextResponse.json(updatedSummary, { status: 200 })
@@ -391,6 +487,22 @@ export async function DELETE(request: NextRequest) {
     if (!userCongregation) {
       return NextResponse.json({ error: "Acesso não autorizado a esta congregação" }, { status: 403 })
     }
+
+    await prisma.launch.updateMany({
+        where: {
+          summaryId: id,
+          status: "NORMAL"
+        },
+        data: {
+          //status: "NORMAL",
+          approvedByTreasury: null,
+          approvedAtTreasury: null,
+          approvedByAccountant: null,
+          approvedAtAccountant: null,
+          approvedByDirector: null,
+          approvedAtDirector: null
+        }
+      })
 
     await prisma.congregationSummary.delete({
       where: { id }

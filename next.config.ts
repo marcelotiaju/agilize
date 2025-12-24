@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
     //  experimental: {
     //     optimizeCss: false,
     // },
-    deploymentId: '191220252211',
+    //deploymentId: '201220250936',
 };
 
 export default nextConfig;
