@@ -1030,7 +1030,7 @@ export default function CongregationSummary() {
                               }}
                             >
                               {editFormData.treasurerApproved ? (
-                                <><Check className="mr-2 h-4 w-4" /> Aprovado</>
+                                <><Check className="mr-2 h-4 w-4" /> Tesoureiro</>
                               ) : (
                                 "Aprovar Tesoureiro"
                               )}
@@ -1059,7 +1059,7 @@ export default function CongregationSummary() {
                               }}
                             >
                               {editFormData.accountantApproved ? (
-                                <><Check className="mr-2 h-4 w-4" /> Aprovado</>
+                                <><Check className="mr-2 h-4 w-4" /> Contador</>
                               ) : (
                                 "Aprovar Contador"
                               )}
@@ -1088,7 +1088,7 @@ export default function CongregationSummary() {
                               }}
                             >
                               {editFormData.directorApproved ? (
-                                <><Check className="mr-2 h-4 w-4" /> Aprovado</>
+                                <><Check className="mr-2 h-4 w-4" /> Dirigente</>
                               ) : (
                                 "Aprovar Dirigente"
                               )}

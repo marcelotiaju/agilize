@@ -742,7 +742,7 @@ export default function Launches() {
                        Novo
                      </Button>
                    </DialogTrigger>
-                   <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto p-0 sm:p-6 fixed" style={{ fontSize: '16px' }}>
+                   <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto overflow-x-hidden p-0 sm:p-6 fixed" style={{ fontSize: '16px' }}>
                      <DialogHeader>
                        <DialogTitle>{editingLaunch ? 'Editar' : 'Novo'}</DialogTitle>
                        <DialogDescription asChild style={{ fontSize: '14px' }}>
@@ -775,8 +775,8 @@ export default function Launches() {
                           <TabsTrigger value="dados">Dados</TabsTrigger>
                           <TabsTrigger value="logs">Logs</TabsTrigger>
                         </TabsList>
-                    <TabsContent value="dados" className="p-4 sm:p-0">
-                     <form onSubmit={handleSubmit} className="space-y-2 px-4 sm:px-0">
+                    <TabsContent value="dados" className="p-4 sm:p-0 overflow-x-hidden">
+                     <form onSubmit={handleSubmit} className="space-y-2 px-4 sm:px-0 w-full max-w-full overflow-x-hidden">
                        <div className="space-y-2">
                          <div>
                            <Label htmlFor="congregationId">Congregação</Label>
@@ -793,15 +793,15 @@ export default function Launches() {
                            />
                          </div>
 
-                         <div className="grid grid-cols-3 gap-1">
-                           <div>
+                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                           <div className="w-full">
                              <Label htmlFor="type">Tipo</Label>
                              <Select
                                value={formData.type}
                                onValueChange={(value) => handleSelectChange('type', value)}
                                disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
                              >
-                               <SelectTrigger>
+                               <SelectTrigger className="w-full">
                                  <SelectValue />
                                </SelectTrigger>
                                <SelectContent>
@@ -818,7 +818,7 @@ export default function Launches() {
                            </div>
 
                            {formData.type === 'SAIDA' && (
-                             <div>
+                             <div className="w-full">
                                <Label htmlFor="classificationId">Classificação</Label>
                                <Select
                                  key={formData.classificationId}
@@ -826,13 +826,20 @@ export default function Launches() {
                                  onValueChange={(value) => handleSelectChange('classificationId', value)}
                                  disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
                                >
-                                 <SelectTrigger>
+                                 <SelectTrigger className="w-full">
                                    <SelectValue placeholder="Selecione uma classificação" />
                                  </SelectTrigger>
-                                 <SelectContent>
+                                 <SelectContent 
+                                   className="max-w-[calc(100vw-3rem)] sm:max-w-[var(--radix-select-trigger-width)] max-h-[300px]"
+                                   position="popper"
+                                 >
                                    {classifications.map((classification) => (
-                                     <SelectItem key={classification.id} value={classification.id}>
-                                       {classification.description}
+                                     <SelectItem 
+                                       key={classification.id} 
+                                       value={classification.id} 
+                                       className="break-words whitespace-normal max-w-full"
+                                     >
+                                       <span className="block max-w-full break-words">{classification.description}</span>
                                      </SelectItem>
                                    ))}
                                  </SelectContent>
