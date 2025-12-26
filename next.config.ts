@@ -8,10 +8,10 @@ const nextConfig: NextConfig = {
   typescript: {
      ignoreBuildErrors: true,
   },
-    //  experimental: {
-    //     optimizeCss: false,
-    // },
-    //deploymentId: '201220250936',
+     experimental: {
+        optimizeCss: false,
+    },
+    deploymentId: '261220251612',
 };
 
 export default nextConfig;
