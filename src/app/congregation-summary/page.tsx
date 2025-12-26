@@ -1168,7 +1168,7 @@ export default function CongregationSummary() {
                     </TableBody>
                   </Table>
                 </TabsContent>
-                <TabsContent value="logs" className="max-w-[400px] md:max-w-[600px] max-h-[50vh] h-[50vh] min-h-0">
+                <TabsContent value="logs" className="max-w-[300px] md:max-w-[600px] max-h-[50vh] h-[50vh] min-h-0">
                       <div className="rounded-md border mt-4">
                         <Table>
                           <TableHeader>

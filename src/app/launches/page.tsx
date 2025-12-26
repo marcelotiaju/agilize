@@ -913,16 +913,16 @@ export default function Launches() {
 
                          {/* Dízimo: contribuinte */}
                          {formData.type === 'DIZIMO' && (
-                           <div>
-                             <div className="flex items-center space-x-4">
-                               <div className="flex items-center space-x-2">
+                           <div className="w-full">
+                             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
+                               <div className="flex items-center space-x-2 w-full sm:w-auto">
                                 <Button
                                     type="button"
                                     variant={formData.isContributorRegistered ? "default" : "outline"}
                                     size="sm"
                                     disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
                                     className={cn(
-                                      "h-9 px-3 transition-all flex items-center gap-2",
+                                      "h-9 px-3 transition-all flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start",
                                       formData.isContributorRegistered 
                                           ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-800 shadow-sm" 
                                           : "text-gray-600 border-gray-300 hover:bg-gray-50"
@@ -930,23 +930,23 @@ export default function Launches() {
                                     onClick={() => toggleField('isContributorRegistered')}
                                   >
                                     {formData.isContributorRegistered ? (
-                                      <Check className="h-4 w-4 animate-in zoom-in duration-200" />
+                                      <Check className="h-4 w-4 animate-in zoom-in duration-200 shrink-0" />
                                     ) : (
-                                      <Users className="h-4 w-4" />
+                                      <Users className="h-4 w-4 shrink-0" />
                                     )}
-                                    Contribuinte cadastrado
+                                    <span className="text-sm sm:text-base">Contribuinte cadastrado</span>
                                   </Button>
                                </div>
 
                                {!formData.isContributorRegistered && (
-                                 <div className="flex items-center space-x-2">
+                                 <div className="flex items-center space-x-2 w-full sm:w-auto">
                                   <Button
                                       type="button"
                                       variant={formData.isAnonymous ? "default" : "outline"}
                                       size="sm"
                                       disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
                                       className={cn(
-                                        "h-9 px-3 transition-all flex items-center gap-2",
+                                        "h-9 px-3 transition-all flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start",
                                         formData.isAnonymous 
                                           ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-800 shadow-sm" 
                                           : "text-gray-600 border-gray-300 hover:bg-gray-50"
@@ -954,18 +954,18 @@ export default function Launches() {
                                       onClick={() => toggleField('isAnonymous')}
                                     >
                                       {formData.isAnonymous ? (
-                                        <Check className="h-4 w-4 animate-in zoom-in duration-200" />
+                                        <Check className="h-4 w-4 animate-in zoom-in duration-200 shrink-0" />
                                       ) : (
-                                        <Ghost className="h-4 w-4" />
+                                        <Ghost className="h-4 w-4 shrink-0" />
                                       )}
-                                      Anônimo
+                                      <span className="text-sm sm:text-base">Anônimo</span>
                                     </Button>
                                  </div>
                                )}
                              </div>
 
                              {formData.isContributorRegistered ? (
-                               <div className="mt-2">
+                               <div className="mt-2 w-full">
                                  <Label htmlFor="contributorId">Contribuinte</Label>
                                  <SearchableSelect
                                    key={formData.contributorId}
@@ -980,7 +980,7 @@ export default function Launches() {
                                  />
                                </div>
                              ) : (
-                               <div className="mt-2">
+                               <div className="mt-2 w-full">
                                  <Label htmlFor="contributorName">Nome do Contribuinte</Label>
                                  <Input
                                    id="contributorName"
@@ -988,6 +988,7 @@ export default function Launches() {
                                    value={formData.contributorName ?? ''}
                                    onChange={handleInputChange}
                                    disabled={formData.isAnonymous || (editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null))}
+                                   className="w-full"
                                    //required={!formData.isAnonymous}
                                    style={{ fontSize: '16px' }}
                                  />
