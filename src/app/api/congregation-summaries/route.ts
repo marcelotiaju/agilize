@@ -456,7 +456,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
 
-  if (!session.user.canManageSummary) {
+  if (!session.user.canGenerateSummary) {
     return NextResponse.json({ error: "Sem permissão para excluir resumos" }, { status: 403 })
   }
 

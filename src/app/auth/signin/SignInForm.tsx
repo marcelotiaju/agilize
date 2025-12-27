@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
 import Image from 'next/image';
+import packageJson from '../../../../package.json';
 
 export default function SignInForm() {
   const [login, setLogin] = useState('')
@@ -112,6 +113,9 @@ export default function SignInForm() {
           </Button>
         </form>
       </CardContent>
+      <footer className="text-xs text-gray-500 pr-6 pb-2 text-right">
+        Versão do Sistema: {packageJson.version}
+      </footer>
     </Card>
   );
 }

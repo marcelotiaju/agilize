@@ -1,0 +1,13 @@
+{
+  "header": "# Histórico de Alterações\n",
+  "types": [
+    {"type": "feat", "section": "✨ Novas Funcionalidades"},
+    {"type": "fix", "section": "🐛 Correções de Erros"},
+    {"type": "chore", "section": "🚀 Tarefas de Manutenção"},
+    {"type": "docs", "section": "📚 Documentação"},
+    {"type": "style", "section": "🎨 Estilização"},
+    {"type": "refactor", "section": "♻️ Refatoração"},
+    {"type": "perf", "section": "⚡ Performance"},
+    {"type": "test", "section": "✅ Testes"}
+  ]
+}

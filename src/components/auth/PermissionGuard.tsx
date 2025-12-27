@@ -22,6 +22,7 @@ interface PermissionGuardProps {
     defaultPage?: boolean,
     canListSummary?: boolean,
     canGenerateSummary?: boolean,
+    canManageUsers?: boolean,
     
   }
   requireAuth?: boolean
