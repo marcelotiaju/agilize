@@ -9,9 +9,9 @@ const nextConfig: NextConfig = {
      ignoreBuildErrors: true,
   },
      experimental: {
-        optimizeCss: false,
+        optimizeCss: true,
     },
-    deploymentId: '261220251612',
+   //  deploymentId: '261220251612',
 };
 
 export default nextConfig;
