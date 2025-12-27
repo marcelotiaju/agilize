@@ -1,5 +1,12 @@
 # Histórico de Alterações
 
+### [1.0.2](https://github.com/marcelotiaju/agilize/compare/v1.0.1...v1.0.2) (2025-12-27)
+
+
+### 🐛 Correções de Erros
+
+* Ajustes de Bugs 2 ([cd97ff2](https://github.com/marcelotiaju/agilize/commit/cd97ff2298077afd3907eabaacbf0d20a1e4ae06))
+
 ### 1.0.1 (2025-12-27)
 
 
