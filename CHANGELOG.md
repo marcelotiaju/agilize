@@ -1,5 +1,12 @@
 # Histórico de Alterações
 
+### [1.0.3](https://github.com/marcelotiaju/agilize/compare/v1.0.2...v1.0.3) (2025-12-28)
+
+
+### 🐛 Correções de Erros
+
+* Ajustes versão nextjs ([5557c1d](https://github.com/marcelotiaju/agilize/commit/5557c1d767fdca73d048977926b71e2cebd5c2f3))
+
 ### [1.0.2](https://github.com/marcelotiaju/agilize/compare/v1.0.1...v1.0.2) (2025-12-27)
 
 
