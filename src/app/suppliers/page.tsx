@@ -65,15 +65,24 @@ export default function Suppliers() {
   }
 
 
+  // Função para remover acentos
+  const removeAccents = (str: string): string => {
+    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  }
+
   // Filtrar fornecedores com base no termo de pesquisa
   const filteredSuppliers = useMemo(() => {
     if (!searchTerm) return suppliers
+    const normalizedSearchTerm = removeAccents(searchTerm.toLowerCase())
     
-    return suppliers.filter(supplier =>
-      supplier.razaoSocial.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      supplier.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (supplier.cpfCnpj && supplier.cpfCnpj.toLowerCase().includes(searchTerm.toLowerCase()))
-    )
+    return suppliers.filter(supplier => {
+      const normalizedRazaoSocial = removeAccents(supplier.razaoSocial.toLowerCase())
+      const normalizedCode = removeAccents(supplier.code.toLowerCase())
+      const normalizedCpfCnpj = supplier.cpfCnpj ? removeAccents(supplier.cpfCnpj.toLowerCase()) : ''
+      return normalizedRazaoSocial.includes(normalizedSearchTerm) ||
+             normalizedCode.includes(normalizedSearchTerm) ||
+             (supplier.cpfCnpj && normalizedCpfCnpj.includes(normalizedSearchTerm))
+    })
   }, [suppliers, searchTerm])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -129,14 +129,22 @@ export default function Congregations() {
     }
   }
 
+  // Função para remover acentos
+  const removeAccents = (str: string): string => {
+    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  }
+
   // Filtrar congregações com base no termo de pesquisa
   const filteredCongregations = useMemo(() => {
     if (!searchTerm) return congregations
+    const normalizedSearchTerm = removeAccents(searchTerm.toLowerCase())
     
-    return congregations.filter(congregation =>
-      congregation.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      congregation.code.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    return congregations.filter(congregation => {
+      const normalizedName = removeAccents(congregation.name.toLowerCase())
+      const normalizedCode = removeAccents(congregation.code.toLowerCase())
+      return normalizedName.includes(normalizedSearchTerm) ||
+             normalizedCode.includes(normalizedSearchTerm)
+    })
   }, [congregations, searchTerm])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

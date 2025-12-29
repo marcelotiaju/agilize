@@ -23,6 +23,7 @@ interface Congregation {
 export default function Export() {
   const { data: session } = useSession()
   const [congregations, setCongregations] = useState<Congregation[]>([])
+  const [congregationFilter, setCongregationFilter] = useState('')
   const [formData, setFormData] = useState({
     startDate: format(new Date(new Date().setDate(new Date().getDate() - 1)), 'yyyy-MM-dd'),
     endDate: format(new Date(new Date().setDate(new Date().getDate() - 1)), 'yyyy-MM-dd'),
@@ -73,11 +74,35 @@ export default function Export() {
     })
   }
 
+  // Função para remover acentos
+  const removeAccents = (str: string): string => {
+    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  }
+
+  const filteredCongregations = congregations.filter(congregation => {
+    const normalizedName = removeAccents(congregation.name.toLowerCase())
+    const normalizedFilter = removeAccents(congregationFilter.toLowerCase())
+    return normalizedName.includes(normalizedFilter)
+  })
+
   const handleSelectAll = (checked: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      congregationIds: checked ? congregations.map(c => c.id) : []
-    }))
+    setFormData(prev => {
+      const filteredIds = filteredCongregations.map(c => c.id)
+      if (checked) {
+        // Adicionar os IDs filtrados que ainda não estão selecionados
+        const newIds = filteredIds.filter(id => !prev.congregationIds.includes(id))
+        return {
+          ...prev,
+          congregationIds: [...prev.congregationIds, ...newIds]
+        }
+      } else {
+        // Remover apenas os IDs filtrados
+        return {
+          ...prev,
+          congregationIds: prev.congregationIds.filter(id => !filteredIds.includes(id))
+        }
+      }
+    })
   }
 
   const handleTypeChange = (type: string, checked: boolean) => {
@@ -142,7 +167,8 @@ export default function Export() {
     }
   }
 
-  const allSelected = congregations.length > 0 && formData.congregationIds.length === congregations.length
+  const allFilteredSelected = filteredCongregations.length > 0 && 
+    filteredCongregations.every(c => formData.congregationIds.includes(c.id))
   
   const handleStatusChange = (status: string, checked: boolean) => {
   setFormData(prev => {
@@ -304,27 +330,47 @@ export default function Export() {
                      </div>
 
                     <div>
+                      <div className="mb-2">
+                        <Label htmlFor="congregationFilter" className="mb-2 block">Filtrar por nome</Label>
+                        <Input
+                          id="congregationFilter"
+                          type="text"
+                          placeholder="Ex: SETOR 1"
+                          value={congregationFilter}
+                          onChange={(e) => setCongregationFilter(e.target.value)}
+                        />
+                      </div>
                       <div className="flex items-center space-x-2 mb-2">
                         <Checkbox
                           id="selectAll"
-                          checked={allSelected}
+                          checked={allFilteredSelected}
                           onCheckedChange={handleSelectAll}
                         />
-                        <Label htmlFor="selectAll">Selecionar todas as congregações</Label>
+                        <Label htmlFor="selectAll">
+                          {congregationFilter 
+                            ? `Selecionar todas as congregações filtradas (${filteredCongregations.length})`
+                            : 'Selecionar todas as congregações'}
+                        </Label>
                       </div>
                       <div className="space-y-2 max-h-60 overflow-y-auto p-2 border rounded-md">
-                        {congregations.map((congregation) => (
-                          <div key={congregation.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`congregation-${congregation.id}`}
-                              checked={formData.congregationIds.includes(congregation.id)}
-                              onCheckedChange={(checked) => handleCongregationChange(congregation.id, checked as boolean)}
-                            />
-                            <Label htmlFor={`congregation-${congregation.id}`}>
-                              {congregation.name}
-                            </Label>
+                        {filteredCongregations.length > 0 ? (
+                          filteredCongregations.map((congregation) => (
+                            <div key={congregation.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`congregation-${congregation.id}`}
+                                checked={formData.congregationIds.includes(congregation.id)}
+                                onCheckedChange={(checked) => handleCongregationChange(congregation.id, checked as boolean)}
+                              />
+                              <Label htmlFor={`congregation-${congregation.id}`}>
+                                {congregation.name}
+                              </Label>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-sm text-gray-500 text-center py-4">
+                            Nenhuma congregação encontrada
                           </div>
-                        ))}
+                        )}
                       </div>
                     </div>
 

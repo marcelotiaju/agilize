@@ -20,7 +20,8 @@ import {
   Building2,
   List,
   User,
-  PieChart 
+  PieChart, 
+  UserPen
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -32,7 +33,22 @@ export function Sidebar() {
   const pathname = usePathname()
   const { data: session } = useSession()
 
-      const canAccessLaunches = ['canLaunchEntry', 'canLaunchTithe', 'canLaunchExpense', 'canApproveEntry', 'canApproveTithe', 'canApproveExpense'];
+      const canAccessLaunches = ['canLaunchVote',
+         'canLaunchEbd', 
+         'canLaunchCampaign',
+         'canLaunchTithe',
+         'canLaunchMission',
+         'canLaunchCircle',
+         'canLaunchServiceOffer',
+         'canLaunchExpense',
+         'canApproveVote',
+         'canApproveEbd', 
+         'canApproveCampaign',
+         'canApproveTithe',
+         'canApproveMission',
+         'canApproveCircle',
+         'canApproveServiceOffer',
+         'canApproveExpense'];
       const canAccesSummary = ['canListSummary', 'canGenerateSummary'];
     const hasLaunchPermission = canAccessLaunches.find(perm => session?.user?.[perm]);
     const hasSummaryPermission = canAccesSummary.find(perm => session?.user?.[perm]);
@@ -45,7 +61,7 @@ const navigation = [
     { name: 'Fornecedores', href: '/suppliers', icon: Building2, permission: 'canCreate' },
     { name: 'Classificações', href: '/classifications', icon: List, permission: 'canCreate' },
     { name: 'Usuários', href: '/users', icon: UserCheck, permission: 'canManageUsers' },
-    { name: 'Perfis', href: '/profiles', icon: UserCheck, permission: 'canManageUsers' },
+    { name: 'Perfis', href: '/profiles', icon: UserPen, permission: 'canManageUsers' },
     { name: 'Acesso', href: '/profile', icon: User }, // Adicione esta linha
     { name: 'Exportar Dados', href: '/export', icon: Download, permission: 'canExport' },
     { name: 'Excluir Histórico', href: '/delete-history', icon: Trash2, permission: 'canDelete' },

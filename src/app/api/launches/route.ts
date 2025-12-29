@@ -5,6 +5,11 @@ import { getServerSession } from "next-auth/next";
 import { zonedTimeToUtc, utcToZonedTime } from 'date-fns-tz';
 import { startOfDay, endOfDay } from 'date-fns';
 
+// Função para remover acentos (normalizar texto)
+function removeAccents(str: string): string {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+}
+
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
 
@@ -89,16 +94,58 @@ export async function GET(request: NextRequest) {
       // const dataStringUTC = startDate.replace(' ', 'T') + 'Z';
       // const dataObjeto = new Date(dataStringUTC);
 
-    if (searchTerm ) {
-      where.OR = [
-        { description: { contains: searchTerm } },
-        { talonNumber: { contains: searchTerm } },
-        { contributor: { name: { contains: searchTerm } } },
-        { supplier: { razaoSocial: { contains: searchTerm } } },
-        { supplierName: { contains: searchTerm } },
-        { contributorName: { contains: searchTerm } },
-        // { type: { contains: searchTerm } }
-      ]
+    // Se houver termo de busca, aplicar filtro normalizado
+    if (searchTerm) {
+      const normalizedSearchTerm = removeAccents(searchTerm.toLowerCase())
+      
+      // Buscar todos os lançamentos que atendem aos filtros (data, congregação, etc)
+      // sem paginação para poder filtrar por texto normalizado
+      const allLaunches = await prisma.launch.findMany({
+        where,
+        include: {
+          congregation: true,
+          contributor: true,
+          supplier: true,
+          classification: true
+        },
+        orderBy: [
+          { date: 'desc' },
+          { type: 'asc' },
+          { createdAt: 'desc' }
+        ]
+      })
+      
+      // Filtrar resultados normalizando os textos
+      const filteredLaunches = allLaunches.filter(launch => {
+        const fieldsToSearch = [
+          launch.description || '',
+          launch.talonNumber || '',
+          launch.contributorName || '',
+          launch.supplierName || '',
+          launch.contributor?.name || '',
+          launch.supplier?.razaoSocial || ''
+        ]
+        
+        return fieldsToSearch.some(field => {
+          const normalizedField = removeAccents(field.toLowerCase())
+          return normalizedField.includes(normalizedSearchTerm)
+        })
+      })
+      
+      // Aplicar paginação manualmente
+      const paginatedLaunches = filteredLaunches.slice(skip, skip + limit)
+      const totalCount = filteredLaunches.length
+      const totalPages = Math.ceil(totalCount / limit)
+      
+      return NextResponse.json({
+        launches: paginatedLaunches,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalCount,
+          limit
+        }
+      })
     }
  //console.log(`SearchTerm ${searchTerm}`)
 
@@ -112,8 +159,8 @@ export async function GET(request: NextRequest) {
     //   ]
     // }
 
-    // Buscar lançamentos com paginação
-      const [launches, totalCount] = await Promise.all([
+    // Se não houver termo de busca, fazer busca normal com paginação
+    const [launches, totalCount] = await Promise.all([
       prisma.launch.findMany({
         where,
         include: {
@@ -123,9 +170,9 @@ export async function GET(request: NextRequest) {
           classification: true
         },
         orderBy: [
-          { date: 'desc' }, // Primeiro, ordena pela data (mais recente primeiro)
-          { type: 'asc' },  // Em seguida, ordena pelo tipo (ordem alfabética)
-          { createdAt: 'desc' }    // Por fim, usa o ID como critério de desempate (garante consistência)
+          { date: 'desc' },
+          { type: 'asc' },
+          { createdAt: 'desc' }
         ],
         skip,
         take: limit
@@ -266,19 +313,83 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Nome do contribuinte é obrigatório para lançamentos do tipo Dízimo" }, { status: 400 })
     }
 
-
-    // const existingLaunch = await prisma.launch.findFirst({
-    //   where: {
-    //     congregationId,
-    //     date: launchDate,
-    //     type,
-    //     status: "NORMAL"
-    //   }
-    // })
-
-    // if (existingLaunch) {
-    //   return NextResponse.json({ error: "Já existe um lançamento deste tipo para esta data" }, { status: 400 })
-    // }
+    // Validação de duplicidade baseada no tipo de lançamento
+    const numericValue = parseFloat(value) || 0
+    
+    // Para DÍZIMO: verificar Congregação + Data + Valor + Contribuinte
+    if (type === "DIZIMO") {
+      const whereClause: any = {
+        congregationId,
+        date: launchDate,
+        type: "DIZIMO",
+        value: numericValue,
+        status: { in: ["NORMAL", "APPROVED"] } // Apenas status que permitem duplicidade
+      }
+      
+      // Verificar por contributorId ou contributorName
+      if (isContributorRegistered && contributorId) {
+        whereClause.contributorId = contributorId
+      } else if (contributorName) {
+        whereClause.contributorName = contributorName
+        whereClause.contributorId = null // Garantir que não é contribuinte cadastrado
+      }
+      
+      const existingLaunch = await prisma.launch.findFirst({
+        where: whereClause
+      })
+      
+      if (existingLaunch) {
+        return NextResponse.json({ 
+          error: "Já existe um lançamento de dízimo com a mesma congregação, data, valor e contribuinte" 
+        }, { status: 400 })
+      }
+    }
+    // Para SAÍDA: verificar Congregação + Data + Valor + Fornecedor
+    else if (type === "SAIDA") {
+      const whereClause: any = {
+        congregationId,
+        date: launchDate,
+        type: "SAIDA",
+        value: numericValue,
+        status: { in: ["NORMAL", "APPROVED"] }
+      }
+      
+      // Verificar por supplierId ou supplierName
+      if (isSupplierRegistered && supplierId) {
+        whereClause.supplierId = supplierId
+      } else if (supplierName) {
+        whereClause.supplierName = supplierName
+        whereClause.supplierId = null // Garantir que não é fornecedor cadastrado
+      }
+      
+      const existingLaunch = await prisma.launch.findFirst({
+        where: whereClause
+      })
+      
+      if (existingLaunch) {
+        return NextResponse.json({ 
+          error: "Já existe um lançamento de saída com a mesma congregação, data, valor e fornecedor" 
+        }, { status: 400 })
+      }
+    }
+    // Para os demais tipos (VOTO, EBD, CAMPANHA, MISSAO, CIRCULO, OFERTA_CULTO): verificar Congregação + Data + Valor
+    else {
+      const existingLaunch = await prisma.launch.findFirst({
+        where: {
+          congregationId,
+          date: launchDate,
+          type,
+          value: numericValue,
+          status: { in: ["NORMAL", "APPROVED"] }
+        }
+      })
+      
+      if (existingLaunch) {
+        return NextResponse.json({ 
+          error: `Já existe um lançamento do tipo ${type} com a mesma congregação, data e valor` 
+        }, { status: 400 })
+      }
+    }
 
     // Se for dízimo com contribuinte não cadastrado, criar o contribuinte
     // let finalContributorId = contributorId
@@ -388,6 +499,21 @@ export async function PUT(request: NextRequest) {
     const timezone = 'America/Sao_Paulo'
     const dataToUpdate: any = {}
 
+    // Função helper para parse de data (reutilizar mesma estratégia do POST)
+    function parseDateToUtcInstantLocal(dateStr: string, timezoneLocal = timezone, endOfDayFlag = false): Date {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        return zonedTimeToUtc(`${dateStr}T${endOfDayFlag ? '23:59:59.999' : '00:00:00'}`, timezoneLocal)
+      }
+      if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+        const [dd, mm, yyyy] = dateStr.split('/')
+        const iso = `${yyyy}-${mm}-${dd}`
+        return zonedTimeToUtc(`${iso}T${endOfDayFlag ? '23:59:59.999' : '00:00:00'}`, timezoneLocal)
+      }
+      const parsed = new Date(dateStr)
+      if (!isNaN(parsed.getTime())) return parsed
+      throw new Error('Invalid date format')
+    }
+
     if (status !== undefined) dataToUpdate.status = status
     if (updateData.value !== undefined) {
       // 1. Garantir que é string e trata a vírgula para decimal
@@ -420,30 +546,114 @@ export async function PUT(request: NextRequest) {
       dataToUpdate.talonNumber = updateData.talonNumber || null
     }
     if (updateData.date !== undefined && updateData.date !== null && updateData.date !== '') {
-      // reuse same parsing strategy as POST (support yyyy-MM-dd, dd/MM/yyyy, ISO)
-      function parseDateToUtcInstantLocal(dateStr: string, timezoneLocal = timezone, endOfDayFlag = false): Date {
-        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-          return zonedTimeToUtc(`${dateStr}T${endOfDayFlag ? '23:59:59.999' : '00:00:00'}`, timezoneLocal)
-        }
-        if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
-          const [dd, mm, yyyy] = dateStr.split('/')
-          const iso = `${yyyy}-${mm}-${dd}`
-          return zonedTimeToUtc(`${iso}T${endOfDayFlag ? '23:59:59.999' : '00:00:00'}`, timezoneLocal)
-        }
-        const parsed = new Date(dateStr)
-        if (!isNaN(parsed.getTime())) return parsed
-        throw new Error('Invalid date format')
-      }
       try {
         dataToUpdate.date = parseDateToUtcInstantLocal(updateData.date)
-        //console.log(dataToUpdate)
-        //const launchDate = parseDateToUtcInstant(date, 'America/Sao_Paulo', false);
       } catch (err) {
         return NextResponse.json({ error: "Formato de data inválido" }, { status: 400 })
       }
     }
     if (updateData.type !== undefined) dataToUpdate.type = updateData.type
     if (updateData.description !== undefined) dataToUpdate.description = updateData.description
+    if (updateData.contributorName !== undefined) {
+      dataToUpdate.contributorName = updateData.contributorName || null
+    }
+    if (updateData.supplierName !== undefined) {
+      dataToUpdate.supplierName = updateData.supplierName || null
+    }
+
+    // Validação de duplicidade na atualização (excluindo o próprio registro)
+    // Usar os valores atualizados ou os valores atuais do lançamento
+    const finalType = updateData.type || launch.type
+    let finalDate = launch.date
+    if (updateData.date !== undefined && updateData.date !== null && updateData.date !== '') {
+      try {
+        finalDate = parseDateToUtcInstantLocal(updateData.date)
+      } catch (err) {
+        // Se houver erro no parse, usar a data atual
+      }
+    }
+    const finalValue = dataToUpdate.value !== undefined ? dataToUpdate.value : launch.value
+    const finalCongregationId = updateData.congregationId || launch.congregationId
+    const finalContributorId = updateData.contributorId !== undefined ? (updateData.contributorId || null) : launch.contributorId
+    const finalContributorName = updateData.contributorName !== undefined ? (updateData.contributorName || null) : launch.contributorName
+    const finalSupplierId = updateData.supplierId !== undefined ? (updateData.supplierId || null) : launch.supplierId
+    const finalSupplierName = updateData.supplierName !== undefined ? (updateData.supplierName || null) : launch.supplierName
+
+    // Para DÍZIMO: verificar Congregação + Data + Valor + Contribuinte
+    if (finalType === "DIZIMO") {
+      const whereClause: any = {
+        congregationId: finalCongregationId,
+        date: finalDate,
+        type: "DIZIMO",
+        value: finalValue,
+        status: { in: ["NORMAL", "APPROVED"] },
+        id: { not: id } // Excluir o próprio registro
+      }
+      
+      if (finalContributorId) {
+        whereClause.contributorId = finalContributorId
+      } else if (finalContributorName) {
+        whereClause.contributorName = finalContributorName
+        whereClause.contributorId = null
+      }
+      
+      const existingLaunch = await prisma.launch.findFirst({
+        where: whereClause
+      })
+      
+      if (existingLaunch) {
+        return NextResponse.json({ 
+          error: "Já existe um lançamento de dízimo com a mesma congregação, data, valor e contribuinte" 
+        }, { status: 400 })
+      }
+    }
+    // Para SAÍDA: verificar Congregação + Data + Valor + Fornecedor
+    else if (finalType === "SAIDA") {
+      const whereClause: any = {
+        congregationId: finalCongregationId,
+        date: finalDate,
+        type: "SAIDA",
+        value: finalValue,
+        status: { in: ["NORMAL", "APPROVED"] },
+        id: { not: id }
+      }
+      
+      if (finalSupplierId) {
+        whereClause.supplierId = finalSupplierId
+      } else if (finalSupplierName) {
+        whereClause.supplierName = finalSupplierName
+        whereClause.supplierId = null
+      }
+      
+      const existingLaunch = await prisma.launch.findFirst({
+        where: whereClause
+      })
+      
+      if (existingLaunch) {
+        return NextResponse.json({ 
+          error: "Já existe um lançamento de saída com a mesma congregação, data, valor e fornecedor" 
+        }, { status: 400 })
+      }
+    }
+    // Para os demais tipos: verificar Congregação + Data + Valor
+    else {
+      const existingLaunch = await prisma.launch.findFirst({
+        where: {
+          congregationId: finalCongregationId,
+          date: finalDate,
+          type: finalType,
+          value: finalValue,
+          status: { in: ["NORMAL", "APPROVED"] },
+          id: { not: id }
+        }
+      })
+      
+      if (existingLaunch) {
+        return NextResponse.json({ 
+          error: `Já existe um lançamento do tipo ${finalType} com a mesma congregação, data e valor` 
+        }, { status: 400 })
+      }
+    }
 
     const updatedLaunch = await prisma.launch.update({
       where: { id },

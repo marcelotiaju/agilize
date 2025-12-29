@@ -24,7 +24,22 @@ export default function Dashboard() {
   const { data: session } = useSession()
   const router = useRouter()
 
-    const canAccessLaunches = ['canLaunchEntry', 'canLaunchTithe', 'canLaunchExpense', 'canApproveEntry', 'canApproveTithe', 'canApproveExpense'];
+    const canAccessLaunches = ['canLaunchVote',
+      'canLaunchEbd', 
+      'canLaunchCampaign',
+      'canLaunchTithe',
+      'canLaunchMission',
+      'canLaunchCircle',
+      'canLaunchServiceOffer',
+      'canLaunchExpense',
+      'canApproveVote',
+      'canApproveEbd', 
+      'canApproveCampaign',
+      'canApproveTithe',
+      'canApproveMission',
+      'canApproveCircle',
+      'canApproveServiceOffer',
+      'canApproveExpense'];
     const canAccesSummary = ['canListSummary', 'canGenerateSummary'];
     const hasLaunchPermission = canAccessLaunches.find(perm => session?.user?.[perm]);
     const hasSummaryPermission = canAccesSummary.find(perm => session?.user?.[perm]);

@@ -87,15 +87,24 @@ export default function Contributors() {
     }
   }
 
-    // Filtrar contribuintes com base no termo de pesquisa
+  // Função para remover acentos
+  const removeAccents = (str: string): string => {
+    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  }
+
+  // Filtrar contribuintes com base no termo de pesquisa
   const filteredContributors = useMemo(() => {
     if (!searchTerm) return contributors
+    const normalizedSearchTerm = removeAccents(searchTerm.toLowerCase())
     
-    return contributors.filter(contributor =>
-      contributor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (contributor.cpf && contributor.cpf.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      contributor.code.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    return contributors.filter(contributor => {
+      const normalizedName = removeAccents(contributor.name.toLowerCase())
+      const normalizedCpf = contributor.cpf ? removeAccents(contributor.cpf.toLowerCase()) : ''
+      const normalizedCode = removeAccents(contributor.code.toLowerCase())
+      return normalizedName.includes(normalizedSearchTerm) ||
+             (contributor.cpf && normalizedCpf.includes(normalizedSearchTerm)) ||
+             normalizedCode.includes(normalizedSearchTerm)
+    })
   }, [contributors, searchTerm])
 
   const fetchCongregations = async () => {
@@ -264,13 +273,33 @@ export default function Contributors() {
 
       if (response.ok) {
         const result = await response.json()
-        alert(`Importação concluída! ${result.imported} contribuintes importados com sucesso.`)
+        let message = `Importação concluída! `
+        if (result.updated && result.updated > 0) {
+          message += `${result.updated} contribuinte(s) atualizado(s)`
+        }
+        if (result.created && result.created > 0) {
+          if (result.updated && result.updated > 0) {
+            message += ` e `
+          }
+          message += `${result.created} contribuinte(s) criado(s)`
+        }
+        if (!result.updated && !result.created) {
+          message += `${result.imported} contribuinte(s) processado(s)`
+        }
+        message += `.`
+        alert(message)
         fetchContributors()
         setIsImportDialogOpen(false)
         setCsvFile(null)
       } else {
         const error = await response.json()
-        alert(error.error || 'Erro ao importar arquivo CSV')
+        let errorMessage = error.error || 'Erro ao importar arquivo CSV'
+        if (error.imported > 0) {
+          errorMessage += `\n${error.imported} contribuinte(s) processado(s)`
+          if (error.updated) errorMessage += ` (${error.updated} atualizado(s))`
+          if (error.created) errorMessage += ` (${error.created} criado(s))`
+        }
+        alert(errorMessage)
       }
     } catch (error) {
       console.error('Erro ao importar CSV:', error)
@@ -473,7 +502,7 @@ export default function Contributors() {
                   <DialogHeader>
                     <DialogTitle>Importar Contribuintes via CSV</DialogTitle>
                     <DialogDescription>
-                      Faça upload de um arquivo CSV com os contribuintes. O arquivo deve ter as colunas: congregação, nome, cpf, cargo_eclesiástico.
+                      Faça upload de um arquivo CSV com os contribuintes. O arquivo deve ter as colunas: Codigo,Nome,CPF,CargoEclesiastico,CodCongregação,Tipo,Foto
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
@@ -493,9 +522,9 @@ export default function Contributors() {
                     
                     <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
                       <p className="font-medium mb-2">Formato esperado do CSV:</p>
-                      <p className="text-xs font-mono">codigo,nome,cpf,cargo_eclesiástico,congregação,tipo</p>
-                      <p className="text-xs font-mono">CG001,João Silva,12345678901,Pastor,1,Congregado</p>
-                      <p className="text-xs font-mono">CG002,Maria Santos,98765432100,Diácono,2,Membro</p>
+                      <p className="text-xs font-mono">Codigo,Nome,CPF,CargoEclesiastico,CodCongregação,Tipo,Foto</p>
+                      <p className="text-xs font-mono">1,João Silva,12345678901,Pastor,1,Congregado,foto.jpg</p>
+                      <p className="text-xs font-mono">2,Maria Santos,98765432100,Diácono,2,Membro,foto.jpg</p>
                       <div className="mt-3 pt-3 border-t border-gray-200">
                         <a 
                           href="/exemplo-contribuintes.csv" 

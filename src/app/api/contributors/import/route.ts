@@ -37,6 +37,8 @@ export async function POST(request: NextRequest) {
     // Remove o cabeçalho
     const dataLines = lines.slice(1)
     let imported = 0
+    let updated = 0
+    let created = 0
     let errors = []
 
     for (let i = 0; i < dataLines.length; i++) {
@@ -58,37 +60,79 @@ export async function POST(request: NextRequest) {
       }
 
       try {
-        // Busca a congribuinte pelo código
-        const existing = await prisma.contributor.findUnique({
-          where: { code: Codigo }
-        })
-
-        if (existing) {
-          errors.push(`Linha ${i + 2}: Código ${Codigo} já existe`)
-          continue
-        }
-
         const congregacaoId = await prisma.congregation.findUnique({
           where: { code: Codcongregacao },
           select: { id: true }
         })
 
-       // Cria o novo contribuinte
-        await prisma.contributor.create({
-          data: {
-            congregationId: congregacaoId?.id,
-            code: Codigo,
-            name: Nome,
-            cpf: cpf,
-            ecclesiasticalPosition: cargoEclesiástico,
-            tipo: tipo.toUpperCase() === 'CONGREGADO' ? 'CONGREGADO' : 'MEMBRO',
-            photoUrl: Foto
-          }
-        })
+        if (!congregacaoId) {
+          errors.push(`Linha ${i + 2}: Congregação com código ${Codcongregacao} não encontrada`)
+          continue
+        }
 
-        imported++
+        // Verificar se existe contribuinte com o CPF informado
+        let existingContributor = null
+        if (cpf && cpf.trim()) {
+          existingContributor = await prisma.contributor.findFirst({
+            where: { cpf: cpf.trim() }
+          })
+        }
+
+        // Se existe contribuinte com o CPF, atualizar as informações
+        if (existingContributor) {
+          // Verificar se o código já existe em outro contribuinte (diferente do encontrado pelo CPF)
+          const existingByCode = await prisma.contributor.findUnique({
+            where: { code: Codigo }
+          })
+
+          if (existingByCode && existingByCode.id !== existingContributor.id) {
+            errors.push(`Linha ${i + 2}: Código ${Codigo} já existe em outro contribuinte`)
+            continue
+          }
+
+          // Atualizar o contribuinte existente
+          await prisma.contributor.update({
+            where: { id: existingContributor.id },
+            data: {
+              congregationId: congregacaoId.id,
+              code: Codigo,
+              name: Nome,
+              cpf: cpf.trim() || null,
+              ecclesiasticalPosition: cargoEclesiástico || null,
+              tipo: tipo && tipo.toUpperCase() === 'CONGREGADO' ? 'CONGREGADO' : 'MEMBRO',
+              photoUrl: Foto || null
+            }
+          })
+          imported++
+          updated++
+        } else {
+          // Verificar se o código já existe
+          const existingByCode = await prisma.contributor.findUnique({
+            where: { code: Codigo }
+          })
+
+          if (existingByCode) {
+            errors.push(`Linha ${i + 2}: Código ${Codigo} já existe`)
+            continue
+          }
+
+          // Criar novo contribuinte
+          await prisma.contributor.create({
+            data: {
+              congregationId: congregacaoId.id,
+              code: Codigo,
+              name: Nome,
+              cpf: cpf && cpf.trim() ? cpf.trim() : null,
+              ecclesiasticalPosition: cargoEclesiástico || null,
+              tipo: tipo && tipo.toUpperCase() === 'CONGREGADO' ? 'CONGREGADO' : 'MEMBRO',
+              photoUrl: Foto || null
+            }
+          })
+          imported++
+          created++
+        }
       } catch (error) {
-        errors.push(`Linha ${i + 2}: Erro ao criar contribuinte - ${error.message}`)
+        errors.push(`Linha ${i + 2}: Erro ao processar contribuinte - ${error.message}`)
       }
     }
     console.log(errors)
@@ -96,13 +140,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ 
         error: "Erro na importação", 
         details: errors,
-        imported 
+        imported,
+        updated,
+        created
       }, { status: 400 })
     }
 
     return NextResponse.json({ 
       message: "Importação concluída com sucesso",
-      imported 
+      imported,
+      updated,
+      created
     })
 
   } catch (error) {

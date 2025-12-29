@@ -63,14 +63,22 @@ export function SearchableSelect({
     return data.find((item) => item.id === value);
   }, [data, value]);
 
+  // Função para remover acentos
+  const removeAccents = (str: string): string => {
+    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  }
+
   const filteredData = useMemo(() => {
     const term = searchTerm.toLowerCase();
     if (!term) {
       return data;
     }
+    const normalizedTerm = removeAccents(term);
     return data.filter((item) => {
-      const nameMatch = searchKeys.includes('name') && item.name.toLowerCase().includes(term);
-      const documentMatch = searchKeys.includes('document') && item.document?.toLowerCase().includes(term);
+      const normalizedName = removeAccents(item.name.toLowerCase());
+      const normalizedDocument = item.document ? removeAccents(item.document.toLowerCase()) : '';
+      const nameMatch = searchKeys.includes('name') && normalizedName.includes(normalizedTerm);
+      const documentMatch = searchKeys.includes('document') && item.document && normalizedDocument.includes(normalizedTerm);
       return nameMatch || documentMatch;
     });
   }, [data, searchTerm, searchKeys]);

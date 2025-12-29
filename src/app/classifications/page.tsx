@@ -58,15 +58,26 @@ export default function Classifications() {
     }
   }
 
-      // Filtrar classificacoes com base no termo de pesquisa
+  // Função para remover acentos
+  const removeAccents = (str: string): string => {
+    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  }
+
+  // Filtrar classificacoes com base no termo de pesquisa
   const filteredClassifications = useMemo(() => {
     if (!searchTerm) return classifications
+    const normalizedSearchTerm = removeAccents(searchTerm.toLowerCase())
     
-    return classifications.filter(classification =>
-      classification.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      classification.shortCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (classification.description && classification.description.toLowerCase().includes(searchTerm.toLowerCase()))
-    )
+    return classifications.filter(classification => {
+      const normalizedCode = removeAccents(classification.code.toLowerCase())
+      const normalizedShortCode = removeAccents(classification.shortCode.toLowerCase())
+      const normalizedDescription = classification.description 
+        ? removeAccents(classification.description.toLowerCase()) 
+        : ''
+      return normalizedCode.includes(normalizedSearchTerm) ||
+             normalizedShortCode.includes(normalizedSearchTerm) ||
+             (classification.description && normalizedDescription.includes(normalizedSearchTerm))
+    })
   }, [classifications, searchTerm])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -3,6 +3,7 @@ import NextAuth, { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import prisma from "@/lib/prisma"
 import bcrypt from "bcrypt"
+import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz'
 
 
 export const authOptions : NextAuthOptions = {
@@ -91,7 +92,18 @@ export const authOptions : NextAuthOptions = {
     async jwt({ token, user }) {
       // O 'user' só está presente na primeira vez que o token é criado (login)
       if (user) {
+        // Calcular expiração para meia-noite (00:00) do dia seguinte no fuso horário de São Paulo
+        const tz = 'America/Sao_Paulo'
+        const now = new Date()
+        const zonedNow = utcToZonedTime(now, tz)
+        const midnight = new Date(zonedNow)
+        midnight.setHours(0, 0, 0, 0)
+        midnight.setDate(midnight.getDate() + 1) // Próxima meia-noite
+        const midnightUtc = zonedTimeToUtc(midnight, tz)
+        const exp = Math.floor(midnightUtc.getTime() / 1000)
+
         return {
+          exp,
           ...token,
           sub: (user as any).id ?? token.sub,
           login: (user as any).login,
@@ -174,6 +186,10 @@ export const authOptions : NextAuthOptions = {
         canApproveTreasury: typeof token.canApproveTreasury === "boolean" ? token.canApproveTreasury : undefined,
         canApproveAccountant: typeof token.canApproveAccountant === "boolean" ? token.canApproveAccountant : undefined,
         canApproveDirector: typeof token.canApproveDirector === "boolean" ? token.canApproveDirector : undefined
+      }
+      // Definir expiração da sessão baseada no token exp
+      if (typeof token.exp === 'number') {
+        session.expires = new Date(token.exp * 1000).toISOString()
       }
       return session
     }
