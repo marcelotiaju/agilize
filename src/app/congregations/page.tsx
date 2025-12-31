@@ -36,6 +36,9 @@ interface Congregation {
   entradaVotesAccountPlan?: string
   entradaVotesFinancialEntity?: string
   entradaVotesPaymentMethod?: string
+  entradaCarneReviverAccountPlan?: string
+  entradaCarneReviverFinancialEntity?: string
+  entradaCarneReviverPaymentMethod?: string
   // Campos para Dízimo
   dizimoAccountPlan?: string
   dizimoFinancialEntity?: string
@@ -84,6 +87,9 @@ export default function Congregations() {
     entradaVotesAccountPlan: '',
     entradaVotesFinancialEntity: '',
     entradaVotesPaymentMethod: '',
+    entradaCarneReviverAccountPlan: '',
+    entradaCarneReviverFinancialEntity: '',
+    entradaCarneReviverPaymentMethod: '',
     // Campos para Dízimo
     dizimoAccountPlan: '',
     dizimoFinancialEntity: '',
@@ -208,7 +214,10 @@ export default function Congregations() {
       entradaCampaignPaymentMethod: congregation.entradaCampaignPaymentMethod || '',      
       entradaVotesAccountPlan: congregation.entradaVotesAccountPlan || '',
       entradaVotesFinancialEntity: congregation.entradaVotesFinancialEntity || '',
-      entradaVotesPaymentMethod: congregation.entradaVotesPaymentMethod || '',      
+      entradaVotesPaymentMethod: congregation.entradaVotesPaymentMethod || '',
+      entradaCarneReviverAccountPlan: congregation.entradaCarneReviverAccountPlan || '',      
+      entradaCarneReviverFinancialEntity: congregation.entradaCarneReviverFinancialEntity || '',
+      entradaCarneReviverPaymentMethod: congregation.entradaCarneReviverPaymentMethod || '',
       // Campos para Dízimo
       dizimoAccountPlan: congregation.dizimoAccountPlan || '',
       dizimoFinancialEntity: congregation.dizimoFinancialEntity || '',
@@ -291,6 +300,9 @@ export default function Congregations() {
       entradaVotesAccountPlan: '',
       entradaVotesFinancialEntity: '',
       entradaVotesPaymentMethod: '',      
+      entradaCarneReviverAccountPlan: '',
+      entradaCarneReviverFinancialEntity: '',
+      entradaCarneReviverPaymentMethod: '',
       // Campos para Dízimo
       dizimoAccountPlan: '',
       dizimoFinancialEntity: '',
@@ -449,7 +461,8 @@ export default function Congregations() {
                           <TabsTrigger value="circulo">Círculo</TabsTrigger>
                           <TabsTrigger value="votos">Votos</TabsTrigger>
                           <TabsTrigger value="ebd">EBD</TabsTrigger>
-                          <TabsTrigger value="campaign">Campanha</TabsTrigger>                          
+                          <TabsTrigger value="campaign">Campanha</TabsTrigger>  
+                          <TabsTrigger value="carneReviver">Carnê R.</TabsTrigger>
                           <TabsTrigger value="saida">Saídas</TabsTrigger>
                           <TabsTrigger value="outros">Outros</TabsTrigger>
                       </TabsList>
@@ -681,6 +694,39 @@ export default function Congregations() {
                                   placeholder=""
                               />
                           </div>
+                      </TabsContent>
+
+                      <TabsContent value="carneReviver" className="space-y-4 mt-6">
+                        <div>
+                            <Label htmlFor="entradaCarneReviverAccountPlan">Plano de Contas</Label>
+                            <Input
+                                id="entradaCarneReviverAccountPlan"
+                                name="entradaCarneReviverAccountPlan"
+                                value={formData.entradaCarneReviverAccountPlan}
+                                onChange={handleInputChange}
+                                placeholder=""
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="entradaCarneReviverFinancialEntity">Entidade Financeira</Label>
+                            <Input
+                                id="entradaCarneReviverFinancialEntity"
+                                name="entradaCarneReviverFinancialEntity"
+                                value={formData.entradaCarneReviverFinancialEntity}
+                                onChange={handleInputChange}
+                                placeholder=""
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="entradaCarneReviverPaymentMethod">Método de Pagamento</Label>
+                            <Input
+                                id="entradaCarneReviverPaymentMethod"
+                                name="entradaCarneReviverPaymentMethod"
+                                value={formData.entradaCarneReviverPaymentMethod}
+                                onChange={handleInputChange}
+                                placeholder=""
+                            />
+                        </div>
                       </TabsContent>
 
                       <TabsContent value="saida" className="space-y-4 mt-6">

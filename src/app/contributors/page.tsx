@@ -210,25 +210,23 @@ export default function Contributors() {
   }
 
   const handleCancel = async (id: string) => {
+    if (confirm('Tem certeza que deseja excluir este contribuinte?')) {
     try {
-      const response = await fetch('/api/contributors', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ id, status: 'CANCELED' })
+      const response = await fetch(`/api/contributors?id=${id}`, {
+        method: 'DELETE',
       })
 
       if (response.ok) {
         fetchContributors()
       } else {
         const error = await response.json()
-        alert(error.error || 'Erro ao cancelar contribuinte')
+        alert(error.error || 'Erro ao deletar contribuinte')
       }
     } catch (error) {
-      console.error('Erro ao cancelar contribuinte:', error)
-      alert('Erro ao cancelar contribuinte')
+      console.error('Erro ao deletar contribuinte:', error)
+      alert('Erro ao deletar contribuinte')
     }
+  }
   }
 
   const resetForm = () => {

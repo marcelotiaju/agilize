@@ -86,6 +86,7 @@ model Profile {
   canLaunchMission       Boolean @default(false)
   canLaunchCircle        Boolean @default(false)
   canLaunchServiceOffer  Boolean @default(false)
+  canLaunchCarneReviver  Boolean @default(false)
   canApproveVote         Boolean @default(false)
   canApproveEbd          Boolean @default(false)
   canApproveCampaign     Boolean @default(false)
@@ -94,6 +95,7 @@ model Profile {
   canApproveMission      Boolean @default(false)
   canApproveCircle       Boolean @default(false)
   canApproveServiceOffer Boolean @default(false)
+  canApproveCarneReviver Boolean @default(false)
   canCreate              Boolean @default(false)
   canEdit                Boolean @default(false)
   canExclude             Boolean @default(false)
@@ -110,43 +112,46 @@ model Profile {
 }
 
 model Congregation {
-  id                             String                @id @default(cuid())
-  code                           String                @unique
-  name                           String
-  regionalName                   String?
+  id                                 String                @id @default(cuid())
+  code                               String                @unique
+  name                               String
+  regionalName                       String?
   // Campos legados de "Entrada->Oferta"
-  entradaOfferAccountPlan        String?
-  entradaOfferFinancialEntity    String?
-  entradaOfferPaymentMethod      String?
+  entradaOfferAccountPlan            String?
+  entradaOfferFinancialEntity        String?
+  entradaOfferPaymentMethod          String?
   // Novos campos dedicados para "Oferta do Culto" (mantemos legados para compatibilidade)
-  entradaEbdAccountPlan          String?
-  entradaEbdFinancialEntity      String?
-  entradaEbdPaymentMethod        String?
-  entradaCampaignAccountPlan     String?
-  entradaCampaignFinancialEntity String?
-  entradaCampaignPaymentMethod   String?
-  entradaVotesAccountPlan        String?
-  entradaVotesFinancialEntity    String?
-  entradaVotesPaymentMethod      String?
-  dizimoAccountPlan              String?
-  dizimoFinancialEntity          String?
-  dizimoPaymentMethod            String?
-  saidaFinancialEntity           String?
-  saidaPaymentMethod             String?
-  missionAccountPlan             String?
-  missionFinancialEntity         String?
-  missionPaymentMethod           String?
-  circleAccountPlan              String?
-  circleFinancialEntity          String?
-  circlePaymentMethod            String?
-  matriculaEnergisa              String?
-  matriculaIgua                  String?
-  users                          UserCongregation[]
-  launches                       Launch[]
-  contributors                   Contributor[]
-  createdAt                      DateTime              @default(now()) @db.DateTime(0)
-  updatedAt                      DateTime              @updatedAt @db.DateTime(0)
-  CongregationSummary            CongregationSummary[]
+  entradaEbdAccountPlan              String?
+  entradaEbdFinancialEntity          String?
+  entradaEbdPaymentMethod            String?
+  entradaCampaignAccountPlan         String?
+  entradaCampaignFinancialEntity     String?
+  entradaCampaignPaymentMethod       String?
+  entradaVotesAccountPlan            String?
+  entradaVotesFinancialEntity        String?
+  entradaVotesPaymentMethod          String?
+  entradaCarneReviverAccountPlan     String?
+  entradaCarneReviverFinancialEntity String?
+  entradaCarneReviverPaymentMethod   String?
+  dizimoAccountPlan                  String?
+  dizimoFinancialEntity              String?
+  dizimoPaymentMethod                String?
+  saidaFinancialEntity               String?
+  saidaPaymentMethod                 String?
+  missionAccountPlan                 String?
+  missionFinancialEntity             String?
+  missionPaymentMethod               String?
+  circleAccountPlan                  String?
+  circleFinancialEntity              String?
+  circlePaymentMethod                String?
+  matriculaEnergisa                  String?
+  matriculaIgua                      String?
+  users                              UserCongregation[]
+  launches                           Launch[]
+  contributors                       Contributor[]
+  createdAt                          DateTime              @default(now()) @db.DateTime(0)
+  updatedAt                          DateTime              @updatedAt @db.DateTime(0)
+  CongregationSummary                CongregationSummary[]
 }
 
 model UserCongregation {
@@ -256,6 +261,7 @@ model CongregationSummary {
   campaignTotal        Float         @default(0)
   missionTotal         Float         @default(0)
   circleTotal          Float         @default(0)
+  carneReviverTotal    Float         @default(0)
   exitValue            Float         @default(0)
   talonNumber          String?
   depositValue         Float         @default(0)
@@ -290,6 +296,7 @@ enum LaunchType {
   CIRCULO
   ENTRADA
   SAIDA
+  CARNE_REVIVER
 }
 
 enum LaunchStatus {

@@ -103,6 +103,7 @@ export default function Launches() {
   const canLaunchMission = session?.user?.canLaunchMission
   const canLaunchCircle = session?.user?.canLaunchCircle
   const canLaunchServiceOffer = session?.user?.canLaunchServiceOffer
+  const canLaunchCarneReviver = session?.user?.canLaunchCarneReviver
   const canApproveVote = session?.user?.canApproveVote
   const canApproveEbd = session?.user?.canApproveEbd
   const canApproveCampaign = session?.user?.canApproveCampaign
@@ -111,6 +112,7 @@ export default function Launches() {
   const canApproveMission = session?.user?.canApproveMission
   const canApproveCircle = session?.user?.canApproveCircle
   const canApproveServiceOffer = session?.user?.canApproveServiceOffer
+  const canApproveCarneReviver = session?.user?.canApproveCarneReviver
   const canApproveTreasury = session?.user?.canApproveTreasury
   const canApproveAccountant = session?.user?.canApproveAccountant
   const canApproveDirector = session?.user?.canApproveDirector  
@@ -347,9 +349,14 @@ export default function Launches() {
       return alert("Não é permitido lançar com data futura")
     }
 
+    if (startOfDay(new Date(formData.date)).getTime() <= (todayStart.getTime() - (session?.user?.historyDays || 0) * 24 * 60 * 60 * 1000)) {
+      setSalvando(false)
+      return alert("Não é permitido lançar com data anterior ao limite permitido")
+    }
+
     // Todos os tipos agora usam campo único "value" (exceto quando a regra específica difere)
     const numericValue = parseFloat(formData.value as any)
-    if (['VOTO', 'EBD', 'CAMPANHA', 'DIZIMO', 'SAIDA', 'OFERTA_CULTO', 'MISSAO', 'CIRCULO'].includes(formData.type)) {
+    if (['VOTO', 'EBD', 'CAMPANHA', 'DIZIMO', 'SAIDA', 'OFERTA_CULTO', 'MISSAO', 'CIRCULO', 'CARNE_REVIVER'].includes(formData.type)) {
       if (!numericValue || Number.isNaN(numericValue)) {
         alert('O campo Valor deve ser preenchido.')
         setSalvando(false)
@@ -565,18 +572,20 @@ export default function Launches() {
         <div className="flex justify-between items-start mb-1">
           <div className={`px-3 py-1 rounded text-white text-sm font-medium ${
             launch.type === 'VOTO' ? 'bg-green-500' :
-            launch.type === 'EBD' ? 'bg-teal-500' :
-            launch.type === 'CAMPANHA' ? 'bg-indigo-500' :
+            launch.type === 'EBD' ? 'bg-green-500' :
+            launch.type === 'CAMPANHA' ? 'bg-green-500' :
             launch.type === 'DIZIMO' ? 'bg-blue-500' :
+            launch.type === 'CARNE_REVIVER' ? 'bg-green-500' :
             launch.type === 'SAIDA' ? 'bg-red-500' :
-            launch.type === 'MISSAO' ? 'bg-orange-500' :
-            launch.type === 'OFERTA_CULTO' ? 'bg-purple-500' :
-            launch.type === 'CIRCULO' ? 'bg-yellow-500' : ''
+            launch.type === 'MISSAO' ? 'bg-green-500' :
+            launch.type === 'OFERTA_CULTO' ? 'bg-green-500' :
+            launch.type === 'CIRCULO' ? 'bg-green-500' : ''
           }`}>
             {launch.type === 'VOTO' ? 'Voto' :
              launch.type === 'EBD' ? 'EBD' :
              launch.type === 'CAMPANHA' ? 'Campanha' :
              launch.type === 'DIZIMO' ? 'Dízimo' :
+             launch.type === 'CARNE_REVIVER' ? 'Carnê Reviver' :
              launch.type === 'SAIDA' ? 'Saída' :
              launch.type === 'MISSAO' ? 'Missão' :
              launch.type === 'OFERTA_CULTO' ? 'Oferta do Culto' :
@@ -653,13 +662,14 @@ export default function Launches() {
             <TooltipContent><p>Editar</p></TooltipContent>
           </Tooltip>
 
-          {launch.status === 'NORMAL' && (
+          {launch.status === 'NORMAL' && launch.summaryId == null && (
             <>
               {(launch.type === 'VOTO' && canApproveVote) ||
                (launch.type === 'EBD' && canApproveEbd) ||
                (launch.type === 'CAMPANHA' && canApproveCampaign) ||
                (launch.type === 'OFERTA_CULTO' && canApproveServiceOffer) ||
                (launch.type === 'DIZIMO' && canApproveTithe) ||
+               (launch.type === 'CARNE_REVIVER' && canApproveCarneReviver) ||
                (launch.type === 'SAIDA' && canApproveExpense) ||
                (launch.type === 'MISSAO' && canApproveMission) ||
                (launch.type === 'CIRCULO' && canApproveCircle) ? (
@@ -673,13 +683,14 @@ export default function Launches() {
             </>
           )}
 
-          {launch.status === 'APPROVED' && (
+          {launch.status === 'APPROVED' && launch.summaryId == null && (
             <>
               {(launch.type === 'VOTO' && canApproveVote) ||
                (launch.type === 'EBD' && canApproveEbd) ||
                (launch.type === 'CAMPANHA' && canApproveCampaign) ||
                (launch.type === 'OFERTA_CULTO' && canApproveServiceOffer) ||
                (launch.type === 'DIZIMO' && canApproveTithe) ||
+               (launch.type === 'CARNE_REVIVER' && canApproveCarneReviver) ||
                (launch.type === 'SAIDA' && canApproveExpense) ||
                (launch.type === 'MISSAO' && canApproveMission) ||
                (launch.type === 'CIRCULO' && canApproveCircle) ? (
@@ -693,7 +704,7 @@ export default function Launches() {
             </>
           )}
 
-          {launch.status == 'NORMAL' && launch.summaryId == null && (canLaunchVote || canLaunchEbd || canLaunchCampaign || canLaunchExpense || canLaunchTithe || canLaunchMission || canLaunchCircle || canLaunchServiceOffer) ? (
+          {launch.status == 'NORMAL' && launch.summaryId == null && (canLaunchVote || canLaunchEbd || canLaunchCampaign || canLaunchExpense || canLaunchTithe || canLaunchMission || canLaunchCircle || canLaunchServiceOffer || canApproveCarneReviver) ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="outline" size="sm" onClick={() => handleCancel(launch.id)}><Trash2 className="h-4 w-4 mr-1" /></Button>
@@ -717,6 +728,7 @@ export default function Launches() {
         canLaunchMission: canLaunchMission,
         canLaunchCircle: canLaunchCircle,
         canLaunchServiceOffer: canLaunchServiceOffer,
+        canLaunchCarneReviver: canLaunchCarneReviver,
         canApproveVote: canApproveVote,
         canApproveEbd: canApproveEbd,
         canApproveCampaign: canApproveCampaign,
@@ -725,6 +737,7 @@ export default function Launches() {
         canApproveMission: canApproveMission,
         canApproveCircle: canApproveCircle,
         canApproveServiceOffer: canApproveServiceOffer,
+        canApproveCarneReviver: canApproveCarneReviver,
       }}
     >
 
@@ -742,7 +755,7 @@ export default function Launches() {
                        Novo
                      </Button>
                    </DialogTrigger>
-                   <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto overflow-x-hidden p-0 sm:p-6 fixed" style={{ fontSize: '16px' }}>
+                   <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto overflow-x-auto sm:overflow-x-hidden p-0 sm:p-6 fixed" style={{ fontSize: '16px' }}>
                      <DialogHeader>
                        <DialogTitle>{editingLaunch ? 'Editar' : 'Novo'}</DialogTitle>
                        <DialogDescription asChild style={{ fontSize: '14px' }}>
@@ -776,7 +789,7 @@ export default function Launches() {
                           <TabsTrigger value="logs">Logs</TabsTrigger>
                         </TabsList>
                     <TabsContent value="dados" className="p-4 sm:p-0 overflow-x-hidden">
-                     <form onSubmit={handleSubmit} className="space-y-2 px-4 sm:px-0 w-full max-w-full overflow-x-hidden">
+                     <form onSubmit={handleSubmit} className="space-y-2 px-2 sm:px-0 w-full max-w-full overflow-x-hidden">
                        <div className="space-y-2">
                          <div>
                            <Label htmlFor="congregationId">Congregação</Label>
@@ -807,6 +820,7 @@ export default function Launches() {
                                <SelectContent>
                                  {canLaunchTithe && <SelectItem value="DIZIMO">Dízimos</SelectItem>}
                                  {canLaunchServiceOffer && <SelectItem value="OFERTA_CULTO">Oferta do Culto</SelectItem>}
+                                 {canLaunchCarneReviver && <SelectItem value="CARNE_REVIVER">Carnê Reviver</SelectItem>}
                                  {canLaunchVote && <SelectItem value="VOTO">Voto</SelectItem>}
                                  {canLaunchEbd && <SelectItem value="EBD">EBD</SelectItem>}
                                  {canLaunchCampaign && <SelectItem value="CAMPANHA">Campanha</SelectItem>}
@@ -864,7 +878,8 @@ export default function Launches() {
                            </div>
 
                            <div>
-                             {formData.type === 'SAIDA' ? <Label htmlFor="talonNumber">Nr. Doc</Label> : formData.type === 'DIZIMO' ? <Label htmlFor="talonNumber">Nr. Recibo</Label> : <Label htmlFor="talonNumber">Nr. Talão</Label>}
+                             {formData.type === 'SAIDA' ? <Label htmlFor="talonNumber">Nr. Doc</Label> : formData.type === 'DIZIMO' ? <Label htmlFor="talonNumber">Nr. Recibo</Label> : formData.type === 'CARNE_REVIVER' ? '' : <Label htmlFor="talonNumber">Nr. Talão</Label>}
+                             {formData.type !== 'CARNE_REVIVER' && (
                              <Input
                                id="talonNumber"
                                name="talonNumber"
@@ -876,6 +891,7 @@ export default function Launches() {
                                disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
                                style={{ fontSize: '16px' }}
                              />
+                             )}
                            </div>
                          </div>
 
@@ -896,9 +912,9 @@ export default function Launches() {
                                }}
                                thousandSeparator="."
                                decimalSeparator=","
-                               prefix="R$ "
-                               decimalScale={2}
-                               fixedDecimalScale={true}
+                               //prefix="R$ "
+                               //decimalScale={2}
+                               //fixedDecimalScale={true}
                                disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
                                style={{ fontSize: '16px' }}
                                onFocus={(e) => {
@@ -1073,10 +1089,11 @@ export default function Launches() {
                        </div>
                      </form>
                     </TabsContent>
-                    <TabsContent value="logs" className="p-4 sm:p-0">
-                      <div className="space-y-4 py-4">
+                    <TabsContent value="logs" className="max-w-[350px] md:max-w-[600px] max-h-[50vh] h-[50vh] min-h-0">
+                      <div className="space-y-4 py-4 p-2">
                         <div className="rounded-md border">
-                          <Table>
+                          <div>
+                            <Table className="min-w-max">
                             <TableHeader>
                               <TableRow>
                                 <TableHead>Ação</TableHead>
@@ -1119,6 +1136,7 @@ export default function Launches() {
                           </Table>
                         </div>
                       </div>
+                    </div>
                     </TabsContent>
                   </Tabs>
                   </DialogContent>
@@ -1234,17 +1252,19 @@ export default function Launches() {
                               launch.type === 'OFERTA_CULTO'? 'bg-green-500' :
                               launch.type === 'VOTO' ? 'bg-green-500' : 
                               launch.type === 'EBD' ? 'bg-green-500' : 
-                              launch.type === 'CAMPANHA' ? 'bg-green-500' :                                                             
+                              launch.type === 'CAMPANHA' ? 'bg-green-500' :
+                              launch.type === 'CARNE_REVIVER' ? 'bg-green-500' :
                               launch.type === 'SAIDA'? 'bg-red-500' :
-                              launch.type === 'MISSAO'? 'bg-orange-500' :
-                              launch.type === 'OFERTA_CULTO'? 'bg-purple-500' :
-                              launch.type === 'CIRCULO'? 'bg-yellow-500' : ''
+                              launch.type === 'MISSAO'? 'bg-green-500' :
+                              launch.type === 'OFERTA_CULTO'? 'bg-green-500' :
+                              launch.type === 'CIRCULO'? 'bg-green-500' : ''
                             }`}>
                                 {launch.type === 'VOTO' ? 'Voto' :
                                  launch.type === 'OFERTA_CULTO' ? 'Oferta do Culto' :
                                  launch.type === 'EBD' ? 'EBD' :
                                  launch.type === 'CAMPANHA' ? 'Campanha' :
                                  launch.type === 'DIZIMO' ? 'Dízimo' :
+                                 launch.type === 'CARNE_REVIVER' ? 'Carnê Reviver' :
                                  launch.type === 'SAIDA' ? 'Saída' :
                                  launch.type === 'MISSAO' ? 'Missão' :
                                  launch.type === 'CIRCULO' ? 'Círculo de Oração' : ''}
@@ -1284,6 +1304,7 @@ export default function Launches() {
                                   (launch.type === 'EBD' && canLaunchEbd) ||
                                   (launch.type === 'CAMPANHA' && canLaunchCampaign) ||
                                   (launch.type === 'OFERTA_CULTO' && canLaunchServiceOffer) ||
+                                  (launch.type === 'CARNE_REVIVER' && canLaunchCarneReviver) ||
                                   (launch.type === 'DIZIMO' && canLaunchTithe) ||
                                   (launch.type === 'SAIDA' && canLaunchExpense) ||
                                   (launch.type === 'MISSAO' && canLaunchMission) ||
@@ -1296,13 +1317,14 @@ export default function Launches() {
                                   </Tooltip>
                                 ) : null}
 
-                                {launch.status === 'NORMAL' && (
+                                {launch.status === 'NORMAL' && launch.summaryId == null && (
                                   <>
                                     {(launch.type === 'VOTO' && canApproveVote) ||
                                       (launch.type === 'EBD' && canApproveEbd) ||
                                       (launch.type === 'CAMPANHA' && canApproveCampaign) ||
                                       (launch.type === 'OFERTA_CULTO' && canApproveServiceOffer) ||
                                       (launch.type === 'DIZIMO' && canApproveTithe) ||
+                                      (launch.type === 'CARNE_REVIVER' && canApproveCarneReviver) ||
                                       (launch.type === 'SAIDA' && canApproveExpense) ||
                                       (launch.type === 'MISSAO' && canApproveMission) ||
                                       (launch.type === 'CIRCULO' && canApproveCircle) ? (
@@ -1316,13 +1338,14 @@ export default function Launches() {
                                   </>
                                 )}
 
-                                {launch.status === 'APPROVED' && (
+                                {launch.status === 'APPROVED' && launch.summaryId == null && (
                                   <>
                                     {(launch.type === 'VOTO' && canApproveVote) ||
                                       (launch.type === 'EBD' && canApproveEbd) ||
                                       (launch.type === 'CAMPANHA' && canApproveCampaign) ||
                                       (launch.type === 'OFERTA_CULTO' && canApproveServiceOffer) ||
                                       (launch.type === 'DIZIMO' && canApproveTithe) ||
+                                      (launch.type === 'CARNE_REVIVER' && canApproveCarneReviver) ||
                                       (launch.type === 'SAIDA' && canApproveExpense) ||
                                       (launch.type === 'MISSAO' && canApproveMission) ||
                                       (launch.type === 'CIRCULO' && canApproveCircle) ? (

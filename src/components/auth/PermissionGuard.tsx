@@ -9,9 +9,11 @@ interface PermissionGuardProps {
   children: React.ReactNode
   requiredPermissions?: {
     canLaunchEntry?: boolean
+    canLaunchCarneReviver?: boolean
     canLaunchTithe?: boolean
     canLaunchExpense?: boolean
     canApproveEntry?: boolean
+    canApproveCarneReviver?: boolean
     canApproveTithe?: boolean
     canApproveExpense?: boolean
     canExport?: boolean

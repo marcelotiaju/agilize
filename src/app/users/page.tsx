@@ -544,21 +544,7 @@ export default function Users() {
                           <Label htmlFor="historyDays">Dias de Histórico</Label>
                           <Input id="historyDays" name="historyDays" type="number" value={(formData as any).historyDays ?? ''} onChange={handleInputChange} min="1" max="365" required />
                         </div>
-                        <div>
-                          <Label htmlFor="profileId">Perfil</Label>
-                          <div className="flex items-center space-x-2">
-                            <Select value={(formData as any).profileId} onValueChange={(v) => handleSelectChange('profileId', v)}>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value=" ">-- Sem Perfil --</SelectItem>
-                                {profiles.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                            {/* <Button variant="ghost" onClick={() => { setIsProfileDialogOpen(true); resetProfileForm() }}><Edit className="h-4 w-4" /></Button> */}
-                          </div>
-                        </div>
+
                         <div>
                           <Label htmlFor="defaultPage">Página Inicial</Label>
                           <Select
@@ -581,6 +567,22 @@ export default function Users() {
                             </SelectContent>
                           </Select>
                         </div>
+
+                        <div>
+                          <Label htmlFor="profileId">Perfil</Label>
+                          <div className="flex items-center space-x-2">
+                            <Select value={(formData as any).profileId} onValueChange={(v) => handleSelectChange('profileId', v)}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value=" ">-- Sem Perfil --</SelectItem>
+                                {profiles.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                            {/* <Button variant="ghost" onClick={() => { setIsProfileDialogOpen(true); resetProfileForm() }}><Edit className="h-4 w-4" /></Button> */}
+                          </div>
+                        </div>
                       </div>
                     </div>
 
@@ -602,7 +604,7 @@ export default function Users() {
                     Importar Usuário
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="w-full max-w-[425px]">
+                <DialogContent className="sm:max-w-[425px]">
                   <DialogHeader>
                     <DialogTitle>Importar Usuários via CSV</DialogTitle>
                   </DialogHeader>
@@ -611,12 +613,12 @@ export default function Users() {
                       <Label htmlFor="csvFile" className="text-right">Arquivo CSV</Label>
                       <Input id="csvFile" type="file" accept=".csv" onChange={handleFileChange} className="col-span-3" required />
                     </div>
-                    <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md overflow-x-auto">
-                        <p className="font-medium mb-2">Formato esperado do CSV:</p>
-                        <p className="text-xs font-mono whitespace-pre-wrap break-words">usulogin,usunome,senha,email,celular,dtvalidadeinicio,dtvalidadefim,diashistorico,paginainicial,perfil</p>
-                        <p className="text-xs font-mono whitespace-pre-wrap break-words">213212312,João Silva,12345678901,joao.silva@example.com,12345678901,2025-01-01,2026-01-01,30,/dashboard,Tesoureiro</p>
-                        <p className="text-xs font-mono whitespace-pre-wrap break-words">maria123,Maria Santos,98765432100,maria.santos@example.com,98765432100,2025-01-01,2026-01-01,30,/dashboard,Contador</p>
-                      </div>
+                    <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
+                      <p className="font-medium mb-2">Formato esperado do CSV:</p>
+                      <p className="text-xs font-mono">usulogin,usunome,senha,email,celular,dtvalidadeinicio,dtvalidadefim,diashistorico,paginainicial,perfil</p>
+                      <p className="text-xs font-mono">213212312,João Silva,12345678901,joao.silva@example.com,12345678901,2025-01-01,2026-01-01,30,/dashboard,Tesoureiro</p>
+                      <p className="text-xs font-mono">maria123,Maria Santos,98765432100,maria.santos@example.com,98765432100,2025-01-01,2026-01-01,30,/dashboard,Contador</p>
+                    </div>
                   </div>
                   <DialogFooter>
                     <Button type="button" onClick={handleImportCSV} disabled={!csvFile || importing}>{importing ? 'Importando...' : 'Importar'}</Button>
@@ -631,7 +633,7 @@ export default function Users() {
                     Importar Associação
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="w-full max-w-[425px]">
+                <DialogContent className="sm:max-w-[425px]">
                   <DialogHeader>
                     <DialogTitle>Importar Associação via CSV</DialogTitle>
                   </DialogHeader>

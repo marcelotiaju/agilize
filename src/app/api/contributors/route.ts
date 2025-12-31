@@ -206,3 +206,28 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "Erro ao atualizar contribuinte" }, { status: 500 })
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+  }
+
+  try {
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+
+    if (!id) {
+      return NextResponse.json({ error: "ID do contribuinte é obrigatório" }, { status: 400 })
+    }
+
+    await prisma.contributor.delete({
+      where: { id }
+    })
+
+    return NextResponse.json({ message: "Contribuinte excluído com sucesso" })
+  } catch (error) {
+    return NextResponse.json({ error: "Erro ao excluir contribuinte" }, { status: 500 })
+  }
+}

@@ -41,6 +41,7 @@ export default function Profiles() {
     canLaunchMission: false,
     canLaunchCircle: false,
     canLaunchServiceOffer: false,
+    canLaunchCarneReviver: false,
     canApproveVote: false,
     canApproveEbd: false,
     canApproveCampaign: false,
@@ -49,6 +50,7 @@ export default function Profiles() {
     canApproveMission: false,
     canApproveCircle: false,
     canApproveServiceOffer: false,
+    canApproveCarneReviver: false,
     canCreate: false,
     canEdit: false,
     canExclude: false,
@@ -93,6 +95,7 @@ export default function Profiles() {
       canLaunchMission: false,
       canLaunchCircle: false,
       canLaunchServiceOffer: false,
+      canLaunchCarneReviver: false,
       canApproveVote: false,
       canApproveEbd: false,
       canApproveCampaign: false,
@@ -101,6 +104,7 @@ export default function Profiles() {
       canApproveMission: false,
       canApproveCircle: false,
       canApproveServiceOffer: false,
+      canApproveCarneReviver: false,
       canCreate: false,
       canEdit: false,
       canExclude: false,
@@ -252,9 +256,9 @@ export default function Profiles() {
                             <Label>Lançar EBD</Label>
                           </div>
                           <div className="flex items-center space-x-2">
-                            <Checkbox checked={profileForm.canLaunchCampaign} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchCampaign: v as boolean }))} />
-                            <Label>Lançar Campanha</Label>
-                          </div>
+                            <Checkbox checked={profileForm.canLaunchCarneReviver} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchCarneReviver: v as boolean }))} />
+                            <Label>Lançar Carnê Reviver</Label>
+                          </div>                            
                           <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canLaunchExpense} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchExpense: v as boolean }))} />
                             <Label>Lançar Saída</Label>
@@ -293,6 +297,10 @@ export default function Profiles() {
                             <Checkbox checked={profileForm.canApproveCampaign} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveCampaign: v as boolean }))} />
                             <Label>Aprovar Campanha</Label>
                           </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox checked={profileForm.canApproveCarneReviver} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveCarneReviver: v as boolean }))} />
+                            <Label>Aprovar Carnê Reviver</Label>
+                          </div>                          
                           <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canApproveExpense} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveExpense: v as boolean }))} />
                             <Label>Aprovar Saída</Label>
