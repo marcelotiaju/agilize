@@ -1,5 +1,12 @@
 # Histórico de Alterações
 
+## [1.2.0](https://github.com/marcelotiaju/agilize/compare/v1.1.0...v1.2.0) (2025-12-31)
+
+
+### ✨ Novas Funcionalidades
+
+* Ajustes diversos com Carne Reviver ([6b26d53](https://github.com/marcelotiaju/agilize/commit/6b26d53a95d98d6ff8e16c3859c14f0dc798a650))
+
 ## [1.1.0](https://github.com/marcelotiaju/agilize/compare/v1.0.3...v1.1.0) (2025-12-29)
 
 
