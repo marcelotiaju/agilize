@@ -297,17 +297,10 @@ export default function CongregationSummary() {
 
   const handleUpdateSummary = async () => {
     // ⭐️ MUDANÇA 1: Validação de Saldo Geral ⭐️
-    if (Math.abs(saldoGeral - totalDepositadoEspecie) > 0.001) { // Tolerância de 1 centavo
-    //  toast.error("O Saldo Geral não confere!", {
-    //    description: (
-    //      <><p className="space-y-1 text-gray-500">
-    //        {`A soma de Depósito e Espécie (R$ ${totalDepositadoEspecie.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) deve ser igual ao Saldo Geral (R$ ${saldoGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}).`}
-    //      </p></>
-    //    ),
-    //  })
-       alert(`O Saldo Geral não confere! A soma de Depósito e Espécie (R$ ${totalDepositadoEspecie.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) deve ser igual ao Saldo Geral (R$ ${saldoGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}).`)
-      return;
-    }
+    // if (Math.abs(saldoGeral - totalDepositadoEspecie) > 0.001) { // Tolerância de 1 centavo
+    //    alert(`O Saldo Geral não confere! A soma de Depósito e Espécie (R$ ${totalDepositadoEspecie.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) deve ser igual ao Saldo Geral (R$ ${saldoGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}).`)
+    //   return;
+    // }
 
     try {
       const response = await fetch('/api/congregation-summaries', {
@@ -965,7 +958,7 @@ export default function CongregationSummary() {
                             />
                         </div>
 
-                        <div>
+                        {/* <div>
                         <Label htmlFor="depositValue">Valor Depósito</Label>
                         <NumericFormat
                             id="depositValue"
@@ -1000,19 +993,19 @@ export default function CongregationSummary() {
                               allowNegative={true}
                               disabled={editFormData.status === 'APPROVED'}                              
                             />  
-                        </div>                      
+                        </div> */}                     
                       </div>
 
                       {/* ⭐️ NOVO: CARD TOTAL DE DEPÓSITO + ESPÉCIE ⭐️ */}
-                        <div className="bg-yellow-50 p-1 rounded-lg mt-2">
+                        {/* <div className="bg-yellow-50 p-1 rounded-lg mt-2">
                           <div className="flex justify-between items-center">
                             <h5 className="font-small text-yellow-700">Total Depósito + Espécie</h5>
                             <div className="text-sm font-semibold text-yellow-800">
-                              {/* Usa o memo para atualizar automaticamente enquanto o usuário digita */}
+                              
                               R$ {totalDepositadoEspecie.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </div>
                           </div>
-                        </div>
+                        </div>  */}
                      
                       <div className="space-y-2">
                         {/* <h4 className="font-medium">Aprovações</h4> */}
