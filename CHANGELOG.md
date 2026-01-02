@@ -1,5 +1,12 @@
 # Histórico de Alterações
 
+### [1.2.1](https://github.com/marcelotiaju/agilize/compare/v1.2.0...v1.2.1) (2026-01-02)
+
+
+### 🐛 Correções de Erros
+
+* Ajustes retirar valores especie e deposito ([06b72b0](https://github.com/marcelotiaju/agilize/commit/06b72b0350f5e75f2bc005990de45e184bc437fe))
+
 ## [1.2.0](https://github.com/marcelotiaju/agilize/compare/v1.1.0...v1.2.0) (2025-12-31)
 
 
