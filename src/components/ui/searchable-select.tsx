@@ -33,6 +33,10 @@ interface SearchableSelectProps {
     photoUrl?: string;
   }[];
   searchKeys: ('name' | 'document')[];
+  /**
+   * Optional rendering mode. Use 'congregation' to hide avatar and strip prefix until ':' from name.
+   */
+  itemRenderMode?: 'default' | 'congregation';
 }
 
 export function SearchableSelect({
@@ -45,6 +49,7 @@ export function SearchableSelect({
   name,
   data,
   searchKeys,
+  itemRenderMode = 'default',
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -62,6 +67,15 @@ export function SearchableSelect({
   const selectedItem = useMemo(() => {
     return data.find((item) => item.id === value);
   }, [data, value]);
+
+  const getDisplayName = (name?: string) => {
+    if (!name) return ''
+    if (itemRenderMode === 'congregation') {
+      const idx = name.indexOf(':')
+      return idx >= 0 ? name.substring(idx + 1).trim() : name
+    }
+    return name
+  }
 
   // Função para remover acentos
   const removeAccents = (str: string): string => {
@@ -107,9 +121,9 @@ export function SearchableSelect({
           variant="outline"
           disabled={disabled}
           required={required}
-          className={cn("w-full justify-start", !value && "text-muted-foreground")}
+          className={cn("w-full justify-start overflow-hidden", !value && "text-muted-foreground")}
         >
-          {selectedItem ? selectedItem.name : placeholder}
+          <span className="truncate" title={selectedItem ? selectedItem.name : undefined}>{selectedItem ? selectedItem.name : placeholder}</span>
           <Search className="ml-auto h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </DialogTrigger>
@@ -158,27 +172,31 @@ export function SearchableSelect({
             >
             <CardContent className="p-3">
               <div className="flex items-center space-x-3">
-                <div key={item.id} className="shrink-0"></div>
-                <div className="shrink-0">
-                  {item.photoUrl && item.photoExists ? (
-                    <img 
-                    src={`/uploads/${item.photoUrl}`} 
-                    alt="Foto"
-                    className="h-12 w-12 rounded-full object-cover border"
-                    />
-                  ) : (
-                    <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center">
-                      {!item.document && !item.cargo && !item.photoExists ? (
-                        <Church className="h-6 w-6 text-gray-400" />
+                {itemRenderMode !== 'congregation' && (
+                  <>
+                    <div key={item.id} className="shrink-0"></div>
+                    <div className="shrink-0">
+                      {item.photoUrl && item.photoExists ? (
+                        <img 
+                        src={`/uploads/${item.photoUrl}`} 
+                        alt="Foto"
+                        className="h-12 w-12 rounded-full object-cover border"
+                        />
                       ) : (
-                        <User className="h-6 w-6 text-gray-400" />
+                        <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center">
+                          {!item.document && !item.cargo && !item.photoExists ? (
+                            <Church className="h-6 w-6 text-gray-400" />
+                          ) : (
+                            <User className="h-6 w-6 text-gray-400" />
+                          )}
+                        </div>
                       )}
                     </div>
-                  )}
-                </div>
+                  </>
+                )}
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm truncate">
-                    {item.name}
+                    {getDisplayName(item.name)}
                   </p>
                   {item.document && (
                     <p className="text-xs text-gray-500 truncate">

@@ -462,24 +462,52 @@ export default function CongregationSummary() {
 
                 {session?.user?.canGenerateSummary && (
                 <>
-                <div>
+                <div className="w-full">
                   <Label htmlFor="startDate">Data Início</Label>
-                  <Input
-                    id="startDate"
-                    type="date"
-                    value={editFormData.startDate}
-                    onChange={(e) => setEditFormData({ ...editFormData, startDate: e.target.value })}
-                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start text-left font-normal">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {editFormData.startDate ? formatDate(new Date(`${editFormData.startDate}T00:00:00`), 'dd/MM/yyyy') : 'Data Início'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={editFormData.startDate ? new Date(`${editFormData.startDate}T00:00:00`) : undefined}
+                        onSelect={(d) => {
+                          if (d) {
+                            setEditFormData({ ...editFormData, startDate: formatDate(d, 'yyyy-MM-dd') })
+                          }
+                        }}
+                        locale={ptBR}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 
-                <div>
+                <div className="w-full">
                   <Label htmlFor="endDate">Data Fim</Label>
-                  <Input
-                    id="endDate"
-                    type="date"
-                    value={editFormData.endDate}
-                    onChange={(e) => setEditFormData({ ...editFormData, endDate: e.target.value })}
-                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start text-left font-normal">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {editFormData.endDate ? formatDate(new Date(`${editFormData.endDate}T00:00:00`), 'dd/MM/yyyy') : 'Data Fim'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={editFormData.endDate ? new Date(`${editFormData.endDate}T00:00:00`) : undefined}
+                        onSelect={(d) => {
+                          if (d) {
+                            setEditFormData({ ...editFormData, endDate: formatDate(d, 'yyyy-MM-dd') })
+                          }
+                        }}
+                        locale={ptBR}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 <div className="flex items-start md:mt-3">
@@ -522,8 +550,8 @@ export default function CongregationSummary() {
                       onSelect={(d) => { 
                         setStartSummaryDate(d); 
                         setStartDateOpen(false);
-                        //setCurrentPage(1); 
                       }}
+                      locale={ptBR}
                     />
                   </PopoverContent>
                 </Popover>
@@ -546,8 +574,8 @@ export default function CongregationSummary() {
                       onSelect={(d) => { 
                         setEndSummaryDate(d);
                         setEndDateOpen(false);
-                        //setCurrentPage(1); 
                       }}
+                      locale={ptBR}
                     />
                   </PopoverContent>
                 </Popover>

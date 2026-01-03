@@ -62,6 +62,9 @@ export async function PUT(request: NextRequest, props: any) {
         if (existingLaunch.type === "OFERTA_CULTO" && !session.user.canApproveServiceOffer) {
           return NextResponse.json({ error: "Sem permissão para aprovar ofertas" }, { status: 403 });
         }
+        if (existingLaunch.type === "CARNE_REVIVER" && !session.user.canApproveServiceOffer) {
+          return NextResponse.json({ error: "Sem permissão para aprovar Carnê Reviver" }, { status: 403 });
+        }
       }
 
       const updateData: any = { status }

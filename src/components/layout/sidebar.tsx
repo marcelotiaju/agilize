@@ -17,6 +17,7 @@ import {
   Plus,
   Building,
   UserCheck,
+  ChevronDown,
   Building2,
   List,
   User,
@@ -100,14 +101,14 @@ export function Sidebar() {
                 <div className="mt-3">
                   <button type="button" onClick={() => setOpenTesouraria(!openTesouraria)} className="w-full flex items-center justify-between px-2 py-2 text-base font-medium text-gray-700 rounded-md hover:bg-gray-50">
                     <span className="flex items-center"><FileText className="mr-4 h-6 w-6" /> Tesouraria</span>
-                    <span className="text-sm">{openTesouraria ? '-' : '+'}</span>
+                    <ChevronDown className={cn('h-4 w-4 transform transition-transform text-gray-500', openTesouraria ? 'rotate-0' : '-rotate-90')} />
                   </button>
                   {openTesouraria && (
                     <div className="mt-1 space-y-1 pl-8">
-                      {hasLaunchPermission && (<Link href="/launches" className={cn('group block px-2 py-2 text-sm rounded-md', pathname === '/launches' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}>Lançamentos</Link>)}
-                      {hasSummaryPermission && (<Link href="/congregation-summary" className={cn('group block px-2 py-2 text-sm rounded-md', pathname === '/congregation-summary' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}>Resumo Diário</Link>)}
-                      {session?.user?.canExport && (<Link href="/export" className={cn('group block px-2 py-2 text-sm rounded-md', pathname === '/export' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}>Exportar Dados</Link>)}
-                      {session?.user?.canDelete && (<Link href="/delete-history" className={cn('group block px-2 py-2 text-sm rounded-md', pathname === '/delete-history' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}>Excluir Histórico</Link>)}
+                      {hasLaunchPermission && (<Link href="/launches" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/launches' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><List className="mr-3 h-5 w-5 shrink-0" />Lançamentos</Link>)}
+                      {hasSummaryPermission && (<Link href="/congregation-summary" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/congregation-summary' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><PieChart className="mr-3 h-5 w-5 shrink-0" />Resumo Diário</Link>)}
+                      {session?.user?.canExport && (<Link href="/export" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/export' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Download className="mr-3 h-5 w-5 shrink-0" />Exportar Dados</Link>)}
+                      {session?.user?.canDelete && (<Link href="/delete-history" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/delete-history' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Trash2 className="mr-3 h-5 w-5 shrink-0" />Excluir Histórico</Link>)}
                     </div>
                   )}
                 </div>
@@ -118,14 +119,14 @@ export function Sidebar() {
                 <div className="mt-3">
                   <button type="button" onClick={() => setOpenCadastros(!openCadastros)} className="w-full flex items-center justify-between px-2 py-2 text-base font-medium text-gray-700 rounded-md hover:bg-gray-50">
                     <span className="flex items-center"><Users className="mr-4 h-6 w-6" /> Cadastros</span>
-                    <span className="text-sm">{openCadastros ? '-' : '+'}</span>
+                    <ChevronDown className={cn('h-4 w-4 transform transition-transform text-gray-500', openCadastros ? 'rotate-0' : '-rotate-90')} />
                   </button>
                   {openCadastros && (
                     <div className="mt-1 space-y-1 pl-8">
-                      <Link href="/contributors" className={cn('group block px-2 py-2 text-sm rounded-md', pathname === '/contributors' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}>Contribuintes</Link>
-                      <Link href="/congregations" className={cn('group block px-2 py-2 text-sm rounded-md', pathname === '/congregations' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}>Congregações</Link>
-                      <Link href="/suppliers" className={cn('group block px-2 py-2 text-sm rounded-md', pathname === '/suppliers' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}>Fornecedores</Link>
-                      <Link href="/classifications" className={cn('group block px-2 py-2 text-sm rounded-md', pathname === '/classifications' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}>Classificações</Link>
+                      <Link href="/contributors" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/contributors' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><User className="mr-3 h-5 w-5 shrink-0" />Contribuintes</Link>
+                      <Link href="/congregations" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/congregations' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Building2 className="mr-3 h-5 w-5 shrink-0" />Congregações</Link>
+                      <Link href="/suppliers" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/suppliers' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Building className="mr-3 h-5 w-5 shrink-0" />Fornecedores</Link>
+                      <Link href="/classifications" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/classifications' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><List className="mr-3 h-5 w-5 shrink-0" />Classificações</Link>
                     </div>
                   )}
                 </div>
@@ -136,13 +137,13 @@ export function Sidebar() {
               <div className="mt-3">
                 <button type="button" onClick={() => setOpenSeguranca(!openSeguranca)} className="w-full flex items-center justify-between px-2 py-2 text-base font-medium text-gray-700 rounded-md hover:bg-gray-50">
                   <span className="flex items-center"><UserCheck className="mr-4 h-6 w-6" /> Segurança</span>
-                  <span className="text-sm">{openSeguranca ? '-' : '+'}</span>
+                  <ChevronDown className={cn('h-4 w-4 transform transition-transform text-gray-500', openSeguranca ? 'rotate-0' : '-rotate-90')} />
                 </button>
                 {openSeguranca && (
                   <div className="mt-1 space-y-1 pl-8">
-                    { canManageUsers && <Link href="/users" className={cn('group block px-2 py-2 text-sm rounded-md', pathname === '/users' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}>Usuários</Link>}
-                    { canManageUsers && <Link href="/profiles" className={cn('group block px-2 py-2 text-sm rounded-md', pathname === '/profiles' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}>Perfis</Link>}
-                    <Link href="/profile" className={cn('group block px-2 py-2 text-sm rounded-md', pathname === '/profile' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}>Acesso</Link>
+                    {canManageUsers && <Link href="/users" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/users' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Users className="mr-3 h-5 w-5 shrink-0" />Usuários</Link>}
+                    {canManageUsers && <Link href="/profiles" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/profiles' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><UserPen className="mr-3 h-5 w-5 shrink-0" />Perfis</Link>}
+                    <Link href="/profile" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/profile' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><UserCheck className="mr-3 h-5 w-5 shrink-0" />Acesso</Link>
                   </div>
                 )}
               </div>
@@ -202,14 +203,14 @@ export function Sidebar() {
                 <div className="mt-3">
                   <button type="button" onClick={() => setOpenTesouraria(!openTesouraria)} className="w-full flex items-center justify-between px-2 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-50">
                     <span className="flex items-center"><FileText className="mr-3 h-5 w-5 shrink-0" /> Tesouraria</span>
-                    <span className="text-sm">{openTesouraria ? '-' : '+'}</span>
+                    <ChevronDown className={cn('h-4 w-4 transform transition-transform text-gray-500', openTesouraria ? 'rotate-0' : '-rotate-90')} />
                   </button>
                   {openTesouraria && (
                     <div className="mt-1 space-y-1 pl-8">
-                      {hasLaunchPermission && (<Link href="/launches" className={cn('group block px-2 py-2 text-sm rounded-md', pathname === '/launches' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}>Lançamentos</Link>)}
-                      {hasSummaryPermission && (<Link href="/congregation-summary" className={cn('group block px-2 py-2 text-sm rounded-md', pathname === '/congregation-summary' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}>Resumo Diário</Link>)}
-                      {session?.user?.canExport && (<Link href="/export" className={cn('group block px-2 py-2 text-sm rounded-md', pathname === '/export' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}>Exportar Dados</Link>)}
-                      {session?.user?.canDelete && (<Link href="/delete-history" className={cn('group block px-2 py-2 text-sm rounded-md', pathname === '/delete-history' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}>Excluir Histórico</Link>)}                      
+                      {hasLaunchPermission && (<Link href="/launches" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/launches' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><List className="mr-3 h-5 w-5 shrink-0" />Lançamentos</Link>)}
+                      {hasSummaryPermission && (<Link href="/congregation-summary" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/congregation-summary' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><PieChart className="mr-3 h-5 w-5 shrink-0" />Resumo Diário</Link>)}
+                      {session?.user?.canExport && (<Link href="/export" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/export' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><Download className="mr-3 h-5 w-5 shrink-0" />Exportar Dados</Link>)}
+                      {session?.user?.canDelete && (<Link href="/delete-history" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/delete-history' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><Trash2 className="mr-3 h-5 w-5 shrink-0" />Excluir Histórico</Link>)}                      
                     </div>
                   )}
                 </div>
@@ -220,14 +221,14 @@ export function Sidebar() {
                 <div className="mt-3">
                   <button type="button" onClick={() => setOpenCadastros(!openCadastros)} className="w-full flex items-center justify-between px-2 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-50">
                     <span className="flex items-center"><Users className="mr-3 h-5 w-5 shrink-0" /> Cadastros</span>
-                    <span className="text-sm">{openCadastros ? '-' : '+'}</span>
+                    <ChevronDown className={cn('h-4 w-4 transform transition-transform text-gray-500', openCadastros ? 'rotate-0' : '-rotate-90')} />
                   </button>
                   {openCadastros && (
                     <div className="mt-1 space-y-1 pl-8">
-                      <Link href="/contributors" className={cn('group block px-2 py-2 text-sm rounded-md', pathname === '/contributors' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}>Contribuintes</Link>
-                      <Link href="/congregations" className={cn('group block px-2 py-2 text-sm rounded-md', pathname === '/congregations' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}>Congregações</Link>
-                      <Link href="/suppliers" className={cn('group block px-2 py-2 text-sm rounded-md', pathname === '/suppliers' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}>Fornecedores</Link>
-                      <Link href="/classifications" className={cn('group block px-2 py-2 text-sm rounded-md', pathname === '/classifications' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}>Classificações</Link>
+                      <Link href="/contributors" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/contributors' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><User className="mr-3 h-5 w-5 shrink-0" />Contribuintes</Link>
+                      <Link href="/congregations" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/congregations' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><Building2 className="mr-3 h-5 w-5 shrink-0" />Congregações</Link>
+                      <Link href="/suppliers" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/suppliers' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><Building className="mr-3 h-5 w-5 shrink-0" />Fornecedores</Link>
+                      <Link href="/classifications" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/classifications' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><List className="mr-3 h-5 w-5 shrink-0" />Classificações</Link>
                     </div>
                   )}
                 </div>
@@ -237,13 +238,13 @@ export function Sidebar() {
               <div className="mt-3">
                 <button type="button" onClick={() => setOpenSeguranca(!openSeguranca)} className="w-full flex items-center justify-between px-2 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-50">
                   <span className="flex items-center"><UserCheck className="mr-3 h-5 w-5 shrink-0" /> Segurança</span>
-                  <span className="text-sm">{openSeguranca ? '-' : '+'}</span>
+                  <ChevronDown className={cn('h-4 w-4 transform transition-transform text-gray-500', openSeguranca ? 'rotate-0' : '-rotate-90')} />
                 </button>
                 {openSeguranca && (
                   <div className="mt-1 space-y-1 pl-8">
-                    {canManageUsers && (<Link href="/users" className={cn('group block px-2 py-2 text-sm rounded-md', pathname === '/users' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}>Usuários</Link>)}
-                    {canManageUsers && (<Link href="/profiles" className={cn('group block px-2 py-2 text-sm rounded-md', pathname === '/profiles' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}>Perfis</Link>)}
-                    <Link href="/profile" className={cn('group block px-2 py-2 text-sm rounded-md', pathname === '/profile' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}>Acesso</Link>
+                    {canManageUsers && (<Link href="/users" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/users' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><Users className="mr-3 h-5 w-5 shrink-0" />Usuários</Link>)}
+                    {canManageUsers && (<Link href="/profiles" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/profiles' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><UserPen className="mr-3 h-5 w-5 shrink-0" />Perfis</Link>)}
+                    <Link href="/profile" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/profile' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><UserCheck className="mr-3 h-5 w-5 shrink-0" />Acesso</Link>
                   </div>
                 )}
               </div>

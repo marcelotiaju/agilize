@@ -299,7 +299,7 @@ export default function Launches() {
           isAnonymous: newValue,
           isContributorRegistered: newValue ? false : prev.isContributorRegistered,
           contributorName: newValue ? 'ANÔNIMO' : '',
-          contributorId: newValue ? prev.contributorId : '',
+          contributorId: newValue ? null : prev.contributorId,
         };
       }
       if (name === 'isContributorRegistered') {
@@ -308,7 +308,7 @@ export default function Launches() {
           isContributorRegistered: newValue, 
           isAnonymous: false, 
           contributorName: newValue ? '' : prev.contributorName,
-          contributorId: newValue ? prev.contributorId : '',
+          contributorId: newValue ? prev.contributorId : null,
         };
       }
       if (name === 'isSupplierRegistered' && newValue) {
@@ -755,7 +755,7 @@ export default function Launches() {
                        Novo
                      </Button>
                    </DialogTrigger>
-                   <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto overflow-x-auto sm:overflow-x-hidden p-0 sm:p-6 fixed" style={{ fontSize: '16px' }}>
+                   <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto overflow-x-hidden p-0 sm:p-6 fixed" style={{ fontSize: '16px' }}>
                      <DialogHeader>
                        <DialogTitle>{editingLaunch ? 'Editar' : 'Novo'}</DialogTitle>
                        <DialogDescription asChild style={{ fontSize: '14px' }}>
@@ -788,7 +788,7 @@ export default function Launches() {
                           <TabsTrigger value="dados">Dados</TabsTrigger>
                           <TabsTrigger value="logs">Logs</TabsTrigger>
                         </TabsList>
-                    <TabsContent value="dados" className="p-4 sm:p-0 overflow-x-hidden">
+                    <TabsContent value="dados" className="max-w-[calc(105vw-3rem)] p-2 sm:p-0 overflow-x-hidden">
                      <form onSubmit={handleSubmit} className="space-y-2 px-2 sm:px-0 w-full max-w-full overflow-x-hidden">
                        <div className="space-y-2">
                          <div>
@@ -801,6 +801,7 @@ export default function Launches() {
                              onChange={(value) => handleSelectChange('congregationId', value)}
                              name="congregationId"
                              data={congregations.map(s => ({ id: s.id, name: s.name }))}
+                             itemRenderMode="congregation"
                              searchKeys={['name']}
                              required
                            />
@@ -928,7 +929,7 @@ export default function Launches() {
                          </div>
 
                          {/* Dízimo: contribuinte */}
-                         {formData.type === 'DIZIMO' && (
+                         {formData.type === 'DIZIMO' || formData.type === 'CARNE_REVIVER' && (
                            <div className="w-full">
                              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
                                <div className="flex items-center space-x-2 w-full sm:w-auto">
@@ -1012,6 +1013,92 @@ export default function Launches() {
                              )}
                            </div>
                          )}
+
+                         {/* Carne Reviver: contribuinte
+                         {formData.type === 'CARNE_REVIVER' && (
+                           <div className="w-full">
+                             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
+                               <div className="flex items-center space-x-2 w-full sm:w-auto">
+                                <Button
+                                    type="button"
+                                    variant={formData.isContributorRegistered ? "default" : "outline"}
+                                    size="sm"
+                                    disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
+                                    className={cn(
+                                      "h-9 px-3 transition-all flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start",
+                                      formData.isContributorRegistered 
+                                          ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-800 shadow-sm" 
+                                          : "text-gray-600 border-gray-300 hover:bg-gray-50"
+                                    )}
+                                    onClick={() => toggleField('isContributorRegistered')}
+                                  >
+                                    {formData.isContributorRegistered ? (
+                                      <Check className="h-4 w-4 animate-in zoom-in duration-200 shrink-0" />
+                                    ) : (
+                                      <Users className="h-4 w-4 shrink-0" />
+                                    )}
+                                    <span className="text-sm sm:text-base">Contribuinte cadastrado</span>
+                                  </Button>
+                               </div>
+
+                               {!formData.isContributorRegistered && (
+                                 <div className="flex items-center space-x-2 w-full sm:w-auto">
+                                  <Button
+                                      type="button"
+                                      variant={formData.isAnonymous ? "default" : "outline"}
+                                      size="sm"
+                                      disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
+                                      className={cn(
+                                        "h-9 px-3 transition-all flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start",
+                                        formData.isAnonymous 
+                                          ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-800 shadow-sm" 
+                                          : "text-gray-600 border-gray-300 hover:bg-gray-50"
+                                      )}
+                                      onClick={() => toggleField('isAnonymous')}
+                                    >
+                                      {formData.isAnonymous ? (
+                                        <Check className="h-4 w-4 animate-in zoom-in duration-200 shrink-0" />
+                                      ) : (
+                                        <Ghost className="h-4 w-4 shrink-0" />
+                                      )}
+                                      <span className="text-sm sm:text-base">Anônimo</span>
+                                    </Button>
+                                 </div>
+                               )}
+                             </div>
+
+                             {formData.isContributorRegistered ? (
+                               <div className="mt-2 w-full">
+                                 <Label htmlFor="contributorId">Contribuinte</Label>
+                                 <SearchableSelect
+                                   key={formData.contributorId}
+                                   label="Buscar Contribuinte"
+                                   placeholder="Selecione o contribuinte"
+                                   value={formData.contributorId ?? ''}
+                                   disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
+                                   onChange={(value) => handleSelectChange('contributorId', value)}
+                                   name="contributorId"
+                                   data={contributors.filter(f => (f.congregationId == formData.congregationId)).map(c => ({ key: c.id, id: c.id, name: c.name, document: c.cpf, cargo: c.ecclesiasticalPosition, photoUrl: c.photoUrl, photoExists: c.photoExists }))}
+                                   searchKeys={['name', 'document']}
+                                 />
+                               </div>
+                             ) : (
+                               <div className="mt-2 w-full">
+                                 <Label htmlFor="contributorName">Nome do Contribuinte</Label>
+                                 <Input
+                                   id="contributorName"
+                                   name="contributorName"
+                                   value={formData.contributorName ?? ''}
+                                   onChange={handleInputChange}
+                                   disabled={formData.isAnonymous || (editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null))}
+                                   className="w-full"
+                                   //required={!formData.isAnonymous}
+                                   style={{ fontSize: '16px' }}
+                                 />
+                               </div>
+                             )}
+                           </div>
+                         )} */}
 
                          {/* Fornecedor para SAIDA */}
                          {['SAIDA'].includes(formData.type) && (

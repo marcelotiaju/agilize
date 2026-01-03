@@ -308,69 +308,63 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Congregação é obrigatória" }, { status: 400 })
     }
 
-    // Validação para contribuinte obrigatório em dízimos
-    if (type === "DIZIMO" && !contributorId && !contributorName) {
-      return NextResponse.json({ error: "Nome do contribuinte é obrigatório para lançamentos do tipo Dízimo" }, { status: 400 })
+    // Validação para contribuinte obrigatório em dízimos e carne reviver
+    if ((type === "DIZIMO" || type === "CARNE_REVIVER") && !contributorId && !contributorName) {
+      return NextResponse.json({ error: `Nome do contribuinte é obrigatório para lançamentos do tipo ${type === "DIZIMO" ? "Dízimo" : "Carne Reviver"}` }, { status: 400 })
     }
 
     // Validação de duplicidade baseada no tipo de lançamento
     const numericValue = parseFloat(value) || 0
     
-    // Para DÍZIMO: verificar Congregação + Data + Valor + Contribuinte
-    if (type === "DIZIMO") {
-      const whereClause: any = {
-        congregationId,
-        date: launchDate,
-        type: "DIZIMO",
-        value: numericValue,
-        status: { in: ["NORMAL", "APPROVED"] } // Apenas status que permitem duplicidade
-      }
-      
-      // Verificar por contributorId ou contributorName
+    // Para DÍZIMO e CARNE_REVIVER: verificar Congregação + Data + Valor + Contribuinte apenas se contributorId estiver preenchido
+    if (type === "DIZIMO" || type === "CARNE_REVIVER") {
+      // Validação de duplicidade apenas se o contribuinte estiver registrado (contributorId preenchido)
       if (isContributorRegistered && contributorId) {
-        whereClause.contributorId = contributorId
-      } else if (contributorName) {
-        whereClause.contributorName = contributorName
-        whereClause.contributorId = null // Garantir que não é contribuinte cadastrado
+        const whereClause: any = {
+          congregationId,
+          date: launchDate,
+          type: type,
+          value: numericValue,
+          contributorId,
+          status: { in: ["NORMAL", "APPROVED"] }
+        }
+        
+        const existingLaunch = await prisma.launch.findFirst({
+          where: whereClause
+        })
+        
+        if (existingLaunch) {
+          return NextResponse.json({ 
+            error: `Já existe um lançamento de ${type === "DIZIMO" ? "dízimo" : "carne reviver"} com a mesma congregação, data, valor e contribuinte` 
+          }, { status: 400 })
+        }
       }
-      
-      const existingLaunch = await prisma.launch.findFirst({
-        where: whereClause
-      })
-      
-      if (existingLaunch) {
-        return NextResponse.json({ 
-          error: "Já existe um lançamento de dízimo com a mesma congregação, data, valor e contribuinte" 
-        }, { status: 400 })
-      }
+      // Se não tiver contributorId (contribuinte anônimo ou não cadastrado), permite duplicação
     }
-    // Para SAÍDA: verificar Congregação + Data + Valor + Fornecedor
+    // Para SAÍDA: verificar Congregação + Data + Valor + Fornecedor apenas se supplierId estiver preenchido
     else if (type === "SAIDA") {
-      const whereClause: any = {
-        congregationId,
-        date: launchDate,
-        type: "SAIDA",
-        value: numericValue,
-        status: { in: ["NORMAL", "APPROVED"] }
-      }
-      
-      // Verificar por supplierId ou supplierName
+      // Validação de duplicidade apenas se o fornecedor estiver registrado (supplierId preenchido)
       if (isSupplierRegistered && supplierId) {
-        whereClause.supplierId = supplierId
-      } else if (supplierName) {
-        whereClause.supplierName = supplierName
-        whereClause.supplierId = null // Garantir que não é fornecedor cadastrado
+        const whereClause: any = {
+          congregationId,
+          date: launchDate,
+          type: "SAIDA",
+          value: numericValue,
+          supplierId,
+          status: { in: ["NORMAL", "APPROVED"] }
+        }
+        
+        const existingLaunch = await prisma.launch.findFirst({
+          where: whereClause
+        })
+        
+        if (existingLaunch) {
+          return NextResponse.json({ 
+            error: "Já existe um lançamento de saída com a mesma congregação, data, valor e fornecedor" 
+          }, { status: 400 })
+        }
       }
-      
-      const existingLaunch = await prisma.launch.findFirst({
-        where: whereClause
-      })
-      
-      if (existingLaunch) {
-        return NextResponse.json({ 
-          error: "Já existe um lançamento de saída com a mesma congregação, data, valor e fornecedor" 
-        }, { status: 400 })
-      }
+      // Se não tiver supplierId (fornecedor não cadastrado), permite duplicação
     }
     // Para os demais tipos (VOTO, EBD, CAMPANHA, MISSAO, CIRCULO, OFERTA_CULTO): verificar Congregação + Data + Valor
     else {
@@ -427,9 +421,9 @@ export async function POST(request: NextRequest) {
         value: parseFloat(value) || null,
         description,
         status: "NORMAL",
-        // Lógica ajustada para o Dízimo
-        contributorId: type === "DIZIMO" && isContributorRegistered ?  contributorId : null,
-        contributorName: type === "DIZIMO" && !isContributorRegistered ? contributorName : null,
+        // Lógica ajustada para o Dízimo e Carne Reviver
+        contributorId: (type === "DIZIMO" || type === "CARNE_REVIVER") && isContributorRegistered ?  contributorId : null,
+        contributorName: (type === "DIZIMO" || type === "CARNE_REVIVER") && !isContributorRegistered ? contributorName : null,
         // Lógica ajustada para a Saída
         supplierName: type === "SAIDA" && !isSupplierRegistered ? supplierName : null,
         supplierId: type === "SAIDA" && isSupplierRegistered ? supplierId : null,
@@ -579,12 +573,12 @@ export async function PUT(request: NextRequest) {
     const finalSupplierId = updateData.supplierId !== undefined ? (updateData.supplierId || null) : launch.supplierId
     const finalSupplierName = updateData.supplierName !== undefined ? (updateData.supplierName || null) : launch.supplierName
 
-    // Para DÍZIMO: verificar Congregação + Data + Valor + Contribuinte
-    if (finalType === "DIZIMO") {
+    // Para DÍZIMO e CARNE_REVIVER: verificar Congregação + Data + Valor + Contribuinte
+    if (finalType === "DIZIMO" || finalType === "CARNE_REVIVER") {
       const whereClause: any = {
         congregationId: finalCongregationId,
         date: finalDate,
-        type: "DIZIMO",
+        type: finalType,
         value: finalValue,
         status: { in: ["NORMAL", "APPROVED"] },
         id: { not: id } // Excluir o próprio registro
@@ -603,7 +597,7 @@ export async function PUT(request: NextRequest) {
       
       if (existingLaunch) {
         return NextResponse.json({ 
-          error: "Já existe um lançamento de dízimo com a mesma congregação, data, valor e contribuinte" 
+          error: `Já existe um lançamento de ${finalType === "DIZIMO" ? "dízimo" : "carne reviver"} com a mesma congregação, data, valor e contribuinte` 
         }, { status: 400 })
       }
     }

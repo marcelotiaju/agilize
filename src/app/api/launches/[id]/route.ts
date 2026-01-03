@@ -124,7 +124,7 @@ export async function PUT(request: NextRequest, props: any) {
       }
 
       // Lógica para contribuinte (Dízimo)
-      if (body.type === "DIZIMO") {
+      if (body.type === "DIZIMO" || body.type === "CARNE_REVIVER") {
         if (body.isContributorRegistered && body.contributorId) {
           // Contribuinte cadastrado: salva contributorId e limpa contributorName
           dataToUpdate.contributorId = body.contributorId
