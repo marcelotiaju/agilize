@@ -396,6 +396,8 @@ export default function CongregationSummary() {
   //   })
   // }
 
+  const [mainActiveTab, setMainActiveTab] = useState('listar')
+
   if (!session?.user?.canListSummary && !session?.user?.canGenerateSummary) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -423,107 +425,123 @@ export default function CongregationSummary() {
             {/* <p className="text-gray-600">Gerencie os resumos financeiros das congregações</p> */}
           </div>
 
-          {/* Filtros */}
+          {/* Seleção de Congregações - Sempre Visível */}
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>Gerar Resumo</CardTitle>
+              <CardTitle>Seleção de Congregação(ões)</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                {/* MUDANÇA 2: Seleção Múltipla de Congregações */}
-                <div className="col-span-1 md:col-span-4 lg:col-span-1">
-                  <Label htmlFor="congregation">Congregação(ões)</Label>
-                  <div className="space-y-2 mt-2 border p-3 rounded-md max-h-40 overflow-y-auto">
-                    <div className="flex items-center space-x-2 pb-1 border-b">
-                      <Checkbox
-                        id="selectAllCongregations"
-                        checked={selectedCongregations.length === congregations.length && congregations.length > 0}
-                        onCheckedChange={(checked) => handleSelectAll(checked as boolean)}
-                      />
-                      <Label htmlFor="selectAllCongregations" className="font-semibold">
-                        Marcar/Desmarcar Todos
-                      </Label>
-                    </div>
-                    {congregations.map((congregation) => (
-                      <div key={congregation.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`congregation-${congregation.id}`}
-                          checked={selectedCongregations.includes(congregation.id)}
-                          onCheckedChange={(checked) => handleCongregationSelection(congregation.id, checked as boolean)}
-                        />
-                        <Label htmlFor={`congregation-${congregation.id}`}>
-                          {congregation.name}
-                        </Label>
-                      </div>
-                    ))}
+              <Label htmlFor="congregation">Congregação(ões)</Label>
+              <div className="space-y-2 mt-2 border p-3 rounded-md max-h-40 overflow-y-auto">
+                <div className="flex items-center space-x-2 pb-1 border-b">
+                  <Checkbox
+                    id="selectAllCongregations"
+                    checked={selectedCongregations.length === congregations.length && congregations.length > 0}
+                    onCheckedChange={(checked) => handleSelectAll(checked as boolean)}
+                  />
+                  <Label htmlFor="selectAllCongregations" className="font-semibold">
+                    Marcar/Desmarcar Todos
+                  </Label>
+                </div>
+                {congregations.map((congregation) => (
+                  <div key={congregation.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`congregation-${congregation.id}`}
+                      checked={selectedCongregations.includes(congregation.id)}
+                      onCheckedChange={(checked) => handleCongregationSelection(congregation.id, checked as boolean)}
+                    />
+                    <Label htmlFor={`congregation-${congregation.id}`}>
+                      {congregation.name}
+                    </Label>
                   </div>
-                </div>
-                {/* FIM MUDANÇA 2 */}
-
-                {session?.user?.canGenerateSummary && (
-                <>
-                <div className="w-full">
-                  <Label htmlFor="startDate">Data Início</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start text-left font-normal">
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {editFormData.startDate ? formatDate(new Date(`${editFormData.startDate}T00:00:00`), 'dd/MM/yyyy') : 'Data Início'}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={editFormData.startDate ? new Date(`${editFormData.startDate}T00:00:00`) : undefined}
-                        onSelect={(d) => {
-                          if (d) {
-                            setEditFormData({ ...editFormData, startDate: formatDate(d, 'yyyy-MM-dd') })
-                          }
-                        }}
-                        locale={ptBR}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                
-                <div className="w-full">
-                  <Label htmlFor="endDate">Data Fim</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start text-left font-normal">
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {editFormData.endDate ? formatDate(new Date(`${editFormData.endDate}T00:00:00`), 'dd/MM/yyyy') : 'Data Fim'}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={editFormData.endDate ? new Date(`${editFormData.endDate}T00:00:00`) : undefined}
-                        onSelect={(d) => {
-                          if (d) {
-                            setEditFormData({ ...editFormData, endDate: formatDate(d, 'yyyy-MM-dd') })
-                          }
-                        }}
-                        locale={ptBR}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                <div className="flex items-start md:mt-3">
-                  <Button onClick={handleCreateSummary} disabled={isLoading} visible={editFormData.canGenerateSummary}>
-                    {isLoading ? 'Listando...' : 'Gerar Resumo'}
-                  </Button>
-                </div>
-                </>
-                )}
+                ))}
               </div>
             </CardContent>
           </Card>
-          {/* Lista de Resumos */}
-          {session?.user?.canListSummary && (
-          <>
-          <Card>
+
+          {/* Abas Principal */}
+          <Tabs value={mainActiveTab} onValueChange={setMainActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              {session?.user?.canListSummary && (
+                <TabsTrigger value="listar">Listar Resumos</TabsTrigger>
+              )}
+              {session?.user?.canGenerateSummary && (
+                <TabsTrigger value="gerar">Gerar Resumo</TabsTrigger>
+              )}
+            </TabsList>
+
+            {/* Aba: Gerar Resumo */}
+            {session?.user?.canGenerateSummary && (
+            <TabsContent value="gerar">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Gerar Novo Resumo</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="w-full">
+                      <Label htmlFor="startDate">Data Início</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="w-full justify-start text-left font-normal">
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {editFormData.startDate ? formatDate(new Date(`${editFormData.startDate}T00:00:00`), 'dd/MM/yyyy') : 'Data Início'}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={editFormData.startDate ? new Date(`${editFormData.startDate}T00:00:00`) : undefined}
+                            onSelect={(d) => {
+                              if (d) {
+                                setEditFormData({ ...editFormData, startDate: formatDate(d, 'yyyy-MM-dd') })
+                              }
+                            }}
+                            locale={ptBR}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    
+                    <div className="w-full">
+                      <Label htmlFor="endDate">Data Fim</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="w-full justify-start text-left font-normal">
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {editFormData.endDate ? formatDate(new Date(`${editFormData.endDate}T00:00:00`), 'dd/MM/yyyy') : 'Data Fim'}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={editFormData.endDate ? new Date(`${editFormData.endDate}T00:00:00`) : undefined}
+                            onSelect={(d) => {
+                              if (d) {
+                                setEditFormData({ ...editFormData, endDate: formatDate(d, 'yyyy-MM-dd') })
+                              }
+                            }}
+                            locale={ptBR}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    <div className="flex items-end">
+                      <Button onClick={handleCreateSummary} disabled={isLoading} className="w-full">
+                        {isLoading ? 'Gerando...' : 'Gerar Resumo'}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            )}
+
+            {/* Aba: Listagem de Resumos */}
+            {session?.user?.canListSummary && (
+            <TabsContent value="listar">
+              <Card>
             <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-start gap-3">
               <CardTitle>Filtrar Resumos</CardTitle>
               <CardDescription>
@@ -791,8 +809,9 @@ export default function CongregationSummary() {
               )}
             </CardContent>
           </Card>
-          </>
-          )}
+            </TabsContent>
+            )}
+          </Tabs>
           {/* Diálogo de Edição */}
           <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
             <DialogContent className="max-h-[85vh] overflow-y-auto h-[90vh]">

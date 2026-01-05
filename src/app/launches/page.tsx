@@ -875,6 +875,7 @@ export default function Launches() {
                                onChange={handleInputChange}
                                disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
                                style={{ fontSize: '16px' }}
+                               locale="pt-BR"
                              />
                            </div>
 
@@ -913,6 +914,7 @@ export default function Launches() {
                                }}
                                thousandSeparator="."
                                decimalSeparator=","
+                               allowNegative={false}
                                //prefix="R$ "
                                //decimalScale={2}
                                //fixedDecimalScale={true}
@@ -929,7 +931,7 @@ export default function Launches() {
                          </div>
 
                          {/* Dízimo: contribuinte */}
-                         {formData.type === 'DIZIMO' && (
+                         {(formData.type === 'DIZIMO' || formData.type === 'CARNE_REVIVER') && (
                            <div className="w-full">
                              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
                                <div className="flex items-center space-x-2 w-full sm:w-auto">
@@ -1263,6 +1265,7 @@ export default function Launches() {
                           setStartDateOpen(false);
                           setCurrentPage(1);
                         }}
+                        locale={ptBR}
                       />
                     </PopoverContent>
                   </Popover>
@@ -1287,6 +1290,7 @@ export default function Launches() {
                           setEndDateOpen(false);
                           setCurrentPage(1);
                         }}
+                        locale={ptBR}
                       />
                     </PopoverContent>
                   </Popover>

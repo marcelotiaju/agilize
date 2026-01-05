@@ -256,6 +256,10 @@ export default function Profiles() {
                             <Label>Lançar EBD</Label>
                           </div>
                           <div className="flex items-center space-x-2">
+                            <Checkbox checked={profileForm.canLaunchCampaign} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchCampaign: v as boolean }))} />
+                            <Label>Lançar Campanha</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canLaunchCarneReviver} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchCarneReviver: v as boolean }))} />
                             <Label>Lançar Carnê Reviver</Label>
                           </div>                            
