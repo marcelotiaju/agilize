@@ -1,5 +1,12 @@
 # Histórico de Alterações
 
+### [1.2.3](https://github.com/marcelotiaju/agilize/compare/v1.2.2...v1.2.3) (2026-01-05)
+
+
+### 🐛 Correções de Erros
+
+* Ajustes Resumo aba e lançamentos data ([902a445](https://github.com/marcelotiaju/agilize/commit/902a445b1b8eb431ab237894e015db3d6092c33e))
+
 ### [1.2.2](https://github.com/marcelotiaju/agilize/compare/v1.2.1...v1.2.2) (2026-01-03)
 
 
