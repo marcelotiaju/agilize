@@ -1,5 +1,12 @@
 # Histórico de Alterações
 
+### [1.3.5](https://github.com/marcelotiaju/agilize/compare/v1.3.4...v1.3.5) (2026-01-11)
+
+
+### 🐛 Correções de Erros
+
+* Ajuste Logo 5 ([5375ccc](https://github.com/marcelotiaju/agilize/commit/5375ccca5f8c00833a74ae858c7537f9bb666d45))
+
 ### [1.3.4](https://github.com/marcelotiaju/agilize/compare/v1.3.3...v1.3.4) (2026-01-11)
 
 
