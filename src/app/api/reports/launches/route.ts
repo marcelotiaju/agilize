@@ -6,13 +6,12 @@ import { zonedTimeToUtc, utcToZonedTime } from 'date-fns-tz'
 import { startOfDay, endOfDay, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import jsPDF from 'jspdf'
+import path from "path/win32"
 
 const fs = require('fs');
+const imagePath = path.join(process.cwd(), 'public/images/Logo.png');
 
-// const { resolve } = require('path');
-// const filePath = resolve(__dirname, 'Logo.png');  
-
-const imageFile = fs.readFileSync('@/../public/images/Logo.png');
+const imageFile = fs.readFileSync(imagePath);
 const base64String = Buffer.from(imageFile).toString('base64');
 
 // Função auxiliar para formatar tipo de lançamento

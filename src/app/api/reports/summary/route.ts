@@ -6,14 +6,13 @@ import { jsPDF } from "jspdf"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { utcToZonedTime } from 'date-fns-tz'
+import path from "path/win32"
 
-const fs = require('fs')
+const fs = require('fs');
+const imagePath = path.join(process.cwd(), 'public/images/Logo.png');
 
-// const { resolve } = require('path');
-// const filePath = resolve(__dirname, 'Logo.png');   
-
-const imageFile = fs.readFileSync('@/../public/images/Logo.png');
-const base64String = Buffer.from(imageFile).toString('base64')
+const imageFile = fs.readFileSync(imagePath);
+const base64String = Buffer.from(imageFile).toString('base64');
 
 const formatCurrency = (val: number) => {
   if (val === 0) return '-'
