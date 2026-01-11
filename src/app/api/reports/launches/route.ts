@@ -9,7 +9,10 @@ import jsPDF from 'jspdf'
 
 const fs = require('fs');
 
-const imageFile = fs.readFileSync('./Logo.png');
+const { resolve } = require('path');
+const filePath = resolve(__dirname, '@Logo.png');   
+
+const imageFile = fs.readFileSync(filePath);
 const base64String = Buffer.from(imageFile).toString('base64');
 
 // Função auxiliar para formatar tipo de lançamento
