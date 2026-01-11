@@ -721,7 +721,7 @@ export default function CongregationSummary() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Período</TableHead>
-                          <TableHead>Dízimos</TableHead>
+                          {/* <TableHead>Dízimos</TableHead>
                           <TableHead>Oferta</TableHead>
                           <TableHead>Carne Reviver</TableHead>
                           <TableHead>Votos</TableHead>
@@ -729,7 +729,7 @@ export default function CongregationSummary() {
                           <TableHead>Campanha</TableHead>
                           <TableHead>Missão</TableHead>
                           <TableHead>Círculo</TableHead>                                                    
-                          <TableHead>Saídas</TableHead>
+                          <TableHead>Saídas</TableHead> */}
                           <TableHead>Aprovações</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Ações</TableHead>
@@ -748,7 +748,7 @@ export default function CongregationSummary() {
                               {formatDate(new Date(summary.endDate), 'dd/MM/yyyy', { locale: ptBR })}
                               </div>
                             </TableCell>
-                            <TableCell>R$ {(summary.titheTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                            {/* <TableCell>R$ {(summary.titheTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                             <TableCell>R$ {(summary.offerTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                             <TableCell>R$ {(summary.carneReviverTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                             <TableCell>R$ {(summary.votesTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
@@ -756,7 +756,7 @@ export default function CongregationSummary() {
                             <TableCell>R$ {(summary.campaignTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                             <TableCell>R$ {(summary.missionTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                             <TableCell>R$ {(summary.circleTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>                            
-                            <TableCell>R$ {(summary.exitTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                            <TableCell>R$ {(summary.exitTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell> */}
                             <TableCell>
                               <div className="space-y-1">
                                 <div className="flex items-center space-x-2">
