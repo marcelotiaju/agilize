@@ -9,7 +9,7 @@ import { zonedTimeToUtc, utcToZonedTime } from 'date-fns-tz'
 
 const fs = require('fs');
 
-const imageFile = fs.readFileSync('./logo.png');
+const imageFile = fs.readFileSync('./Logo.png');
 const base64String = Buffer.from(imageFile).toString('base64');
 
 // Função auxiliar para formatar moeda
