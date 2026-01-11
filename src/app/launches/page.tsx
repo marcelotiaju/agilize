@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useReducer } from 'react'
+import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, Search, Check, X, AlertCircle, CalendarIcon, User, Users, Ghost } from 'lucide-react'
+import { Plus, Edit, Trash2, Search, Check, X, AlertCircle, CalendarIcon, User, Users, Ghost, List, ArrowUp } from 'lucide-react'
 import { format, startOfDay } from 'date-fns'
 import { zonedTimeToUtc } from 'date-fns-tz'
 import { ptBR } from 'date-fns/locale'
@@ -59,6 +59,7 @@ export default function Launches() {
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
+  const [pageYPosition, setPageYPosition] = useState(0);
 
   // Tipos
   type Congregation = { id: string; name: string }
@@ -116,7 +117,7 @@ export default function Launches() {
   const canApproveTreasury = session?.user?.canApproveTreasury
   const canApproveAccountant = session?.user?.canApproveAccountant
   const canApproveDirector = session?.user?.canApproveDirector  
-
+  const canDeleteLaunch = session?.user?.canDeleteLaunch
 
   const [editingLaunch, setEditingLaunch] = useState<Launch | null>(null)
   const [formData, setFormData] = useState({
@@ -155,6 +156,16 @@ export default function Launches() {
     }
   }, [congregations])
 
+  // Detectar scroll para mostrar/esconder botão de voltar ao topo
+  useEffect(() => {
+    const handleScroll = () => {
+      setPageYPosition(window.scrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
   }
@@ -175,6 +186,19 @@ export default function Launches() {
     setSelectedCongregation('all')
     setCurrentPage(1)
   }
+
+  const handleDelete = async (id: string) => {
+      if (!confirm('Tem certeza que deseja excluir este lançamento?')) return
+      try {
+        const response = await fetch(`/api/launches/${id}`, { method: 'DELETE' })
+        if (response.ok) fetchLaunches()
+        else setError('Erro ao excluir lançamento.')
+      } catch (error) {
+        console.error('Erro ao excluir:', error)
+        setError('Erro ao excluir lançamento.')
+      }
+    }
+
 
   const fetchLaunches = async () => {
     try {
@@ -341,7 +365,6 @@ export default function Launches() {
       return
     }      
 
-
     // Comparar apenas a data (ignorando a hora) usando a data já parseada
     const todayStart = startOfDay(new Date())
     if (startOfDay(new Date(formData.date)) > todayStart) {
@@ -421,7 +444,7 @@ export default function Launches() {
       type: launch.type,
       date: format(new Date(launch.date), 'yyyy-MM-dd'),
       talonNumber: launch.talonNumber || '',
-      value: launch.value?.toString() || '',
+      value: launch.value?.toFixed(2) || '',
       description: launch.description || '',
       contributorId: launch.contributorId?.toString() || '',
       contributorName: launch.contributorName || '',
@@ -568,7 +591,7 @@ export default function Launches() {
 
   const LaunchCard = ({ launch }) => (
     <Card key={launch.id} className="mb-2">
-      <CardContent className="p-4 pt-0.5">
+      <CardContent className="p-4 pt-0.5 pb-1">
         <div className="flex justify-between items-start mb-1">
           <div className={`px-3 py-1 rounded text-white text-sm font-medium ${
             launch.type === 'VOTO' ? 'bg-green-500' :
@@ -626,7 +649,7 @@ export default function Launches() {
           </div>
 
           {(launch.contributor?.name || launch.contributorName || launch.supplier?.razaoSocial || launch.supplierName) && (
-            <div className="flex items-center text-sm font-normal">
+            <div className="flex items-center text-sm font-normal truncate">
               <User className="h-4 w-4 mr-1" />
               {launch.contributor?.name || launch.contributorName || launch.supplier?.razaoSocial || launch.supplierName}
             </div>
@@ -646,8 +669,9 @@ export default function Launches() {
           </div>
         )}
         {launch.classification && (
-          <div className="flex justify-between">
-            <span className="text-sm font-normal">Classificação:</span>
+          <div className="flex justify-start">
+            <List className="h-4 w-4 mr-1" />
+            {/* <span className="text-sm font-normal">Classificação:</span> */}
             <span className="text-sm font-medium">{launch.classification.description}</span>
           </div>
         )}
@@ -712,6 +736,16 @@ export default function Launches() {
               <TooltipContent><p>Cancelar</p></TooltipContent>
             </Tooltip>
           ) : null}
+
+          {launch.status === 'CANCELED' && launch.summaryId == null && canDeleteLaunch && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="destructive" size="sm" onClick={() => handleDelete(launch.id)}><Trash2 className="h-4 w-4" /></Button>
+              </TooltipTrigger>
+              <TooltipContent><p>Excluir</p></TooltipContent>
+            </Tooltip>
+          )}
+
         </div>
       </CardContent>
     </Card>
@@ -741,9 +775,8 @@ export default function Launches() {
       }}
     >
 
-      <div className="min-h-screen bg-gray-50" style={{ fontSize: '16px' }}>
+      <div id="container" className="min-h-screen bg-gray-50" style={{ fontSize: '16px' }}>
          <Sidebar />
-
          <div className="lg:pl-64">
            <div className="p-2">
              <div className="flex justify-end mb-2">
@@ -939,7 +972,7 @@ export default function Launches() {
                                     type="button"
                                     variant={formData.isContributorRegistered ? "default" : "outline"}
                                     size="sm"
-                                    disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
+                                    disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)  || !formData.congregationId}
                                     className={cn(
                                       "h-9 px-3 transition-all flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start",
                                       formData.isContributorRegistered 
@@ -953,7 +986,7 @@ export default function Launches() {
                                     ) : (
                                       <Users className="h-4 w-4 shrink-0" />
                                     )}
-                                    <span className="text-sm sm:text-base">Contribuinte cadastrado</span>
+                                    <span className="text-sm sm:text-base">Contribuinte Cadastrado</span>
                                   </Button>
                                </div>
 
@@ -1124,12 +1157,12 @@ export default function Launches() {
                                   ) : (
                                     <User className="h-4 w-4" />
                                   )}
-                                  Fornecedor
+                                  Fornecedor Cadastrado
                                 </Button>
                              </div>
                              {formData.isSupplierRegistered ? (
                                <div>
-                                 <Label htmlFor="supplierId">Fornecedor cadastrado</Label>
+                                 <Label htmlFor="supplierId">Fornecedor Cadastrado</Label>
                                  <SearchableSelect
                                    key={formData.supplierId}
                                    label="Buscar Fornecedor"
@@ -1458,6 +1491,16 @@ export default function Launches() {
                                     <TooltipContent><p>Cancelar</p></TooltipContent>
                                   </Tooltip>
                                 ) : null}
+
+                                {launch.status === 'CANCELED' && launch.summaryId == null && canDeleteLaunch && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button variant="destructive" size="sm" onClick={() => handleDelete(launch.id)}><Trash2 className="h-4 w-4" /></Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent><p>Excluir</p></TooltipContent>
+                                  </Tooltip>
+                                )}
+
                               </div>
                             </TableCell>
                           </TableRow>
@@ -1485,7 +1528,7 @@ export default function Launches() {
               {launches.map((launch) => (
                 <LaunchCard key={launch.id} launch={launch} />
               ))}
-              <div className="mt-4">
+              {/* <div className="mt-4">
                 <Pagination
                   currentPage={currentPage}
                   totalPages={totalPages}
@@ -1494,11 +1537,32 @@ export default function Launches() {
                   onItemsPerPageChange={handleItemsPerPageChange}
                   totalItems={totalCount}
                 />
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
       </div>
+      {/* Botão flutuante de voltar ao topo - apenas mobile */}
+      {pageYPosition > 10 && (
+        <a
+          href="#container"
+          style={{
+            position: "fixed",
+            bottom: "20px",
+            right: "15px",
+            background: "#333",
+            color: "white",
+            padding: "10px 15px",
+            borderRadius: "5px",
+            textDecoration: "none",
+          }}
+          onClick={(e) => {
+            e.preventDefault();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        >
+          <ArrowUp className="h-6 w-6" />
+        </a>)}
     </PermissionGuard>
   )
 }

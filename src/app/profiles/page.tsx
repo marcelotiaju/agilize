@@ -58,7 +58,8 @@ export default function Profiles() {
     canGenerateSummary: false,
     canApproveTreasury: false,
     canApproveAccountant: false,
-    canApproveDirector: false
+    canApproveDirector: false,
+    canDeleteLaunch : false
   })
 
   useEffect(() => {
@@ -112,7 +113,8 @@ export default function Profiles() {
       canGenerateSummary: false,
       canApproveTreasury: false,
       canApproveAccountant: false,
-      canApproveDirector: false
+      canApproveDirector: false,
+      canDeleteLaunch : false
     })
   }
 
@@ -267,6 +269,10 @@ export default function Profiles() {
                             <Checkbox checked={profileForm.canLaunchExpense} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchExpense: v as boolean }))} />
                             <Label>Lançar Saída</Label>
                           </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox checked={profileForm.canDeleteLaunch} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canDeleteLaunch: v as boolean }))} />
+                            <Label>Deletar Lançamento</Label>
+                          </div>
                         </div>
                       </div>
 
@@ -327,7 +333,7 @@ export default function Profiles() {
                           </div>
                           <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canExclude} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canExclude: v as boolean }))} />
-                            <Label>Excluir Registros</Label>
+                            <Label>Cancelar Registros</Label>
                           </div>
                         </div>
                       </div>
@@ -369,6 +375,16 @@ export default function Profiles() {
                             <Checkbox checked={profileForm.canApproveDirector} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveDirector: v as boolean }))} />
                             <Label>Aprovar como Dirigente</Label>
                           </div>                          
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="font-medium mb-2">Relatórios</h4>
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox checked={profileForm.canGenerateReport} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canGenerateReport: v as boolean }))} />
+                            <Label>Imprimir Relatórios</Label>
+                          </div>
                         </div>
                       </div>
                     </div>

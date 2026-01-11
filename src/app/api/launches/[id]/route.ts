@@ -180,3 +180,28 @@ export async function PUT(request: NextRequest, props: any) {
       return NextResponse.json({ error: "Erro ao atualizar lançamento" }, { status: 500 })
     }
   }
+
+  export async function DELETE(request: NextRequest, props: any) {
+    const session = await getServerSession(authOptions);
+  
+    if (!session) {
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+    }
+  
+    try {
+        const params = await props.params; // Await the params Promise
+      const id = params.id;
+
+      if (!id) {
+        return NextResponse.json({ error: "ID do lançamento é obrigatório" }, { status: 400 })
+      }
+  
+      await prisma.launch.delete({
+        where: { id }
+      })
+
+      return NextResponse.json({ message: "Lançamento excluído com sucesso" })
+    } catch (error) {
+      return NextResponse.json({ error: "Erro ao excluir lançamento" }, { status: 500 })
+    }
+  }

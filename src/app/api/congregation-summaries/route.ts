@@ -122,12 +122,31 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { congregationId, startDate, endDate } = body
+    const { congregationId, startDate, endDate, summaryType } = body
 
-    if (!congregationId || !startDate || !endDate) {
+    if (!congregationId || !startDate || !endDate || !summaryType) {
       return NextResponse.json({ error: "Dados incompletos" }, { status: 400 })
     }
     const timezone = body.timezone || 'America/Sao_Paulo'
+
+    // Determinar tipos de lançamento baseado no tipo de resumo
+    let allowedTypes: string[] = []
+    switch (summaryType) {
+      case 'PADRAO':
+        allowedTypes = ['DIZIMO', 'OFERTA_CULTO', 'VOTO', 'EBD', 'CAMPANHA','MISSAO']
+        break
+      // case 'MISSAO':
+      //   allowedTypes = ['MISSAO']
+      //   break
+      case 'CARNE_REVIVER':
+        allowedTypes = ['CARNE_REVIVER']
+        break
+      case 'CIRCULO':
+        allowedTypes = ['CIRCULO']
+        break
+      default:
+        return NextResponse.json({ error: "Tipo de resumo inválido" }, { status: 400 })
+    }
 
     let startUtc: Date
     let endUtc: Date
@@ -155,12 +174,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Acesso não autorizado a esta congregação" }, { status: 403 })
     }
 
-    // Buscar lançamentos no período
+    // Buscar lançamentos no período filtrados pelo tipo de resumo
     const launches = await prisma.launch.findMany({
       where: {
         congregationId,
         date: { gte: startUtc, lte: endUtc },
-        status: { in: ["NORMAL", "APPROVED", "EXPORTED"] },
+        type: { in: allowedTypes },
+        status: { in: ["NORMAL", "APPROVED"] },
         summaryId: null
       },
       include: { congregation: true },
@@ -168,11 +188,15 @@ export async function POST(request: NextRequest) {
     })
 
     if (launches.length === 0) {
-        return NextResponse.json({ error: "Não há lançamentos no período para criar um resumo." }, { status: 400 });
+        const typeLabel = summaryType === 'PADRAO' ? 'Padrão' : 
+                        //  summaryType === 'MISSAO' ? 'Missão' :
+                         summaryType === 'CARNE_REVIVER' ? 'Carnê Reviver' :
+                         summaryType === 'CIRCULO' ? 'Círculo de Oração' : 'selecionado'
+        return NextResponse.json({ error: `Não há lançamentos do tipo ${typeLabel} no período para criar um resumo.` }, { status: 400 });
     }
 
     // Resumo
-    const entradaSummary = { dizimo: 0, oferta: 0, votos: 0, campanha: 0, ebd: 0, mission: 0, circle: 0, total: 0 }
+    const entradaSummary = { dizimo: 0, oferta: 0, votos: 0, campanha: 0, ebd: 0, mission: 0, circle: 0, carneReviver: 0, total: 0 }
     const saidaSummary = { saida: 0, total: 0 }
     const approvalSummary = { pending: 0, approved: { treasury: 0, accountant: 0, director: 0, total: 0 } }
 
@@ -185,55 +209,69 @@ export async function POST(request: NextRequest) {
         entradaSummary.campanha += launch.value || 0
       } else if (launch.type === "EBD") {
         entradaSummary.ebd += launch.value || 0
-      } else if (launch.type === "OFERTA_CULTO" || launch.type === "VOTO" || launch.type === "EBD" || launch.type === "CAMPANHA") {
-        entradaSummary.total += (launch.value || 0)
       } else if (launch.type === "DIZIMO") {
         entradaSummary.dizimo += launch.value || 0
       } else if (launch.type === "MISSAO") {
         entradaSummary.mission += launch.value || 0
       } else if (launch.type === "CIRCULO") {
         entradaSummary.circle += launch.value || 0
-      } else if (launch.type === "OFERTA_CULTO") {
-        entradaSummary.oferta += launch.offerValue || 0
+      } else if (launch.type === "CARNE_REVIVER") {
+        entradaSummary.carneReviver += launch.value || 0
       } else if (launch.type === "SAIDA") {
         saidaSummary.saida += launch.value || 0
         saidaSummary.total += launch.value || 0
       }
     })
 //console.log('Entrada Summary:', entradaSummary)
+    // Verificar se já existe resumo para este período e tipo
     const existingSummary = await prisma.congregationSummary.findFirst({
-      where: { congregationId, startDate: startUtc, endDate: endUtc }
+      where: { 
+        congregationId, 
+        startDate: startUtc, 
+        endDate: endUtc,
+        // Adicionar campo summaryType no schema se necessário, por enquanto verificar apenas período
+      }
     })
 
     if (existingSummary) {
       return NextResponse.json({ error: "Já existe um resumo para este período" }, { status: 400 })
     }
+    // Calcular total de entradas baseado no tipo de resumo
+    let totalEntradas = 0
+    if (summaryType === 'PADRAO') {
+      totalEntradas = entradaSummary.dizimo + entradaSummary.oferta + entradaSummary.votos + entradaSummary.ebd + entradaSummary.campanha + entradaSummary.mission
+    // } else if (summaryType === 'MISSAO') {
+    //   totalEntradas = entradaSummary.mission
+    } else if (summaryType === 'CARNE_REVIVER') {
+      totalEntradas = entradaSummary.carneReviver
+    } else if (summaryType === 'CIRCULO') {
+      totalEntradas = entradaSummary.circle
+    }
+
     const summary = await prisma.congregationSummary.create({
       data: {
         congregationId,
         startDate: startUtc,
         endDate: endUtc,
         launchCount: launches.length,
-        entryTotal: entradaSummary.total,
+        entryTotal: totalEntradas,
         missionTotal: entradaSummary.mission,
         circleTotal: entradaSummary.circle,
+        carneReviverTotal: entradaSummary.carneReviver,
         titheTotal: entradaSummary.dizimo,
         offerTotal: entradaSummary.oferta,
         votesTotal: entradaSummary.votos,
         ebdTotal: entradaSummary.ebd,
         campaignTotal: entradaSummary.campanha,
         exitTotal: saidaSummary.total,
-        offerTotal: entradaSummary.oferta,
-        votesTotal: entradaSummary.votos,
-        ebdTotal: entradaSummary.ebd,
-        campaignTotal: entradaSummary.campanha,
         depositValue: 0,
         cashValue: 0,
         talonNumber: '',
+        summaryType: summaryType,
         treasurerApproved: false,
         accountantApproved: false,
         directorApproved: false,
-        totalValue: entradaSummary.total - saidaSummary.total,
+        totalValue: totalEntradas - saidaSummary.total,
         status: "PENDING",
         createdBy: session.user.name
       }
@@ -244,7 +282,7 @@ export async function POST(request: NextRequest) {
             congregationId: summary.congregationId,
             date: { gte: startUtc, lte: endUtc },
             summaryId: null,
-            status:  { in: ["NORMAL", "APPROVED", "EXPORTED"] },
+            status:  { in: ["NORMAL", "APPROVED"] },
         },
         data: { summaryId: summary.id },
     });

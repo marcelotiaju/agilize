@@ -38,6 +38,7 @@ export async function middleware(request: NextRequest) {
     '/congregations',
     '/congregation-summary',
     '/profiles',
+    '/reports',
   ]
 
   // Verificar se a rota atual exige autenticação

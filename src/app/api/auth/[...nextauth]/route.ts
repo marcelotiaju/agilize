@@ -68,7 +68,9 @@ export const authOptions : NextAuthOptions = {
           canGenerateSummary: !!p?.canGenerateSummary,
           canApproveTreasury: !!p?.canApproveTreasury,
           canApproveAccountant: !!p?.canApproveAccountant,
-          canApproveDirector: !!p?.canApproveDirector
+          canApproveDirector: !!p?.canApproveDirector,
+          canGenerateReport: !!p?.canGenerateReport,
+          canDeleteLaunch : !!p?.canDeleteLaunch
         }
 
         return {
@@ -143,7 +145,9 @@ export const authOptions : NextAuthOptions = {
           canGenerateSummary: (user as any).canGenerateSummary,
           canApproveTreasury: (user as any).canApproveTreasury,
           canApproveAccountant: (user as any).canApproveAccountant,
-          canApproveDirector: (user as any).canApproveDirector
+          canApproveDirector: (user as any).canApproveDirector,
+          canGenerateReport: (user as any).canGenerateReport,
+          canDeleteLaunch : (user as any).canDeleteLaunch
         }
       }
       return token
@@ -191,7 +195,9 @@ export const authOptions : NextAuthOptions = {
         canGenerateSummary: typeof token.canGenerateSummary === "boolean" ? token.canGenerateSummary : undefined,
         canApproveTreasury: typeof token.canApproveTreasury === "boolean" ? token.canApproveTreasury : undefined,
         canApproveAccountant: typeof token.canApproveAccountant === "boolean" ? token.canApproveAccountant : undefined,
-        canApproveDirector: typeof token.canApproveDirector === "boolean" ? token.canApproveDirector : undefined
+        canApproveDirector: typeof token.canApproveDirector === "boolean" ? token.canApproveDirector : undefined,
+        canGenerateReport: typeof token.canGenerateReport === "boolean" ? token.canGenerateReport : undefined,
+        canDeleteLaunch : typeof token.canDeleteLaunch === "boolean" ? token.canDeleteLaunch : undefined
       }
       // Definir expiração da sessão baseada no token exp
       if (typeof token.exp === 'number') {

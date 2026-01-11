@@ -105,6 +105,8 @@ model Profile {
   canApproveAccountant   Boolean @default(false)
   canApproveDirector     Boolean @default(false)
   canManageUsers         Boolean @default(false)
+  canGenerateReport      Boolean @default(false)
+  canDeleteLaunch        Boolean @default(false)
 
   users     User[]
   createdAt DateTime @default(now()) @db.DateTime(0)
@@ -267,6 +269,7 @@ model CongregationSummary {
   depositValue         Float         @default(0)
   cashValue            Float         @default(0)
   totalValue           Float         @default(0)
+  summaryType          String?       // PADRAO, MISSAO, CARNE_REVIVER, CIRCULO
   treasurerApproved    Boolean       @default(false)
   accountantApproved   Boolean       @default(false)
   directorApproved     Boolean       @default(false)

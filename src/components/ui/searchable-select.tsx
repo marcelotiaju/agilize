@@ -223,7 +223,7 @@ export function SearchableSelect({
             </div>
           )}
         </div>
-        <div className="flex justify-end mt-4">
+        <div className="flex justify-end">
           <Button variant="outline" onClick={() => setIsOpen(false)}>
             <X className="mr-2 h-4 w-4" /> Fechar
           </Button>

@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { FileText, Trash2, List, Check, Edit, CalendarIcon } from 'lucide-react'
+import { FileText, Trash2, List, Check, Edit, CalendarIcon, Printer } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { NumericFormat } from 'react-number-format';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -41,10 +41,12 @@ type Summary = {
   campaignTotal?: number;
   missionTotal?: number;
   circleTotal?: number;
+  carneReviverTotal?: number;
   talonNumber: string;
   depositValue?: number;
   cashValue?: number;
   status: string;
+  summaryType?: string;
   treasurerApproved?: boolean;
   accountantApproved?: boolean;
   directorApproved?: boolean;
@@ -89,6 +91,7 @@ export default function CongregationSummary() {
     campaignTotal: '',
     missionTotal: '',
     circleTotal: '',
+    carneReviverTotal: '',
     entryTotal: '',
     titheTotal: '',
     exitTotal: '',
@@ -96,6 +99,7 @@ export default function CongregationSummary() {
     totalExit: 0,
     depositValue: null,
     cashValue: null,
+    summaryType: '',
     treasurerApproved: false,
     accountantApproved: false,
     directorApproved: false,
@@ -110,6 +114,48 @@ export default function CongregationSummary() {
     approvedAtDirector: '',
   })
   const [isLoading, setIsLoading] = useState(false)
+  const [summaryType, setSummaryType] = useState<string>('')
+
+  // Determinar tipos de resumo disponíveis baseado nas permissões do usuário
+  const availableSummaryTypes = useMemo(() => {
+    const types: { value: string; label: string }[] = []
+    const user = session?.user as any
+    
+    // Padrão: Dízimos, Oferta do Culto, Votos, EBD, Campanha
+    if (user?.canLaunchTithe || 
+        user?.canLaunchServiceOffer || 
+        user?.canLaunchVote || 
+        user?.canLaunchEbd || 
+        user?.canLaunchCampaign ||
+        user?.canLaunchMission) {
+      types.push({ value: 'PADRAO', label: 'Padrão (Dízimos, Oferta do Culto, Votos, EBD, Campanha, Missão)' })
+    }
+    
+    // Missão
+    // if (user?.canLaunchMission) {
+    //   types.push({ value: 'MISSAO', label: 'Missão' })
+    // }
+    
+    // Carnê Reviver
+    if (user?.canLaunchCarneReviver) {
+      types.push({ value: 'CARNE_REVIVER', label: 'Carnê Reviver' })
+    }
+    
+    // Círculo de Oração
+    if (user?.canLaunchCircle) {
+      types.push({ value: 'CIRCULO', label: 'Círculo de Oração' })
+    }
+    
+    return types
+  }, [session])
+
+  // Se só houver um tipo disponível, pré-selecionar e desabilitar
+  useEffect(() => {
+    if (availableSummaryTypes.length === 1 && !summaryType) {
+      setSummaryType(availableSummaryTypes[0].value)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availableSummaryTypes.length])
 
     // Memoization para calcular o Saldo Geral e o Total Depositado/Espécie
   const totalEntradas = useMemo(() => Number(editFormData.titheTotal ?? 0) + Number(editFormData.offerTotal ?? 0) + Number(editFormData.votesTotal ?? 0) + Number(editFormData.ebdTotal ?? 0) + Number(editFormData.campaignTotal ?? 0) + Number(editFormData.missionTotal ?? 0) + Number(editFormData.circleTotal ?? 0), [editFormData.entryTotal, editFormData.titheTotal]);
@@ -149,6 +195,20 @@ export default function CongregationSummary() {
       }
     } catch (error) {
       console.error('Erro ao carregar congregações:', error)
+    }
+  }
+
+  const handlePrintSummary = async (summary: Summary) => {
+    const params = new URLSearchParams({
+      summaryId: summary.id,
+      timezone: USER_TIMEZONE
+    })
+
+    const response = await fetch(`/api/reports/summary?${params}`)
+    if (response.ok) {
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      window.open(url, '_blank')
     }
   }
 
@@ -197,10 +257,16 @@ export default function CongregationSummary() {
       alert('Defina período')
       return
     }
+    if (!summaryType) {
+      alert('Selecione o tipo de resumo')
+      return
+    }
 
     const startStr = editFormData.startDate // 'yyyy-MM-dd'
     const endStr = editFormData.endDate
     let hasSuccess = false
+    let hasError = false
+    const errors: string[] = []
 
     for (const congregationId of selectedCongregations) {
       try {
@@ -212,25 +278,34 @@ export default function CongregationSummary() {
             congregationId,
             startDate: startStr,
             endDate: endStr,
+            summaryType: summaryType,
             timezone: USER_TIMEZONE
           })
         })
         if (response.ok) {
           // atualizar lista
           await fetchSummaries(selectedCongregations)
-          setIsCreateDialogOpen(false)
           hasSuccess = true
         } else {
           const err = await response.json()
-          alert(err.error || 'Erro ao criar resumo')
+          hasError = true
+          errors.push(err.error || 'Erro ao criar resumo')
         }
       } catch (err) {
         console.error(err)
-        alert('Erro ao criar resumo')
+        hasError = true
+        errors.push('Erro ao criar resumo')
       }
     }
-    if (hasSuccess) {
+    
+    if (hasSuccess && !hasError) {
+      setIsCreateDialogOpen(false)
       alert(`Resumo(s) criado(s) com sucesso.`)
+      // Mudar para a aba de listagem após criar com sucesso
+      setMainActiveTab('listar')
+    } else if (hasError) {
+      // Mostrar apenas os erros, não mostrar mensagem de sucesso se houver erros
+      errors.forEach(error => alert(error))
     }
   }
 
@@ -276,11 +351,13 @@ export default function CongregationSummary() {
       campaignTotal: summary.campaignTotal ?? '',
       missionTotal: summary.missionTotal ?? '',
       circleTotal: summary.circleTotal ?? '',
+      carneReviverTotal: (summary as any).carneReviverTotal ?? '',
       entryTotal: summary.entryTotal ?? '',
       titheTotal: summary.titheTotal ?? '',
       exitTotal: summary.exitTotal ?? '',
       totalTithe: summary.titheTotal ?? 0,
       totalExit: summary.exitTotal ?? 0,
+      summaryType: (summary as any).summaryType || '',
       createdAt: summary.createdAt || '',
       createdBy: summary.createdBy || '',
       approvedByTreasury: summary.approvedByTreasury || '',
@@ -396,7 +473,7 @@ export default function CongregationSummary() {
   //   })
   // }
 
-  const [mainActiveTab, setMainActiveTab] = useState('listar')
+  const [mainActiveTab, setMainActiveTab] = useState(session?.user?.canGenerateSummary ? "gerar" : "listar")
 
   if (!session?.user?.canListSummary && !session?.user?.canGenerateSummary) {
     return (
@@ -462,11 +539,11 @@ export default function CongregationSummary() {
           {/* Abas Principal */}
           <Tabs value={mainActiveTab} onValueChange={setMainActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              {session?.user?.canListSummary && (
-                <TabsTrigger value="listar">Listar Resumos</TabsTrigger>
-              )}
               {session?.user?.canGenerateSummary && (
                 <TabsTrigger value="gerar">Gerar Resumo</TabsTrigger>
+              )}
+              {session?.user?.canListSummary && (
+                <TabsTrigger value="listar">Visualizar Resumos</TabsTrigger>
               )}
             </TabsList>
 
@@ -478,59 +555,86 @@ export default function CongregationSummary() {
                   <CardTitle>Gerar Novo Resumo</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-4">
                     <div className="w-full">
-                      <Label htmlFor="startDate">Data Início</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className="w-full justify-start text-left font-normal">
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {editFormData.startDate ? formatDate(new Date(`${editFormData.startDate}T00:00:00`), 'dd/MM/yyyy') : 'Data Início'}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={editFormData.startDate ? new Date(`${editFormData.startDate}T00:00:00`) : undefined}
-                            onSelect={(d) => {
-                              if (d) {
-                                setEditFormData({ ...editFormData, startDate: formatDate(d, 'yyyy-MM-dd') })
-                              }
-                            }}
-                            locale={ptBR}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    
-                    <div className="w-full">
-                      <Label htmlFor="endDate">Data Fim</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className="w-full justify-start text-left font-normal">
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {editFormData.endDate ? formatDate(new Date(`${editFormData.endDate}T00:00:00`), 'dd/MM/yyyy') : 'Data Fim'}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={editFormData.endDate ? new Date(`${editFormData.endDate}T00:00:00`) : undefined}
-                            onSelect={(d) => {
-                              if (d) {
-                                setEditFormData({ ...editFormData, endDate: formatDate(d, 'yyyy-MM-dd') })
-                              }
-                            }}
-                            locale={ptBR}
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <Label htmlFor="summaryType">Tipo de Resumo</Label>
+                      <Select
+                        value={summaryType}
+                        onValueChange={setSummaryType}
+                        disabled={availableSummaryTypes.length === 1}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Selecione o tipo de resumo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableSummaryTypes.map((type) => (
+                            <SelectItem key={type.value} value={type.value} className="max-w-[300px] sm:max-w-full">
+                              <span className="truncate block">
+                                {type.label}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {availableSummaryTypes.length === 0 && (
+                        <p className="text-sm text-red-600 mt-1">Você não tem permissão para gerar nenhum tipo de resumo</p>
+                      )}
                     </div>
 
-                    <div className="flex items-end">
-                      <Button onClick={handleCreateSummary} disabled={isLoading} className="w-full">
-                        {isLoading ? 'Gerando...' : 'Gerar Resumo'}
-                      </Button>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="w-full">
+                        <Label htmlFor="startDate">Data Início</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="w-full justify-start text-left font-normal">
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {editFormData.startDate ? formatDate(new Date(`${editFormData.startDate}T00:00:00`), 'dd/MM/yyyy') : 'Data Início'}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={editFormData.startDate ? new Date(`${editFormData.startDate}T00:00:00`) : undefined}
+                              onSelect={(d) => {
+                                if (d) {
+                                  setEditFormData({ ...editFormData, startDate: formatDate(d, 'yyyy-MM-dd') })
+                                }
+                              }}
+                              locale={ptBR}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      
+                      <div className="w-full">
+                        <Label htmlFor="endDate">Data Fim</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="w-full justify-start text-left font-normal">
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {editFormData.endDate ? formatDate(new Date(`${editFormData.endDate}T00:00:00`), 'dd/MM/yyyy') : 'Data Fim'}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={editFormData.endDate ? new Date(`${editFormData.endDate}T00:00:00`) : undefined}
+                              onSelect={(d) => {
+                                if (d) {
+                                  setEditFormData({ ...editFormData, endDate: formatDate(d, 'yyyy-MM-dd') })
+                                }
+                              }}
+                              locale={ptBR}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+
+                      <div className="flex items-end">
+                        <Button onClick={handleCreateSummary} disabled={isLoading || !summaryType} className="w-full">
+                          {isLoading ? 'Gerando...' : 'Gerar Resumo'}
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -619,6 +723,7 @@ export default function CongregationSummary() {
                           <TableHead>Período</TableHead>
                           <TableHead>Dízimos</TableHead>
                           <TableHead>Oferta</TableHead>
+                          <TableHead>Carne Reviver</TableHead>
                           <TableHead>Votos</TableHead>
                           <TableHead>EBD</TableHead>
                           <TableHead>Campanha</TableHead>
@@ -645,6 +750,7 @@ export default function CongregationSummary() {
                             </TableCell>
                             <TableCell>R$ {(summary.titheTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                             <TableCell>R$ {(summary.offerTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                            <TableCell>R$ {(summary.carneReviverTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                             <TableCell>R$ {(summary.votesTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                             <TableCell>R$ {(summary.ebdTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                             <TableCell>R$ {(summary.campaignTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
@@ -689,6 +795,11 @@ export default function CongregationSummary() {
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
+                                {session.user?.canGenerateReport && (
+                                <Button variant="outline" size="sm" onClick={() => handlePrintSummary(summary)}>
+                                  <Printer className="h-4 w-4" />
+                                </Button>
+                                )}
                               </div>
                             </TableCell>
                           </TableRow>
@@ -730,6 +841,12 @@ export default function CongregationSummary() {
                                     R$ {(summary.offerTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
                             </div>
+                            <div className="flex justify-between">
+                                <span>Carne Reviver:</span>
+                                <span className="font-medium text-green-600">
+                                    R$ {(summary.carneReviverTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                            </div>                            
                             <div className="flex justify-between">
                                 <span>Votos:</span>
                                 <span className="font-medium text-green-600">
@@ -800,6 +917,11 @@ export default function CongregationSummary() {
                               >
                                 <Trash2 className="h-4 w-4 mr-2" /> Excluir
                               </Button>
+                              {session.user?.canGenerateReport && (
+                              <Button variant="outline" size="sm" onClick={() => handlePrintSummary(summary)}>
+                                <Printer className="h-4 w-4" />
+                              </Button>
+                              )}                              
                             </div>
                         </CardContent>
                       </Card>
@@ -850,136 +972,195 @@ export default function CongregationSummary() {
                         <div className="pt-0 mt-0">
                           <h4 className="font-medium mb-0">Totais</h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="flex flex-col gap-1">
-                                  {/* 1. CARD DE OUTRAS RECEITAS (DETALHADO) */}
-                                  {/* <div className="bg-blue-50 p-3 rounded-lg">
-                                      <h5 className="font-medium text-blue-700">Outras Receitas</h5>
-                                      <div className="text-sm space-y-0">
-                                          {/* Detalhes com Título à Esquerda e Valor à Direita */}
-                                          {/*<div className="flex justify-between">
-                                              <span>Oferta:</span>
-                                              <span>
-                                                  R$ {Number(editFormData.offerValue ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                              </span>
-                                          </div> 
-                                          <div className="flex justify-between">
-                                              <span>Votos:</span>
-                                              <span>
-                                                  R$ {Number(editFormData.votesValue ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                              </span>
+                              <div className="flex flex-col gap-1 justify-between">
+                                  {/* Mostrar cards baseado no tipo de resumo */}
+                                  <div className="flex flex-col gap-1">
+                                  {editFormData.summaryType === 'PADRAO' && (
+                                    <>
+                                      {/* CARD DE DÍZIMOS */}
+                                      <div className="bg-blue-50 p-1 rounded-lg flex justify-between items-center">
+                                          <h5 className="font-medium text-blue-700">Dízimos</h5>
+                                          <div className="text-sm font-semibold flex justify-end">
+                                              R$ {Number(editFormData.titheTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                           </div>
-                                          <div className="flex justify-between">
-                                              <span>EBD:</span>
-                                              <span>
-                                                  R$ {Number(editFormData.ebdValue ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                              </span>
-                                          </div>
-                                          <div className="flex justify-between">
-                                              <span>Campanha:</span>
-                                              <span>
-                                                  R$ {Number(editFormData.campaignValue ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                              </span>
-                                          </div>
-                                          <div className="flex justify-between font-semibold">
-                                              <span>Total:</span>
-                                              <span className="font-semibold">
-                                                  R$ {Number(editFormData.entryTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                              </span>
-                                          </div>                                          
-                                      </div>  
-                                  </div>  */}
-                               
-                                  {/* 2. CARD DE DÍZIMOS */}
-                                  <div className="bg-blue-50 p-1 rounded-lg flex justify-between items-center">
-                                      <h5 className="font-medium text-blue-700">Dízimos</h5>
-                                      <div className="text-sm font-semibold flex justify-end">
-                                          R$ {Number(editFormData.titheTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                       </div>
+
+                                      {/* CARD DE OFFERTA DE CULTO*/}
+                                      <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
+                                          <h5 className="font-medium text-green-700">Oferta de Culto</h5>
+                                          <div className="text-sm font-semibold flex justify-end">
+                                              R$ {Number(editFormData.offerTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </div>
+                                      </div>       
+
+                                      {/* CARD DE VOTOS*/}
+                                      <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
+                                          <h5 className="font-medium text-green-700">Votos</h5>
+                                          <div className="text-sm font-semibold flex justify-end">
+                                              R$ {Number(editFormData.votesTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </div>
+                                      </div>     
+
+                                      {/* CARD DE EBD*/}
+                                      <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
+                                          <h5 className="font-medium text-green-700">EBD</h5>
+                                          <div className="text-sm font-semibold flex justify-end">
+                                              R$ {Number(editFormData.ebdTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </div>
+                                      </div>     
+
+                                      {/* CARD DE CAMPANHA*/}
+                                      <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
+                                          <h5 className="font-medium text-green-700">Campanha</h5>
+                                          <div className="text-sm font-semibold flex justify-end">
+                                              R$ {Number(editFormData.campaignTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </div>
+                                      </div>
+
+                                      {/* CARD DE MISSAO */}
+                                      <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
+                                          <h5 className="font-medium text-green-700">Missão</h5>
+                                          <div className="text-sm font-semibold flex justify-end">
+                                              R$ {Number(editFormData.missionTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </div>
+                                      </div>
+
+                                    </>
+                                  )}
+
+                                  {editFormData.summaryType === 'CARNE_REVIVER' && (
+                                    <>
+                                      {/* CARD DE CARNE REVIVER */}
+                                      <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
+                                          <h5 className="font-medium text-green-700">Carnê Reviver</h5>
+                                          <div className="text-sm font-semibold flex justify-end">
+                                              R$ {Number(editFormData.carneReviverTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </div>
+                                      </div>
+                                    </>
+                                  )}
+
+                                  {editFormData.summaryType === 'CIRCULO' && (
+                                    <>
+                                      {/* CARD DE CIRCULO */}
+                                      <div className="bg-yellow-50 p-1 rounded-lg flex justify-between items-center">
+                                          <h5 className="font-medium text-yellow-700">Círculo de Oração</h5>
+                                          <div className="text-sm font-semibold flex justify-end">
+                                              R$ {Number(editFormData.circleTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </div>
+                                      </div>
+                                    </>
+                                  )}
+
+                                  {/* Se não houver tipo definido, mostrar todos (compatibilidade com resumos antigos) */}
+                                  {!editFormData.summaryType && (
+                                    <>
+                                      <div className="bg-blue-50 p-1 rounded-lg flex justify-between items-center">
+                                          <h5 className="font-medium text-blue-700">Dízimos</h5>
+                                          <div className="text-sm font-semibold flex justify-end">
+                                              R$ {Number(editFormData.titheTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </div>
+                                      </div>
+                                      <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
+                                          <h5 className="font-medium text-green-700">Oferta de Culto</h5>
+                                          <div className="text-sm font-semibold flex justify-end">
+                                              R$ {Number(editFormData.offerTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </div>
+                                      </div>
+                                      <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
+                                          <h5 className="font-medium text-green-700">Votos</h5>
+                                          <div className="text-sm font-semibold flex justify-end">
+                                              R$ {Number(editFormData.votesTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </div>
+                                      </div>
+                                      <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
+                                          <h5 className="font-medium text-green-700">EBD</h5>
+                                          <div className="text-sm font-semibold flex justify-end">
+                                              R$ {Number(editFormData.ebdTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </div>
+                                      </div>
+                                      <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
+                                          <h5 className="font-medium text-green-700">Campanha</h5>
+                                          <div className="text-sm font-semibold flex justify-end">
+                                              R$ {Number(editFormData.campaignTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </div>
+                                      </div>
+                                      <div className="bg-orange-50 p-1 rounded-lg flex justify-between items-center">
+                                          <h5 className="font-medium text-orange-700">Missão</h5>
+                                          <div className="text-sm font-semibold flex justify-end">
+                                              R$ {Number(editFormData.missionTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </div>
+                                      </div>
+                                      <div className="bg-yellow-50 p-1 rounded-lg flex justify-between items-center">
+                                          <h5 className="font-medium text-yellow-700">Círculo de Oração</h5>
+                                          <div className="text-sm font-semibold flex justify-end">
+                                              R$ {Number(editFormData.circleTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </div>
+                                      </div>
+                                    </>
+                                  )}
                                   </div>
-
-                                  {/* 2. CARD DE OFFERTA DE CULTO*/}
-                                  <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
-                                      <h5 className="font-medium text-green-700">Oferta de Culto</h5>
-                                      <div className="text-sm font-semibold flex justify-end">
-                                          R$ {Number(editFormData.offerTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                      </div>
-                                  </div>       
-
-                                  {/* 2. CARD DE VOTOS*/}
-                                  <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
-                                      <h5 className="font-medium text-green-700">Votos</h5>
-                                      <div className="text-sm font-semibold flex justify-end">
-                                          R$ {Number(editFormData.votesTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                      </div>
-                                  </div>     
-
-                                  {/* 2. CARD DE EBD*/}
-                                  <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
-                                      <h5 className="font-medium text-green-700">EBD</h5>
-                                      <div className="text-sm font-semibold flex justify-end">
-                                          R$ {Number(editFormData.ebdTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                      </div>
-                                  </div>     
-
-                                  {/* 2. CARD DE CAMPANHA*/}
-                                  <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
-                                      <h5 className="font-medium text-green-700">Campanha</h5>
-                                      <div className="text-sm font-semibold flex justify-end">
-                                          R$ {Number(editFormData.campaignTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                      </div>
-                                  </div>                                                                                                                                      
                                   
-
-                                  {/* 2. CARD DE MISSAO */}
-                                  <div className="bg-orange-50 p-1 rounded-lg flex justify-between items-center">
-                                      <h5 className="font-medium text-orange-700">Missao</h5>
-                                      <div className="text-sm font-semibold flex justify-end">
-                                          R$ {Number(editFormData.missionTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                      </div>
-                                  </div>
-
-                                  {/* 2. CARD DE CIRCULO */}
-                                  <div className="bg-yellow-50 p1 rounded-lg flex justify-between items-center">
-                                      <h5 className="font-medium text-yellow-700">Circulo</h5>
-                                      <div className="text-sm font-semibold flex justify-end">
-                                          R$ {Number(editFormData.circleTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                      </div>
-                                  </div>                                                                    
-
-
-                                  {/* ⭐️ NOVO: CARD TOTAL DE ENTRADAS (Entrada + Dízimo) ⭐️ */}
-                                  <div className="bg-blue-100 p-1 rounded-lg border-2 border-blue-300">
+                                  {/* CARD TOTAL DE ENTRADAS - sempre no final, alinhado com Saldo Geral */}
+                                  <div className="bg-blue-100 p-1 rounded-lg border-2 border-blue-300 mt-auto">
                                       <div className="flex justify-between items-center">
                                           <h5 className="font-bold font-small text-blue-800">Tot Entradas</h5>
                                           <div className="text-sm font-extrabold text-blue-800">
-                                              {/* Calcula Entradas (entryTotal) + Dízimo (titheTotal) */}
-                                              R$ {(Number(editFormData.titheTotal ?? 0) + Number(editFormData.offerTotal ?? 0)  + Number(editFormData.votesTotal   ?? 0) + Number(editFormData.ebdTotal ?? 0) + Number(editFormData.campaignTotal ?? 0) + Number(editFormData.missionTotal ?? 0) + Number(editFormData.circleTotal ?? 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                              {(() => {
+                                                let totalEntradas = 0
+                                                if (editFormData.summaryType === 'PADRAO') {
+                                                  totalEntradas = Number(editFormData.titheTotal ?? 0) + Number(editFormData.offerTotal ?? 0) + Number(editFormData.votesTotal ?? 0) + Number(editFormData.ebdTotal ?? 0) + Number(editFormData.campaignTotal ?? 0 + Number(editFormData.missionTotal ?? 0))
+                                                // } else if (editFormData.summaryType === 'MISSAO') {
+                                                //   totalEntradas = Number(editFormData.missionTotal ?? 0)
+                                                } else if (editFormData.summaryType === 'CARNE_REVIVER') {
+                                                  totalEntradas = Number(editFormData.carneReviverTotal ?? 0)
+                                                } else if (editFormData.summaryType === 'CIRCULO') {
+                                                  totalEntradas = Number(editFormData.circleTotal ?? 0)
+                                                } else {
+                                                  // Compatibilidade com resumos antigos
+                                                  totalEntradas = Number(editFormData.titheTotal ?? 0) + Number(editFormData.offerTotal ?? 0) + Number(editFormData.votesTotal ?? 0) + Number(editFormData.ebdTotal ?? 0) + Number(editFormData.campaignTotal ?? 0) + Number(editFormData.missionTotal ?? 0) + Number(editFormData.circleTotal ?? 0)
+                                                }
+                                                return `R$ ${totalEntradas.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                              })()}
                                           </div>
                                       </div>
                                   </div>
                               </div>
                               
                               {/* ⭐️ COLUNA DIREITA: SAÍDAS E TOTAIS FINAIS ⭐️ */}
-                              <div className="flex flex-col gap-4">
-                                  
+                              <div className="flex flex-col gap-4 justify-between">
+                                  <div className="flex flex-col gap-4">
                                   {/* 3. CARD TOTAL DE SAÍDAS */}
-                                  <div className="bg-red-50 p-1 *:rounded-lg flex justify-between items-center md:mb-49">
+                                  <div className="bg-red-50 p-1 *:rounded-lg flex justify-between items-center md:mb-33">
                                       <h5 className="font-medium text-red-700">Saídas</h5>
                                       <div className="text-sm font-semibold ">
                                           R$ {Number(editFormData.exitTotal).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                       </div>
                                   </div>
-
+                                  </div>
                                  
                                   {/* ⭐️ NOVO: CARD TOTAL GERAL (Entrada - Saída) ⭐️ */}
-                                  <div className="bg-purple-100 p-1 rounded-lg border-2 border-purple-300">
+                                  <div className="bg-purple-100 p-1 rounded-lg border-2 border-purple-300 mt-auto">
                                       <div className="flex justify-between items-center">
                                           <h5 className="font-bold text-purple-800">Saldo Geral</h5>
                                           <div className="text-sm font-extrabold text-purple-800">
-                                              {/* Calcula (Entrada + Dízimo) - Saída */}
-                                              R$ {(
-                                                  (Number(editFormData.titheTotal ?? 0)  + Number(editFormData.offerTotal ?? 0) + Number(editFormData.votesTotal ?? 0) + Number(editFormData.ebdTotal ?? 0) + Number(editFormData.campaignTotal ?? 0) + Number(editFormData.missionTotal ?? 0) + Number(editFormData.circleTotal ?? 0)) - Number(editFormData.exitTotal ?? 0)
-                                              ).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                              {/* Calcula total de entradas baseado no tipo - Saída */}
+                                              R$ {(() => {
+                                                let totalEntradas = 0
+                                                if (editFormData.summaryType === 'PADRAO') {
+                                                  totalEntradas = Number(editFormData.titheTotal ?? 0) + Number(editFormData.offerTotal ?? 0) + Number(editFormData.votesTotal ?? 0) + Number(editFormData.ebdTotal ?? 0) + Number(editFormData.campaignTotal ?? 0 + Number(editFormData.missionTotal ?? 0))
+                                                // } else if (editFormData.summaryType === 'MISSAO') {
+                                                //   totalEntradas = Number(editFormData.missionTotal ?? 0)
+                                                } else if (editFormData.summaryType === 'CARNE_REVIVER') {
+                                                  totalEntradas = Number(editFormData.carneReviverTotal ?? 0)
+                                                } else if (editFormData.summaryType === 'CIRCULO') {
+                                                  totalEntradas = Number(editFormData.circleTotal ?? 0)
+                                                } else {
+                                                  // Compatibilidade com resumos antigos
+                                                  totalEntradas = Number(editFormData.titheTotal ?? 0) + Number(editFormData.offerTotal ?? 0) + Number(editFormData.votesTotal ?? 0) + Number(editFormData.ebdTotal ?? 0) + Number(editFormData.campaignTotal ?? 0) + Number(editFormData.missionTotal ?? 0) + Number(editFormData.circleTotal ?? 0)
+                                                }
+                                                return (totalEntradas - Number(editFormData.exitTotal ?? 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                              })()}
                                           </div>
                                       </div>
                                   </div>
@@ -1068,10 +1249,25 @@ export default function CongregationSummary() {
                                 "w-full transition-all",
                                 editFormData.treasurerApproved && "bg-green-600 hover:bg-green-700 text-white border-green-700"
                               )}
-                              // Desabilita se: usuário não tem permissão OU usuário já aprovou como Contador
-                              disabled={!session?.user?.canApproveTreasury || editFormData.approvedByAccountant === session?.user?.name}
+                              // Desabilita se:
+                              // - usuário não tem permissão OU
+                              // - usuário tem ambas as permissões e já aprovou como Contador (só pode aprovar uma) OU
+                              // - tesoureiro já está aprovado por outro usuário (só o próprio pode desmarcar)
+                              disabled={(() => {
+                                const user = session?.user as any
+                                const hasBothPermissions = user?.canApproveTreasury && user?.canApproveAccountant
+                                const approvedByOther = editFormData.approvedByTreasury && editFormData.approvedByTreasury !== session?.user?.name
+                                const alreadyApprovedAsAccountant = hasBothPermissions && editFormData.accountantApproved && editFormData.approvedByAccountant === session?.user?.name
+                                
+                                return !user?.canApproveTreasury || alreadyApprovedAsAccountant || approvedByOther
+                              })()}
                               onClick={() => {
                                 const isApproving = !editFormData.treasurerApproved;
+                                // Se está desaprovando e não foi o próprio usuário que aprovou, não permitir
+                                if (!isApproving && editFormData.approvedByTreasury && editFormData.approvedByTreasury !== session?.user?.name) {
+                                  alert('Apenas o usuário que aprovou pode desmarcar a aprovação.');
+                                  return;
+                                }
                                 setEditFormData(prev => ({
                                   ...prev, // Mantém todos os outros dados (incluindo aprovação do contador)
                                   treasurerApproved: isApproving,
@@ -1098,10 +1294,25 @@ export default function CongregationSummary() {
                                 "w-full transition-all",
                                 editFormData.accountantApproved && "bg-green-600 hover:bg-green-700 text-white border-green-700"
                               )}
-                              // Desabilita se: usuário não tem permissão OU usuário já aprovou como Tesoureiro
-                              disabled={!session?.user?.canApproveAccountant || editFormData.approvedByTreasury === session?.user?.name}
+                              // Desabilita se:
+                              // - usuário não tem permissão OU
+                              // - usuário tem ambas as permissões e já aprovou como Tesoureiro (só pode aprovar uma) OU
+                              // - contador já está aprovado por outro usuário (só o próprio pode desmarcar)
+                              disabled={(() => {
+                                const user = session?.user as any
+                                const hasBothPermissions = user?.canApproveTreasury && user?.canApproveAccountant
+                                const approvedByOther = editFormData.approvedByAccountant && editFormData.approvedByAccountant !== session?.user?.name
+                                const alreadyApprovedAsTreasurer = hasBothPermissions && editFormData.treasurerApproved && editFormData.approvedByTreasury === session?.user?.name
+                                
+                                return !user?.canApproveAccountant || alreadyApprovedAsTreasurer || approvedByOther
+                              })()}
                               onClick={() => {
                                 const isApproving = !editFormData.accountantApproved;
+                                // Se está desaprovando e não foi o próprio usuário que aprovou, não permitir
+                                if (!isApproving && editFormData.approvedByAccountant && editFormData.approvedByAccountant !== session?.user?.name) {
+                                  alert('Apenas o usuário que aprovou pode desmarcar a aprovação.');
+                                  return;
+                                }
                                 setEditFormData(prev => ({
                                   ...prev, // Mantém todos os outros dados (incluindo aprovação do tesoureiro)
                                   accountantApproved: isApproving,
@@ -1179,22 +1390,22 @@ export default function CongregationSummary() {
                             <div className={`w-full py-1 px-0 rounded text-center text-white font-medium ${
                               launch.type === 'DIZIMO' ? 'bg-blue-500' : 
                               launch.type === 'OFERTA_CULTO'? 'bg-green-500' :
+                              launch.type === 'CARNE_REVIVER'? 'bg-green-500' :
                               launch.type === 'VOTO' ? 'bg-green-500' : 
                               launch.type === 'EBD' ? 'bg-green-500' :
                               launch.type === 'CAMPANHA'? 'bg-green-500' :
                               launch.type === 'SAIDA'? 'bg-red-500' :
                               launch.type === 'MISSAO'? 'bg-green-500' :
-                              launch.type === 'OFERTA_CULTO'? 'bg-green-500' :
                               launch.type === 'CIRCULO'? 'bg-green-500' : ''
                             }`}>
                             { launch.type === 'DIZIMO' ? 'Dízimo' : 
                               launch.type === 'OFERTA_CULTO' ? 'Oferta de Culto' :
+                              launch.type === 'CARNE_REVIVER' ? 'Carne Reviver' :
                               launch.type === 'VOTO' ? 'Voto' :
                               launch.type === 'EBD' ? 'EBD' :
                               launch.type === 'CAMPANHA' ? 'Campanha' :
                               launch.type === 'SAIDA' ? 'Saída' :
                               launch.type === 'MISSAO' ? 'Missão' :
-                              launch.type === 'OFERTA_CULTO' ? 'Oferta de Culto' :
                               launch.type === 'CIRCULO' ? 'Círculo de Oração' : ''}
                             </div>
                           </TableCell>

@@ -25,6 +25,8 @@ interface PermissionGuardProps {
     canListSummary?: boolean,
     canGenerateSummary?: boolean,
     canManageUsers?: boolean,
+    canGenerateReport?: boolean,
+    canDeleteLaunch ?: boolean
     
   }
   requireAuth?: boolean

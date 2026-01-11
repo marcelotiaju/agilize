@@ -52,6 +52,7 @@ export function Sidebar() {
   const canAccesSummary = ['canListSummary', 'canGenerateSummary'];
   const hasLaunchPermission = Boolean(canAccessLaunches.find(perm => session?.user?.[perm]));
   const hasSummaryPermission = Boolean(canAccesSummary.find(perm => session?.user?.[perm]));
+  const canGenerateReport = Boolean((session?.user as any)?.canGenerateReport)
 
   const canCreate = Boolean(session?.user?.canCreate)
   const canManageUsers = Boolean(session?.user?.canManageUsers)
@@ -59,16 +60,19 @@ export function Sidebar() {
   const [openTesouraria, setOpenTesouraria] = useState(true)
   const [openCadastros, setOpenCadastros] = useState(false)
   const [openSeguranca, setOpenSeguranca] = useState(false)
+  const [openReports, setOpenReports] = useState(false)
 
   useEffect(() => {
     const path = pathname || ''
-    const isTesouraria = path.startsWith('/launches') || path.startsWith('/congregation-summary') || path.startsWith('/export') || path.startsWith('/delete-history')
+    const isTesouraria = path.startsWith('/launches') || path.startsWith('/congregation-summary') || path.startsWith('/reports') || path.startsWith('/export') || path.startsWith('/delete-history')
     const isCadastros = path.startsWith('/contributors') || path.startsWith('/congregations') || path.startsWith('/suppliers') || path.startsWith('/classifications')
     const isSeguranca = path.startsWith('/users') || path.startsWith('/profiles') || path.startsWith('/profile')
+    const isReports = path.startsWith('/reports/launches') || path.startsWith('/reports/contributors') || path.startsWith('/reports/congregations') || path.startsWith('/reports/summaries')
 
     setOpenTesouraria(isTesouraria)
     setOpenCadastros(isCadastros)
     setOpenSeguranca(isSeguranca)
+    setOpenReports(isReports)
   }, [pathname])
 
   const handleSignOut = () => {
@@ -97,7 +101,7 @@ export function Sidebar() {
               </Link>
 
               {/* Tesouraria */}
-              {(hasLaunchPermission || hasSummaryPermission) && (
+              {(hasLaunchPermission || hasSummaryPermission || canGenerateReport) && (
                 <div className="mt-3">
                   <button type="button" onClick={() => setOpenTesouraria(!openTesouraria)} className="w-full flex items-center justify-between px-2 py-2 text-base font-medium text-gray-700 rounded-md hover:bg-gray-50">
                     <span className="flex items-center"><FileText className="mr-4 h-6 w-6" /> Tesouraria</span>
@@ -107,6 +111,23 @@ export function Sidebar() {
                     <div className="mt-1 space-y-1 pl-8">
                       {hasLaunchPermission && (<Link href="/launches" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/launches' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><List className="mr-3 h-5 w-5 shrink-0" />Lançamentos</Link>)}
                       {hasSummaryPermission && (<Link href="/congregation-summary" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/congregation-summary' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><PieChart className="mr-3 h-5 w-5 shrink-0" />Resumo Diário</Link>)}
+                      
+                      {/* Submenu Relatórios */}
+                      {canGenerateReport && (
+                        <div className="mt-1">
+                          <button type="button" onClick={() => setOpenReports(!openReports)} className="w-full flex items-center justify-between px-2 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-50">
+                            <span className="flex items-center"><FileText className="mr-3 h-5 w-5 shrink-0" />Relatórios</span>
+                            <ChevronDown className={cn('h-4 w-4 transform transition-transform text-gray-500', openReports ? 'rotate-0' : '-rotate-90')} />
+                          </button>
+                          {openReports && (
+                            <div className="mt-1 space-y-1 pl-8">
+                              <Link href="/reports/launches" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/launches' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><FileText className="mr-3 h-5 w-5 shrink-0" />Relatório de Lançamentos</Link>
+                              <Link href="/reports/contributors" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/contributors' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><FileText className="mr-3 h-5 w-5 shrink-0" />Relatório de Contribuintes</Link>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
                       {session?.user?.canExport && (<Link href="/export" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/export' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Download className="mr-3 h-5 w-5 shrink-0" />Exportar Dados</Link>)}
                       {session?.user?.canDelete && (<Link href="/delete-history" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/delete-history' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Trash2 className="mr-3 h-5 w-5 shrink-0" />Excluir Histórico</Link>)}
                     </div>
@@ -199,7 +220,7 @@ export function Sidebar() {
               </Link>
 
               {/* Tesouraria */}
-              {(hasLaunchPermission || hasSummaryPermission) && (
+              {(hasLaunchPermission || hasSummaryPermission || canGenerateReport) && (
                 <div className="mt-3">
                   <button type="button" onClick={() => setOpenTesouraria(!openTesouraria)} className="w-full flex items-center justify-between px-2 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-50">
                     <span className="flex items-center"><FileText className="mr-3 h-5 w-5 shrink-0" /> Tesouraria</span>
@@ -209,6 +230,23 @@ export function Sidebar() {
                     <div className="mt-1 space-y-1 pl-8">
                       {hasLaunchPermission && (<Link href="/launches" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/launches' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><List className="mr-3 h-5 w-5 shrink-0" />Lançamentos</Link>)}
                       {hasSummaryPermission && (<Link href="/congregation-summary" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/congregation-summary' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><PieChart className="mr-3 h-5 w-5 shrink-0" />Resumo Diário</Link>)}
+                      
+                      {/* Submenu Relatórios */}
+                      {canGenerateReport && (
+                        <div className="mt-1">
+                          <button type="button" onClick={() => setOpenReports(!openReports)} className="w-full flex items-center justify-between px-2 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-50">
+                            <span className="flex items-center"><FileText className="mr-3 h-5 w-5 shrink-0" />Relatórios</span>
+                            <ChevronDown className={cn('h-4 w-4 transform transition-transform text-gray-500', openReports ? 'rotate-0' : '-rotate-90')} />
+                          </button>
+                          {openReports && (
+                            <div className="mt-1 space-y-1 pl-8">
+                              <Link href="/reports/launches" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/launches' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><FileText className="mr-3 h-5 w-5 shrink-0" />Relatório de Lançamentos</Link>
+                              <Link href="/reports/contributors" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/contributors' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><FileText className="mr-3 h-5 w-5 shrink-0" />Relatório de Contribuintes</Link>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
                       {session?.user?.canExport && (<Link href="/export" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/export' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><Download className="mr-3 h-5 w-5 shrink-0" />Exportar Dados</Link>)}
                       {session?.user?.canDelete && (<Link href="/delete-history" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/delete-history' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><Trash2 className="mr-3 h-5 w-5 shrink-0" />Excluir Histórico</Link>)}                      
                     </div>

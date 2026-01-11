@@ -58,6 +58,7 @@ export const authOptions : NextAuthOptions = {
           canApproveTreasury: !!p?.canApproveTreasury,
           canApproveAccountant: !!p?.canApproveAccountant,
           canApproveDirector: !!p?.canApproveDirector,
+          canDeleteLaunch : !!p?.canDeleteLaunch
         }
 
         return {
@@ -132,7 +133,8 @@ export const authOptions : NextAuthOptions = {
           canGenerateSummary: (user as any).canGenerateSummary,
           canApproveTreasury: (user as any).canApproveTreasury,
           canApproveAccountant: (user as any).canApproveAccountant,
-          canApproveDirector: (user as any).canApproveDirector
+          canApproveDirector: (user as any).canApproveDirector,
+          canDeleteLaunch : (user as any).canDeleteLaunch
         }
       }
       return token
@@ -177,7 +179,8 @@ export const authOptions : NextAuthOptions = {
         canGenerateSummary: typeof token.canGenerateSummary === "boolean" ? token.canGenerateSummary : undefined,
         canApproveTreasury: typeof token.canApproveTreasury === "boolean" ? token.canApproveTreasury : undefined,
         canApproveAccountant: typeof token.canApproveAccountant === "boolean" ? token.canApproveAccountant : undefined,
-        canApproveDirector: typeof token.canApproveDirector === "boolean" ? token.canApproveDirector : undefined
+        canApproveDirector: typeof token.canApproveDirector === "boolean" ? token.canApproveDirector : undefined,
+        canDeleteLaunch : typeof token.canDeleteLaunch === "boolean" ? token.canDeleteLaunch : undefined
       }
       if (typeof token.exp === 'number') {
         session.expires = new Date(token.exp * 1000).toISOString()
