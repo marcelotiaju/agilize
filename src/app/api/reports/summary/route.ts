@@ -9,9 +9,9 @@ import { utcToZonedTime } from 'date-fns-tz'
 import path from "path/win32"
 
 const fs = require('fs');
-const imagePath = path.join(process.cwd(), 'public/images/Logo.png');
+//const imagePath = path.join(process.cwd(), '../Logo.png');
 
-const imageFile = fs.readFileSync(imagePath);
+const imageFile = fs.readFileSync('../agilize/public/images/Logo.png');
 const base64String = Buffer.from(imageFile).toString('base64');
 
 const formatCurrency = (val: number) => {
