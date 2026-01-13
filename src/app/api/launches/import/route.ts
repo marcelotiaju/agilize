@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import prisma from "@/lib/prisma"
 import { authOptions } from "../../auth/[...nextauth]/route"
-import { zonedTimeToUtc, startOfDay } from "date-fns-tz"
+import { zonedTimeToUtc } from "date-fns-tz"
+import { startOfDay } from "date-fns"
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions)
