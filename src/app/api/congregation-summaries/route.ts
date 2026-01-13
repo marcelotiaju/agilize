@@ -175,12 +175,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Buscar lançamentos no período filtrados pelo tipo de resumo
+    // Excluir lançamentos importados (IMPORTED) - eles não devem somar nos resumos
     const launches = await prisma.launch.findMany({
       where: {
         congregationId,
         date: { gte: startUtc, lte: endUtc },
         type: { in: allowedTypes },
-        status: { in: ["NORMAL", "APPROVED"] },
+        status: { in: ["NORMAL", "APPROVED"], not: "IMPORTED" },
         summaryId: null
       },
       include: { congregation: true },
@@ -441,7 +442,8 @@ export async function PUT(request: NextRequest) {
         data: {
           status: "APPROVED",
           approvedByDirector: approvedByDirector || null,
-          approvedAtDirector: approvedAtDirector || null
+          approvedAtDirector: approvedAtDirector || null,
+          approvedVia: 'SUMMARY'
         }
       })
     } 
@@ -455,7 +457,8 @@ export async function PUT(request: NextRequest) {
         data: {
           status: "NORMAL",
           approvedByDirector: null,
-          approvedAtDirector: null
+          approvedAtDirector: null,
+          approvedVia: null
         }
       })
     }

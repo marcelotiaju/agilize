@@ -107,6 +107,7 @@ model Profile {
   canManageUsers         Boolean @default(false)
   canGenerateReport      Boolean @default(false)
   canDeleteLaunch        Boolean @default(false)
+  canImportLaunch        Boolean @default(false)
 
   users     User[]
   createdAt DateTime @default(now()) @db.DateTime(0)
@@ -199,6 +200,7 @@ model Launch {
   approvedAtAccountant DateTime?
   approvedByDirector   String?
   approvedAtDirector   DateTime?
+  approvedVia          String?              // 'GRID' ou 'SUMMARY' - método de aprovação
 
   @@index([congregationId])
   @@index([summaryId])
@@ -307,6 +309,7 @@ enum LaunchStatus {
   CANCELED
   APPROVED
   EXPORTED
+  IMPORTED
 }
 
 enum ContributorType {

@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, Search, Check, X, AlertCircle, CalendarIcon, User, Users, Ghost, List, ArrowUp } from 'lucide-react'
+import { Plus, Edit, Trash2, Search, Check, X, AlertCircle, CalendarIcon, User, Users, Ghost, List, ArrowUp, Upload } from 'lucide-react'
 import { format, startOfDay } from 'date-fns'
 import { zonedTimeToUtc } from 'date-fns-tz'
 import { ptBR } from 'date-fns/locale'
@@ -42,8 +42,14 @@ export default function Launches() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [classifications, setClassifications] = useState<Classification[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [salvando, setSalvando] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importLaunchType, setImportLaunchType] = useState<'DIZIMO' | 'CARNE_REVIVER'>('DIZIMO')
+  const [importCongregationId, setImportCongregationId] = useState<string>('')
+  const [csvFile, setCsvFile] = useState<File | null>(null)
 
   const [expandedCard, setExpandedCard] = useState(null)
   // Estados para paginação e filtros
@@ -93,6 +99,7 @@ export default function Launches() {
     approvedByTreasury?: boolean
     approvedByAccountant?: boolean
     approvedByDirector?: boolean
+    approvedVia?: string
   }
 
   // Permissões (mantém nomes existentes)
@@ -116,8 +123,9 @@ export default function Launches() {
   const canApproveCarneReviver = session?.user?.canApproveCarneReviver
   const canApproveTreasury = session?.user?.canApproveTreasury
   const canApproveAccountant = session?.user?.canApproveAccountant
-  const canApproveDirector = session?.user?.canApproveDirector  
+  const canApproveDirector = session?.user?.canApproveDirector
   const canDeleteLaunch = session?.user?.canDeleteLaunch
+  const canImportLaunch = session?.user?.canImportLaunch
 
   const [editingLaunch, setEditingLaunch] = useState<Launch | null>(null)
   const [formData, setFormData] = useState({
@@ -187,17 +195,86 @@ export default function Launches() {
     setCurrentPage(1)
   }
 
-  const handleDelete = async (id: string) => {
-      if (!confirm('Tem certeza que deseja excluir este lançamento?')) return
-      try {
-        const response = await fetch(`/api/launches/${id}`, { method: 'DELETE' })
-        if (response.ok) fetchLaunches()
-        else setError('Erro ao excluir lançamento.')
-      } catch (error) {
-        console.error('Erro ao excluir:', error)
-        setError('Erro ao excluir lançamento.')
-      }
+  const handleImportCSV = async () => {
+    if (!csvFile) {
+      alert('Por favor, selecione um arquivo CSV')
+      return
     }
+
+    setImporting(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', csvFile)
+
+      const response = await fetch('/api/launches/import', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        let message = `Importação concluída! `
+        if (result.updated && result.updated > 0) {
+          message += `${result.updated} lançamento(s) atualizado(s)`
+        }
+        if (result.created && result.created > 0) {
+          if (result.updated && result.updated > 0) {
+            message += ` e `
+          }
+          message += `${result.created} lançamento(s) criado(s)`
+        }
+        if (!result.updated && !result.created) {
+          message += `${result.imported} lançamento(s) processado(s)`
+        }
+        message += `.`
+        alert(message)
+        fetchLaunches()
+        setIsImportDialogOpen(false)
+        setCsvFile(null)
+      } else {
+        const error = await response.json()
+        let errorMessage = error.error || 'Erro ao importar arquivo CSV'
+        if (error.imported > 0) {
+          errorMessage += `\n${error.imported} lançamento(s) processado(s)`
+          if (error.updated) errorMessage += ` (${error.updated} atualizado(s))`
+          if (error.created) errorMessage += ` (${error.created} criado(s))`
+        }
+        alert(errorMessage)
+      }
+    } catch (error) {
+      console.error('Erro ao importar CSV:', error)
+      alert('Erro ao importar arquivo CSV')
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  const resetImportForm = () => {
+    setCsvFile(null)
+    setImporting(false)
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file && file.type === 'text/csv') {
+      setCsvFile(file)
+    } else {
+      alert('Por favor, selecione um arquivo CSV válido')
+      e.target.value = ''
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir este lançamento?')) return
+    try {
+      const response = await fetch(`/api/launches/${id}`, { method: 'DELETE' })
+      if (response.ok) fetchLaunches()
+      else setError('Erro ao excluir lançamento.')
+    } catch (error) {
+      console.error('Erro ao excluir:', error)
+      setError('Erro ao excluir lançamento.')
+    }
+  }
 
 
   const fetchLaunches = async () => {
@@ -312,10 +389,10 @@ export default function Launches() {
     setFormData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
   }
 
-    const toggleField = (name: string) => {
+  const toggleField = (name: string) => {
     setFormData((prev) => {
       const newValue = !prev[name];
-      
+
       // Regra de negócio: Se marcar Anônimo, desmarca o Contribuinte e vice-versa
       if (name === 'isAnonymous') {
         return {
@@ -327,16 +404,16 @@ export default function Launches() {
         };
       }
       if (name === 'isContributorRegistered') {
-        return { 
-          ...prev, 
-          isContributorRegistered: newValue, 
-          isAnonymous: false, 
+        return {
+          ...prev,
+          isContributorRegistered: newValue,
+          isAnonymous: false,
           contributorName: newValue ? '' : prev.contributorName,
           contributorId: newValue ? prev.contributorId : null,
         };
       }
       if (name === 'isSupplierRegistered' && newValue) {
-        return { ...prev, isSupplierRegistered: true};
+        return { ...prev, isSupplierRegistered: true };
       }
 
       return { ...prev, [name]: newValue };
@@ -354,16 +431,16 @@ export default function Launches() {
 
     // Validações
     if (!formData.congregationId) {
-        alert("Congregação é obrigatória")
-        setSalvando(false)
-        return
-      }
+      alert("Congregação é obrigatória")
+      setSalvando(false)
+      return
+    }
 
     if (formData.type === "SAIDA" && !formData.classificationId) {
       alert("Classificação é obrigatória para lançamentos do tipo Saída")
       setSalvando(false)
       return
-    }      
+    }
 
     // Comparar apenas a data (ignorando a hora) usando a data já parseada
     const todayStart = startOfDay(new Date())
@@ -420,17 +497,17 @@ export default function Launches() {
       if (response.ok) {
         // Scroll para o topo da página no mobile
         window.scrollTo({ top: 0, behavior: 'smooth' })
-        
-         fetchLaunches()
-         setIsDialogOpen(false)
-         resetForm()
-         setSalvando(false)
-       } else {
-         const error = await response.json()
-         alert(error.error || 'Erro ao salvar lançamento')
-         setSalvando(false)
-       }
-     } catch (error) {
+
+        fetchLaunches()
+        setIsDialogOpen(false)
+        resetForm()
+        setSalvando(false)
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Erro ao salvar lançamento')
+        setSalvando(false)
+      }
+    } catch (error) {
       console.error('Erro ao salvar lançamento:', error)
       alert('Erro ao salvar lançamento')
       setSalvando(false)
@@ -472,9 +549,9 @@ export default function Launches() {
       const response = await fetch(`api/launches/status/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          id, 
-          status: 'CANCELED', 
+        body: JSON.stringify({
+          id,
+          status: 'CANCELED',
           cancelledBy: session?.user?.name,
           cancelledAt: new Date().toISOString()
         }),
@@ -503,8 +580,8 @@ export default function Launches() {
       const response = await fetch(`/api/launches/status/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          id, 
+        body: JSON.stringify({
+          id,
           status: 'APPROVED',
           approvedBy: session?.user?.name,
           approvedByTreasury: canApproveTreasury,
@@ -593,36 +670,35 @@ export default function Launches() {
     <Card key={launch.id} className="mb-2">
       <CardContent className="p-4 pt-0.5 pb-1">
         <div className="flex justify-between items-start mb-1">
-          <div className={`px-3 py-1 rounded text-white text-sm font-medium ${
-            launch.type === 'VOTO' ? 'bg-green-500' :
-            launch.type === 'EBD' ? 'bg-green-500' :
-            launch.type === 'CAMPANHA' ? 'bg-green-500' :
-            launch.type === 'DIZIMO' ? 'bg-blue-500' :
-            launch.type === 'CARNE_REVIVER' ? 'bg-green-500' :
-            launch.type === 'SAIDA' ? 'bg-red-500' :
-            launch.type === 'MISSAO' ? 'bg-green-500' :
-            launch.type === 'OFERTA_CULTO' ? 'bg-green-500' :
-            launch.type === 'CIRCULO' ? 'bg-green-500' : ''
-          }`}>
+          <div className={`px-3 py-1 rounded text-white text-sm font-medium ${launch.type === 'VOTO' ? 'bg-green-500' :
+              launch.type === 'EBD' ? 'bg-green-500' :
+                launch.type === 'CAMPANHA' ? 'bg-green-500' :
+                  launch.type === 'DIZIMO' ? 'bg-blue-500' :
+                    launch.type === 'CARNE_REVIVER' ? 'bg-green-500' :
+                      launch.type === 'SAIDA' ? 'bg-red-500' :
+                        launch.type === 'MISSAO' ? 'bg-green-500' :
+                          launch.type === 'OFERTA_CULTO' ? 'bg-green-500' :
+                            launch.type === 'CIRCULO' ? 'bg-green-500' : ''
+            }`}>
             {launch.type === 'VOTO' ? 'Voto' :
-             launch.type === 'EBD' ? 'EBD' :
-             launch.type === 'CAMPANHA' ? 'Campanha' :
-             launch.type === 'DIZIMO' ? 'Dízimo' :
-             launch.type === 'CARNE_REVIVER' ? 'Carnê Reviver' :
-             launch.type === 'SAIDA' ? 'Saída' :
-             launch.type === 'MISSAO' ? 'Missão' :
-             launch.type === 'OFERTA_CULTO' ? 'Oferta do Culto' :
-             launch.type === 'CIRCULO' ? 'Círculo de Oração' : ''}
+              launch.type === 'EBD' ? 'EBD' :
+                launch.type === 'CAMPANHA' ? 'Campanha' :
+                  launch.type === 'DIZIMO' ? 'Dízimo' :
+                    launch.type === 'CARNE_REVIVER' ? 'Carnê Reviver' :
+                      launch.type === 'SAIDA' ? 'Saída' :
+                        launch.type === 'MISSAO' ? 'Missão' :
+                          launch.type === 'OFERTA_CULTO' ? 'Oferta do Culto' :
+                            launch.type === 'CIRCULO' ? 'Círculo de Oração' : ''}
           </div>
           <div className="flex items-center space-x-2">
             <Badge variant={
               launch.status === 'NORMAL' ? 'default' :
-              launch.status === 'APPROVED' ? 'default' :
-              launch.status === 'EXPORTED' ? 'secondary' : 'destructive'
+                launch.status === 'APPROVED' ? 'default' :
+                  launch.status === 'EXPORTED' ? 'secondary' : 'destructive'
             }>
               {launch.status === 'NORMAL' ? 'Normal' :
-               launch.status === 'APPROVED' ? 'Aprovado' :
-               launch.status === 'EXPORTED' ? 'Exportado' : 'Cancelado'}
+                launch.status === 'APPROVED' ? 'Aprovado' :
+                  launch.status === 'EXPORTED' ? 'Exportado' : 'Cancelado'}
             </Badge>
             {launch.approvedBy && (
               <Tooltip>
@@ -689,14 +765,14 @@ export default function Launches() {
           {launch.status === 'NORMAL' && launch.summaryId == null && (
             <>
               {(launch.type === 'VOTO' && canApproveVote) ||
-               (launch.type === 'EBD' && canApproveEbd) ||
-               (launch.type === 'CAMPANHA' && canApproveCampaign) ||
-               (launch.type === 'OFERTA_CULTO' && canApproveServiceOffer) ||
-               (launch.type === 'DIZIMO' && canApproveTithe) ||
-               (launch.type === 'CARNE_REVIVER' && canApproveCarneReviver) ||
-               (launch.type === 'SAIDA' && canApproveExpense) ||
-               (launch.type === 'MISSAO' && canApproveMission) ||
-               (launch.type === 'CIRCULO' && canApproveCircle) ? (
+                (launch.type === 'EBD' && canApproveEbd) ||
+                (launch.type === 'CAMPANHA' && canApproveCampaign) ||
+                (launch.type === 'OFERTA_CULTO' && canApproveServiceOffer) ||
+                (launch.type === 'DIZIMO' && canApproveTithe) ||
+                (launch.type === 'CARNE_REVIVER' && canApproveCarneReviver) ||
+                (launch.type === 'SAIDA' && canApproveExpense) ||
+                (launch.type === 'MISSAO' && canApproveMission) ||
+                (launch.type === 'CIRCULO' && canApproveCircle) ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button variant="outline" size="sm" onClick={() => handleApprove(launch.id)}><Check className="h-4 w-4 mr-1" /></Button>
@@ -710,14 +786,14 @@ export default function Launches() {
           {launch.status === 'APPROVED' && launch.summaryId == null && (
             <>
               {(launch.type === 'VOTO' && canApproveVote) ||
-               (launch.type === 'EBD' && canApproveEbd) ||
-               (launch.type === 'CAMPANHA' && canApproveCampaign) ||
-               (launch.type === 'OFERTA_CULTO' && canApproveServiceOffer) ||
-               (launch.type === 'DIZIMO' && canApproveTithe) ||
-               (launch.type === 'CARNE_REVIVER' && canApproveCarneReviver) ||
-               (launch.type === 'SAIDA' && canApproveExpense) ||
-               (launch.type === 'MISSAO' && canApproveMission) ||
-               (launch.type === 'CIRCULO' && canApproveCircle) ? (
+                (launch.type === 'EBD' && canApproveEbd) ||
+                (launch.type === 'CAMPANHA' && canApproveCampaign) ||
+                (launch.type === 'OFERTA_CULTO' && canApproveServiceOffer) ||
+                (launch.type === 'DIZIMO' && canApproveTithe) ||
+                (launch.type === 'CARNE_REVIVER' && canApproveCarneReviver) ||
+                (launch.type === 'SAIDA' && canApproveExpense) ||
+                (launch.type === 'MISSAO' && canApproveMission) ||
+                (launch.type === 'CIRCULO' && canApproveCircle) ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button variant="outline" size="sm" onClick={() => handleReprove(launch.id)}><X className="h-4 w-4 mr-1" /></Button>
@@ -776,280 +852,288 @@ export default function Launches() {
     >
 
       <div id="container" className="min-h-screen bg-gray-50" style={{ fontSize: '16px' }}>
-         <Sidebar />
-         <div className="lg:pl-64">
-           <div className="p-2">
-             <div className="flex justify-end mb-2">
-               <div className="flex space-x-2">
-                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                   <DialogTrigger asChild>
-                     <Button onClick={resetForm} disabled={!canLaunchVote && !canLaunchEbd && !canLaunchCampaign && !canLaunchTithe && !canLaunchExpense && !canLaunchMission && !canLaunchCircle && !canLaunchServiceOffer}>
-                       <Plus className="mr-2 h-4 w-4" />
-                       Novo
-                     </Button>
-                   </DialogTrigger>
-                   <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto overflow-x-hidden p-0 sm:p-6 fixed" style={{ fontSize: '16px' }}>
-                     <DialogHeader>
-                       <DialogTitle>{editingLaunch ? 'Editar' : 'Novo'}</DialogTitle>
-                       <DialogDescription asChild style={{ fontSize: '14px' }}>
-                         {editingLaunch && editingLaunch.status !== 'NORMAL' && (
-                           <div className="mt-2 p-2 bg-yellow-50 text-red-800 rounded-md flex items-center">
-                             <AlertCircle className="h-4 w-4 mr-2" />
-                             Este lançamento não pode ser editado porque está com status "{editingLaunch.status === 'CANCELED' ? 'CANCELADO' : editingLaunch.status === 'APPROVED' ? 'APROVADO': editingLaunch.status === 'EXPORTED' ? 'EXPORTADO' : '' }"
-                           </div>
-                         )}
-                       </DialogDescription>
-                       <DialogDescription asChild style={{ fontSize: '14px' }}>
-                         {editingLaunch && editingLaunch.summaryId != null && (
-                           <div className="mt-2 p-2 bg-yellow-50 text-red-800 rounded-md flex items-center">
-                             <AlertCircle className="h-4 w-4 mr-2" />
-                             Este lançamento faz parte de um resumo e não pode ser alterado."
-                           </div>
-                         )}
-                         </DialogDescription>
-                       </DialogHeader>
+        <Sidebar />
+        <div className="lg:pl-64">
+          <div className="p-2">
+            <div className="flex justify-end mb-2">
+              <div className="flex space-x-2">
+                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button onClick={resetForm} disabled={!canLaunchVote && !canLaunchEbd && !canLaunchCampaign && !canLaunchTithe && !canLaunchExpense && !canLaunchMission && !canLaunchCircle && !canLaunchServiceOffer}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Novo
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto overflow-x-hidden p-0 sm:p-6 fixed" style={{ fontSize: '16px' }}>
+                    <DialogHeader>
+                      <DialogTitle>{editingLaunch ? 'Editar' : 'Novo'}</DialogTitle>
+                      <DialogDescription asChild style={{ fontSize: '14px' }}>
+                        {editingLaunch && editingLaunch.status !== 'NORMAL' && editingLaunch.status !== 'IMPORTED' && (
+                          <div className="mt-2 p-2 bg-yellow-50 text-red-800 rounded-md flex items-center">
+                            <AlertCircle className="h-4 w-4 mr-2" />
+                            Este lançamento não pode ser editado porque está com status "{editingLaunch.status === 'CANCELED' ? 'CANCELADO' : editingLaunch.status === 'APPROVED' ? 'APROVADO' : editingLaunch.status === 'EXPORTED' ? 'EXPORTADO' : ''}"
+                          </div>
+                        )}
+                      </DialogDescription>
+                      <DialogDescription asChild style={{ fontSize: '14px' }}>
+                        {editingLaunch && editingLaunch.status === 'IMPORTED' && (
+                          <div className="mt-2 p-2 bg-yellow-50 text-red-800 rounded-md flex items-center">
+                            <AlertCircle className="h-4 w-4 mr-2" />
+                            Este lançamento faz parte da integração bancária e não pode ser alterado.
+                          </div>
+                        )}
+                      </DialogDescription>
+                      <DialogDescription asChild style={{ fontSize: '14px' }}>
+                        {editingLaunch && editingLaunch.summaryId != null && (
+                          <div className="mt-2 p-2 bg-yellow-50 text-red-800 rounded-md flex items-center">
+                            <AlertCircle className="h-4 w-4 mr-2" />
+                            Este lançamento faz parte de um resumo e não pode ser alterado."
+                          </div>
+                        )}
+                      </DialogDescription>
+                    </DialogHeader>
 
-                     {error && (
-                       <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md flex items-center">
-                         <AlertCircle className="h-4 w-4 mr-2" />
-                         {error}
-                       </div>
-                     )}
+                    {error && (
+                      <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-2" />
+                        {error}
+                      </div>
+                    )}
 
-                  <Tabs defaultValue="dados" className="w-full mt-4">
-                        <TabsList className="grid w-full grid-cols-2 px-4 sm:px-0">
-                          <TabsTrigger value="dados">Dados</TabsTrigger>
-                          <TabsTrigger value="logs">Logs</TabsTrigger>
-                        </TabsList>
-                    <TabsContent value="dados" className="max-w-[calc(105vw-3rem)] p-2 sm:p-0 overflow-x-hidden">
-                     <form onSubmit={handleSubmit} className="space-y-2 px-2 sm:px-0 w-full max-w-full overflow-x-hidden">
-                       <div className="space-y-2">
-                         <div>
-                           <Label htmlFor="congregationId">Congregação</Label>
-                           <SearchableSelect
-                             label="Buscar Congregação"
-                             placeholder="Selecione a Congregação"
-                             value={formData.congregationId}
-                             disabled={editingLaunch ? (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null) : congregations.length === 1}
-                             onChange={(value) => handleSelectChange('congregationId', value)}
-                             name="congregationId"
-                             data={congregations.map(s => ({ id: s.id, name: s.name }))}
-                             itemRenderMode="congregation"
-                             searchKeys={['name']}
-                             required
-                           />
-                         </div>
+                    <Tabs defaultValue="dados" className="w-full mt-4">
+                      <TabsList className="grid w-full grid-cols-2 px-4 sm:px-0">
+                        <TabsTrigger value="dados">Dados</TabsTrigger>
+                        <TabsTrigger value="logs">Logs</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="dados" className="max-w-[calc(105vw-3rem)] p-2 sm:p-0 overflow-x-hidden">
+                        <form onSubmit={handleSubmit} className="space-y-2 px-2 sm:px-0 w-full max-w-full overflow-x-hidden">
+                          <div className="space-y-2">
+                            <div>
+                              <Label htmlFor="congregationId">Congregação</Label>
+                              <SearchableSelect
+                                label="Buscar Congregação"
+                                placeholder="Selecione a Congregação"
+                                value={formData.congregationId}
+                                disabled={editingLaunch ? (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null) : congregations.length === 1}
+                                onChange={(value) => handleSelectChange('congregationId', value)}
+                                name="congregationId"
+                                data={congregations.map(s => ({ id: s.id, name: s.name }))}
+                                itemRenderMode="congregation"
+                                searchKeys={['name']}
+                                required
+                              />
+                            </div>
 
-                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                           <div className="w-full">
-                             <Label htmlFor="type">Tipo</Label>
-                             <Select
-                               value={formData.type}
-                               onValueChange={(value) => handleSelectChange('type', value)}
-                               disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
-                             >
-                               <SelectTrigger className="w-full">
-                                 <SelectValue />
-                               </SelectTrigger>
-                               <SelectContent>
-                                 {canLaunchTithe && <SelectItem value="DIZIMO">Dízimos</SelectItem>}
-                                 {canLaunchServiceOffer && <SelectItem value="OFERTA_CULTO">Oferta do Culto</SelectItem>}
-                                 {canLaunchCarneReviver && <SelectItem value="CARNE_REVIVER">Carnê Reviver</SelectItem>}
-                                 {canLaunchVote && <SelectItem value="VOTO">Voto</SelectItem>}
-                                 {canLaunchEbd && <SelectItem value="EBD">EBD</SelectItem>}
-                                 {canLaunchCampaign && <SelectItem value="CAMPANHA">Campanha</SelectItem>}
-                                 {canLaunchMission && <SelectItem value="MISSAO">Missão</SelectItem>}
-                                 {canLaunchCircle && <SelectItem value="CIRCULO">Círculo de Oração</SelectItem>}
-                                 {canLaunchExpense && <SelectItem value="SAIDA">Saídas</SelectItem>}
-                               </SelectContent>
-                             </Select>
-                           </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div className="w-full">
+                                <Label htmlFor="type">Tipo</Label>
+                                <Select
+                                  value={formData.type}
+                                  onValueChange={(value) => handleSelectChange('type', value)}
+                                  disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null)}
+                                >
+                                  <SelectTrigger className="w-full">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {canLaunchTithe && <SelectItem value="DIZIMO">Dízimos</SelectItem>}
+                                    {canLaunchServiceOffer && <SelectItem value="OFERTA_CULTO">Oferta do Culto</SelectItem>}
+                                    {canLaunchCarneReviver && <SelectItem value="CARNE_REVIVER">Carnê Reviver</SelectItem>}
+                                    {canLaunchVote && <SelectItem value="VOTO">Voto</SelectItem>}
+                                    {canLaunchEbd && <SelectItem value="EBD">EBD</SelectItem>}
+                                    {canLaunchCampaign && <SelectItem value="CAMPANHA">Campanha</SelectItem>}
+                                    {canLaunchMission && <SelectItem value="MISSAO">Missão</SelectItem>}
+                                    {canLaunchCircle && <SelectItem value="CIRCULO">Círculo de Oração</SelectItem>}
+                                    {canLaunchExpense && <SelectItem value="SAIDA">Saídas</SelectItem>}
+                                  </SelectContent>
+                                </Select>
+                              </div>
 
-                           {formData.type === 'SAIDA' && (
-                             <div className="w-full">
-                               <Label htmlFor="classificationId">Classificação</Label>
-                               <Select
-                                 key={formData.classificationId}
-                                 value={formData.classificationId}
-                                 onValueChange={(value) => handleSelectChange('classificationId', value)}
-                                 disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
-                               >
-                                 <SelectTrigger className="w-full">
-                                   <SelectValue placeholder="Selecione uma classificação" />
-                                 </SelectTrigger>
-                                 <SelectContent 
-                                   className="max-w-[calc(100vw-3rem)] sm:max-w-[var(--radix-select-trigger-width)] max-h-[300px]"
-                                   position="popper"
-                                 >
-                                   {classifications.map((classification) => (
-                                     <SelectItem 
-                                       key={classification.id} 
-                                       value={classification.id} 
-                                       className="break-words whitespace-normal max-w-full"
-                                     >
-                                       <span className="block max-w-full break-words">{classification.description}</span>
-                                     </SelectItem>
-                                   ))}
-                                 </SelectContent>
-                               </Select>
-                             </div>
-                           )}
-                         </div>
-
-                         <div className="grid grid-cols-2 gap-4">
-                           <div>
-                             <Label htmlFor="date">Data</Label>
-                             <Input
-                               id="date"
-                               name="date"
-                               type="date"
-                               inputMode="none"
-                               value={formData.date ?? ''}
-                               onChange={handleInputChange}
-                               disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
-                               style={{ fontSize: '16px' }}
-                               locale="pt-BR"
-                             />
-                           </div>
-
-                           <div>
-                             {formData.type === 'SAIDA' ? <Label htmlFor="talonNumber">Nr. Doc</Label> : formData.type === 'DIZIMO' ? <Label htmlFor="talonNumber">Nr. Recibo</Label> : formData.type === 'CARNE_REVIVER' ? '' : <Label htmlFor="talonNumber">Nr. Talão</Label>}
-                             {formData.type !== 'CARNE_REVIVER' && (
-                             <Input
-                               id="talonNumber"
-                               name="talonNumber"
-                               type="text"
-                               inputMode="numeric"
-                               pattern="[0-9]*"
-                               value={formData.talonNumber ?? ''}
-                               onChange={handleInputChange}
-                               disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
-                               style={{ fontSize: '16px' }}
-                             />
-                             )}
-                           </div>
-                         </div>
-
-                         {/* Campo único de valor para todos os tipos */}
-                         <div className="grid grid-cols-2 gap-4">
-                           <div>
-                             <Label htmlFor="value">{formData.type === 'VOTO' ? 'Valor Voto' : formData.type === 'EBD' ? 'Valor EBD' : formData.type === 'CAMPANHA' ? 'Valor Campanha' : formData.type === 'OFERTA_CULTO' ? 'Valor Oferta' : 'Valor'}</Label>
-                             <NumericFormat
-                               id="value"
-                               name="value"
-                               inputMode="decimal"
-                               className="col-span-3 h-10 w-full rounded-md border border-input bg-background px-3 py-2"
-                               value={formData.value ?? ''}
-                               onValueChange={(values) => {
-                                 const { floatValue, value } = values;
-                                 // armazenar como string normalizada
-                                 setFormData(prev => ({ ...prev, value: (floatValue !== undefined ? floatValue : value) as any }))
-                               }}
-                               thousandSeparator="."
-                               decimalSeparator=","
-                               allowNegative={false}
-                               //prefix="R$ "
-                               //decimalScale={2}
-                               //fixedDecimalScale={true}
-                               disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
-                               style={{ fontSize: '16px' }}
-                               onFocus={(e) => {
-                                // Scroll para o input quando focado no mobile
-                                setTimeout(() => {
-                                  e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                                }, 300)
-                              }}
-                             />
-                           </div>
-                         </div>
-
-                         {/* Dízimo: contribuinte */}
-                         {(formData.type === 'DIZIMO' || formData.type === 'CARNE_REVIVER') && (
-                           <div className="w-full">
-                             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
-                               <div className="flex items-center space-x-2 w-full sm:w-auto">
-                                <Button
-                                    type="button"
-                                    variant={formData.isContributorRegistered ? "default" : "outline"}
-                                    size="sm"
-                                    disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)  || !formData.congregationId}
-                                    className={cn(
-                                      "h-9 px-3 transition-all flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start",
-                                      formData.isContributorRegistered 
-                                          ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-800 shadow-sm" 
-                                          : "text-gray-600 border-gray-300 hover:bg-gray-50"
-                                    )}
-                                    onClick={() => toggleField('isContributorRegistered')}
+                              {formData.type === 'SAIDA' && (
+                                <div className="w-full">
+                                  <Label htmlFor="classificationId">Classificação</Label>
+                                  <Select
+                                    key={formData.classificationId}
+                                    value={formData.classificationId}
+                                    onValueChange={(value) => handleSelectChange('classificationId', value)}
+                                    disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null)}
                                   >
-                                    {formData.isContributorRegistered ? (
-                                      <Check className="h-4 w-4 animate-in zoom-in duration-200 shrink-0" />
-                                    ) : (
-                                      <Users className="h-4 w-4 shrink-0" />
-                                    )}
-                                    <span className="text-sm sm:text-base">Contribuinte Cadastrado</span>
-                                  </Button>
-                               </div>
+                                    <SelectTrigger className="w-full">
+                                      <SelectValue placeholder="Selecione uma classificação" />
+                                    </SelectTrigger>
+                                    <SelectContent
+                                      className="max-w-[calc(100vw-3rem)] sm:max-w-[var(--radix-select-trigger-width)] max-h-[300px]"
+                                      position="popper"
+                                    >
+                                      {classifications.map((classification) => (
+                                        <SelectItem
+                                          key={classification.id}
+                                          value={classification.id}
+                                          className="break-words whitespace-normal max-w-full"
+                                        >
+                                          <span className="block max-w-full break-words">{classification.description}</span>
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )}
+                            </div>
 
-                               {!formData.isContributorRegistered && (
-                                 <div className="flex items-center space-x-2 w-full sm:w-auto">
-                                  <Button
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label htmlFor="date">Data</Label>
+                                <Input
+                                  id="date"
+                                  name="date"
+                                  type="date"
+                                  inputMode="none"
+                                  value={formData.date ?? ''}
+                                  onChange={handleInputChange}
+                                  disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null)}
+                                  style={{ fontSize: '16px' }}
+                                  locale="pt-BR"
+                                />
+                              </div>
+
+                              <div>
+                                {formData.type === 'SAIDA' ? <Label htmlFor="talonNumber">Nr. Doc</Label> : formData.type === 'DIZIMO' ? <Label htmlFor="talonNumber">Nr. Recibo</Label> : formData.type === 'CARNE_REVIVER' || formData.type === 'MISSAO' ? '' : <Label htmlFor="talonNumber">Nr. Talão</Label>}
+                                {formData.type !== 'CARNE_REVIVER' && formData.type !== 'MISSAO' && (
+                                  <Input
+                                    id="talonNumber"
+                                    name="talonNumber"
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    value={formData.talonNumber ?? ''}
+                                    onChange={handleInputChange}
+                                    disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null)}
+                                    style={{ fontSize: '16px' }}
+                                  />
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Campo único de valor para todos os tipos */}
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <Label htmlFor="value">{formData.type === 'VOTO' ? 'Valor Voto' : formData.type === 'EBD' ? 'Valor EBD' : formData.type === 'CAMPANHA' ? 'Valor Campanha' : formData.type === 'OFERTA_CULTO' ? 'Valor Oferta' : 'Valor'}</Label>
+                                <NumericFormat
+                                  id="value"
+                                  name="value"
+                                  inputMode="decimal"
+                                  className="col-span-3 h-10 w-full rounded-md border border-input bg-background px-3 py-2"
+                                  value={formData.value ?? ''}
+                                  onValueChange={(values) => {
+                                    const { floatValue, value } = values;
+                                    // armazenar como string normalizada
+                                    setFormData(prev => ({ ...prev, value: (floatValue !== undefined ? floatValue : value) as any }))
+                                  }}
+                                  thousandSeparator="."
+                                  decimalSeparator=","
+                                  allowNegative={false}
+                                  //prefix="R$ "
+                                  //decimalScale={2}
+                                  //fixedDecimalScale={true}
+                                  disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null)}
+                                  style={{ fontSize: '16px' }}
+                                  onFocus={(e) => {
+                                    // Scroll para o input quando focado no mobile
+                                    setTimeout(() => {
+                                      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                                    }, 300)
+                                  }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Dízimo: contribuinte */}
+                            {(formData.type === 'DIZIMO' || formData.type === 'CARNE_REVIVER') && (
+                              <div className="w-full">
+                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
+                                  <div className="flex items-center space-x-2 w-full sm:w-auto">
+                                    <Button
                                       type="button"
-                                      variant={formData.isAnonymous ? "default" : "outline"}
+                                      variant={formData.isContributorRegistered ? "default" : "outline"}
                                       size="sm"
-                                      disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
+                                      disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null) || !formData.congregationId}
                                       className={cn(
                                         "h-9 px-3 transition-all flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start",
-                                        formData.isAnonymous 
-                                          ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-800 shadow-sm" 
+                                        formData.isContributorRegistered
+                                          ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-800 shadow-sm"
                                           : "text-gray-600 border-gray-300 hover:bg-gray-50"
                                       )}
-                                      onClick={() => toggleField('isAnonymous')}
+                                      onClick={() => toggleField('isContributorRegistered')}
                                     >
-                                      {formData.isAnonymous ? (
+                                      {formData.isContributorRegistered ? (
                                         <Check className="h-4 w-4 animate-in zoom-in duration-200 shrink-0" />
                                       ) : (
-                                        <Ghost className="h-4 w-4 shrink-0" />
+                                        <Users className="h-4 w-4 shrink-0" />
                                       )}
-                                      <span className="text-sm sm:text-base">Anônimo</span>
+                                      <span className="text-sm sm:text-base">Contribuinte Cadastrado</span>
                                     </Button>
-                                 </div>
-                               )}
-                             </div>
+                                  </div>
 
-                             {formData.isContributorRegistered ? (
-                               <div className="mt-2 w-full">
-                                 <Label htmlFor="contributorId">Contribuinte</Label>
-                                 <SearchableSelect
-                                   key={formData.contributorId}
-                                   label="Buscar Contribuinte"
-                                   placeholder="Selecione o contribuinte"
-                                   value={formData.contributorId ?? ''}
-                                   disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
-                                   onChange={(value) => handleSelectChange('contributorId', value)}
-                                   name="contributorId"
-                                   data={contributors.filter(f => (f.congregationId == formData.congregationId)).map(c => ({ key: c.id, id: c.id, name: c.name, document: c.cpf, cargo: c.ecclesiasticalPosition, photoUrl: c.photoUrl, photoExists: c.photoExists }))}
-                                   searchKeys={['name', 'document']}
-                                 />
-                               </div>
-                             ) : (
-                               <div className="mt-2 w-full">
-                                 <Label htmlFor="contributorName">Nome do Contribuinte</Label>
-                                 <Input
-                                   id="contributorName"
-                                   name="contributorName"
-                                   value={formData.contributorName ?? ''}
-                                   onChange={handleInputChange}
-                                   disabled={formData.isAnonymous || (editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null))}
-                                   className="w-full"
-                                   //required={!formData.isAnonymous}
-                                   style={{ fontSize: '16px' }}
-                                 />
-                               </div>
-                             )}
-                           </div>
-                         )}
+                                  {!formData.isContributorRegistered && (
+                                    <div className="flex items-center space-x-2 w-full sm:w-auto">
+                                      <Button
+                                        type="button"
+                                        variant={formData.isAnonymous ? "default" : "outline"}
+                                        size="sm"
+                                        disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null)}
+                                        className={cn(
+                                          "h-9 px-3 transition-all flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start",
+                                          formData.isAnonymous
+                                            ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-800 shadow-sm"
+                                            : "text-gray-600 border-gray-300 hover:bg-gray-50"
+                                        )}
+                                        onClick={() => toggleField('isAnonymous')}
+                                      >
+                                        {formData.isAnonymous ? (
+                                          <Check className="h-4 w-4 animate-in zoom-in duration-200 shrink-0" />
+                                        ) : (
+                                          <Ghost className="h-4 w-4 shrink-0" />
+                                        )}
+                                        <span className="text-sm sm:text-base">Anônimo</span>
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
 
-                         {/* Carne Reviver: contribuinte
+                                {formData.isContributorRegistered ? (
+                                  <div className="mt-2 w-full">
+                                    <Label htmlFor="contributorId">Contribuinte</Label>
+                                    <SearchableSelect
+                                      key={formData.contributorId}
+                                      label="Buscar Contribuinte"
+                                      placeholder="Selecione o contribuinte"
+                                      value={formData.contributorId ?? ''}
+                                      disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null)}
+                                      onChange={(value) => handleSelectChange('contributorId', value)}
+                                      name="contributorId"
+                                      data={contributors.filter(f => (f.congregationId == formData.congregationId)).map(c => ({ key: c.id, id: c.id, name: c.name, document: c.cpf, cargo: c.ecclesiasticalPosition, photoUrl: c.photoUrl, photoExists: c.photoExists }))}
+                                      searchKeys={['name', 'document']}
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="mt-2 w-full">
+                                    <Label htmlFor="contributorName">Nome do Contribuinte</Label>
+                                    <Input
+                                      id="contributorName"
+                                      name="contributorName"
+                                      value={formData.contributorName ?? ''}
+                                      onChange={handleInputChange}
+                                      disabled={formData.isAnonymous || (editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null))}
+                                      className="w-full"
+                                      //required={!formData.isAnonymous}
+                                      style={{ fontSize: '16px' }}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Carne Reviver: contribuinte
                          {formData.type === 'CARNE_REVIVER' && (
                            <div className="w-full">
                              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
@@ -1058,7 +1142,7 @@ export default function Launches() {
                                     type="button"
                                     variant={formData.isContributorRegistered ? "default" : "outline"}
                                     size="sm"
-                                    disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
+                                    disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null)}
                                     className={cn(
                                       "h-9 px-3 transition-all flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start",
                                       formData.isContributorRegistered 
@@ -1082,7 +1166,7 @@ export default function Launches() {
                                       type="button"
                                       variant={formData.isAnonymous ? "default" : "outline"}
                                       size="sm"
-                                      disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
+                                      disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null)}
                                       className={cn(
                                         "h-9 px-3 transition-all flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start",
                                         formData.isAnonymous 
@@ -1110,7 +1194,7 @@ export default function Launches() {
                                    label="Buscar Contribuinte"
                                    placeholder="Selecione o contribuinte"
                                    value={formData.contributorId ?? ''}
-                                   disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
+                                   disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null)}
                                    onChange={(value) => handleSelectChange('contributorId', value)}
                                    name="contributorId"
                                    data={contributors.filter(f => (f.congregationId == formData.congregationId)).map(c => ({ key: c.id, id: c.id, name: c.name, document: c.cpf, cargo: c.ecclesiasticalPosition, photoUrl: c.photoUrl, photoExists: c.photoExists }))}
@@ -1135,136 +1219,204 @@ export default function Launches() {
                            </div>
                          )} */}
 
-                         {/* Fornecedor para SAIDA */}
-                         {['SAIDA'].includes(formData.type) && (
-                           <>
-                             <div className="flex items-center space-x-2">
-                              <Button
-                                  type="button"
-                                  variant={formData.isSupplierRegistered ? "default" : "outline"}
-                                  size="sm"
-                                  disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
-                                  className={cn(
-                                    "h-9 px-3 transition-all flex items-center gap-2",
-                                    formData.isSupplierRegistered 
-                                          ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-800 shadow-sm" 
-                                          : "text-gray-600 border-gray-300 hover:bg-gray-50"
-                                  )}
-                                  onClick={() => toggleField('isSupplierRegistered')}
-                                >
-                                  {formData.isSupplierRegistered ? (
-                                    <Check className="h-4 w-4 animate-in zoom-in duration-200" />
-                                  ) : (
-                                    <User className="h-4 w-4" />
-                                  )}
-                                  Fornecedor Cadastrado
-                                </Button>
-                             </div>
-                             {formData.isSupplierRegistered ? (
-                               <div>
-                                 <Label htmlFor="supplierId">Fornecedor Cadastrado</Label>
-                                 <SearchableSelect
-                                   key={formData.supplierId}
-                                   label="Buscar Fornecedor"
-                                   placeholder="Selecione o fornecedor"
-                                   value={formData.supplierId ?? ''}
-                                   disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
-                                   onChange={(value) => handleSelectChange('supplierId', value)}
-                                   name="supplierId"
-                                   data={suppliers.map(s => ({ key: s.id, id: s.id, name: s.razaoSocial, document: s.cpfcnpj }))}
-                                   searchKeys={['name', 'document']}
-                                 />
-                               </div>
-                             ) : (
-                               <div>
-                                 <Label htmlFor="supplierName">Nome do Fornecedor</Label>
-                                 <Input
-                                   id="supplierName"
-                                   name="supplierName"
-                                   value={formData.supplierName ?? ''}
-                                   onChange={handleInputChange}
-                                   disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
-                                   style={{ fontSize: '16px' }}
-                                 />
-                               </div>
-                             )}
-                           </>
-                         )}
+                            {/* Fornecedor para SAIDA */}
+                            {['SAIDA'].includes(formData.type) && (
+                              <>
+                                <div className="flex items-center space-x-2">
+                                  <Button
+                                    type="button"
+                                    variant={formData.isSupplierRegistered ? "default" : "outline"}
+                                    size="sm"
+                                    disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null)}
+                                    className={cn(
+                                      "h-9 px-3 transition-all flex items-center gap-2",
+                                      formData.isSupplierRegistered
+                                        ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-800 shadow-sm"
+                                        : "text-gray-600 border-gray-300 hover:bg-gray-50"
+                                    )}
+                                    onClick={() => toggleField('isSupplierRegistered')}
+                                  >
+                                    {formData.isSupplierRegistered ? (
+                                      <Check className="h-4 w-4 animate-in zoom-in duration-200" />
+                                    ) : (
+                                      <User className="h-4 w-4" />
+                                    )}
+                                    Fornecedor Cadastrado
+                                  </Button>
+                                </div>
+                                {formData.isSupplierRegistered ? (
+                                  <div>
+                                    <Label htmlFor="supplierId">Nome do Fornecedor</Label>
+                                    <SearchableSelect
+                                      key={formData.supplierId}
+                                      label="Buscar Fornecedor"
+                                      placeholder="Selecione o fornecedor"
+                                      value={formData.supplierId ?? ''}
+                                      disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null)}
+                                      onChange={(value) => handleSelectChange('supplierId', value)}
+                                      name="supplierId"
+                                      data={suppliers.map(s => ({ key: s.id, id: s.id, name: s.razaoSocial, document: s.cpfcnpj }))}
+                                      searchKeys={['name', 'document']}
+                                    />
+                                  </div>
+                                ) : (
+                                  <div>
+                                    <Label htmlFor="supplierName">Fornecedor</Label>
+                                    <Input
+                                      id="supplierName"
+                                      name="supplierName"
+                                      value={formData.supplierName ?? ''}
+                                      onChange={handleInputChange}
+                                      disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null)}
+                                      style={{ fontSize: '16px' }}
+                                    />
+                                  </div>
+                                )}
+                              </>
+                            )}
 
-                         <div>
-                           <Label htmlFor="description">Descrição</Label>
-                           <Textarea
-                             id="description"
-                             name="description"
-                             value={formData.description ?? ''}
-                             onChange={handleInputChange}
-                             disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
-                             style={{ fontSize: '16px' }}
-                           />
-                         </div>
+                            <div>
+                              <Label htmlFor="description">Descrição</Label>
+                              <Textarea
+                                id="description"
+                                name="description"
+                                value={formData.description ?? ''}
+                                onChange={handleInputChange}
+                                disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
+                                style={{ fontSize: '16px' }}
+                              />
+                            </div>
 
-                         <DialogFooter>
-                           <Button type="submit" disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null) || salvando}>
-                             {editingLaunch ? 'Atualizar' : 'Salvar'}
-                           </Button>
-                         </DialogFooter>
-                       </div>
-                     </form>
-                    </TabsContent>
-                    <TabsContent value="logs" className="max-w-[350px] md:max-w-[600px] max-h-[50vh] h-[50vh] min-h-0">
-                      <div className="space-y-4 py-4 p-2">
-                        <div className="rounded-md border">
-                          <div>
-                            <Table className="min-w-max">
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Ação</TableHead>
-                                <TableHead>Usuário</TableHead>
-                                <TableHead>Data/Hora</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {/* Log de Inclusão */}
-                              <TableRow>
-                                <TableCell className="font-medium">Inclusão</TableCell>
-                                <TableCell>{editingLaunch?.createdBy || 'N/A'}</TableCell>
-                                <TableCell>{editingLaunch?.createdAt ? format(new Date(editingLaunch.createdAt), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
-                              </TableRow>
-                              {/* Log de Cancelamento */}
-                              {editingLaunch?.status === 'CANCELED' && (
-                                <TableRow className="text-red-600">
-                                  <TableCell className="font-medium">Cancelamento</TableCell>
-                                  <TableCell>{editingLaunch?.cancelledBy || '-'}</TableCell>
-                                  <TableCell>{editingLaunch?.cancelledAt ? format(new Date(editingLaunch.cancelledAt), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
-                                </TableRow>
-                              )}
-                              {/* Logs de Aprovação Específicos */}
-                              <TableRow>
-                                <TableCell className="font-medium">Tesoureiro</TableCell>
-                                <TableCell>{editingLaunch?.approvedByTreasury || '-'}</TableCell>
-                                <TableCell>{editingLaunch?.approvedAtTreasury ? format(new Date(editingLaunch.approvedAtTreasury), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
-                              </TableRow>
-                              <TableRow>
-                                <TableCell className="font-medium">Contador</TableCell>
-                                <TableCell>{editingLaunch?.approvedByAccountant || '-'}</TableCell>
-                                <TableCell>{editingLaunch?.approvedAtAccountant ? format(new Date(editingLaunch.approvedAtAccountant), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
-                              </TableRow>
-                              <TableRow>
-                                <TableCell className="font-medium">Dirigente</TableCell>
-                                <TableCell>{editingLaunch?.approvedByDirector || '-'}</TableCell>
-                                <TableCell>{editingLaunch?.approvedAtDirector ? format(new Date(editingLaunch.approvedAtDirector), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
-                              </TableRow>
-                            </TableBody>
-                          </Table>
+                            <DialogFooter>
+                              <Button type="submit" disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null) || salvando}>
+                                {editingLaunch ? 'Atualizar' : 'Salvar'}
+                              </Button>
+                            </DialogFooter>
+                          </div>
+                        </form>
+                      </TabsContent>
+                      <TabsContent value="logs" className="max-w-[350px] md:max-w-[600px] max-h-[50vh] h-[50vh] min-h-0">
+                        <div className="space-y-4 py-4 p-2">
+                          <div className="rounded-md border">
+                            <div>
+                              <Table className="min-w-max">
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Ação</TableHead>
+                                    <TableHead>Usuário</TableHead>
+                                    <TableHead>Data/Hora</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {/* Log de Inclusão */}
+                                  <TableRow>
+                                    <TableCell className="font-medium">Inclusão</TableCell>
+                                    <TableCell>{editingLaunch?.createdBy || 'N/A'}</TableCell>
+                                    <TableCell>{editingLaunch?.createdAt ? format(new Date(editingLaunch.createdAt), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
+                                  </TableRow>
+                                  {/* Log de Cancelamento */}
+                                  {editingLaunch?.status === 'CANCELED' && (
+                                    <TableRow className="text-red-600">
+                                      <TableCell className="font-medium">Cancelamento</TableCell>
+                                      <TableCell>{editingLaunch?.cancelledBy || '-'}</TableCell>
+                                      <TableCell>{editingLaunch?.cancelledAt ? format(new Date(editingLaunch.cancelledAt), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
+                                    </TableRow>
+                                  )}
+                                  {/* Logs de Aprovação Específicos */}
+                                  <TableRow>
+                                    <TableCell className="font-medium">Tesoureiro</TableCell>
+                                    <TableCell>{editingLaunch?.approvedByTreasury || '-'}</TableCell>
+                                    <TableCell>{editingLaunch?.approvedAtTreasury ? format(new Date(editingLaunch.approvedAtTreasury), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
+                                  </TableRow>
+                                  <TableRow>
+                                    <TableCell className="font-medium">Contador</TableCell>
+                                    <TableCell>{editingLaunch?.approvedByAccountant || '-'}</TableCell>
+                                    <TableCell>{editingLaunch?.approvedAtAccountant ? format(new Date(editingLaunch.approvedAtAccountant), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
+                                  </TableRow>
+                                  <TableRow>
+                                    <TableCell className="font-medium">Dirigente</TableCell>
+                                    <TableCell>{editingLaunch?.approvedByDirector || '-'}</TableCell>
+                                    <TableCell>{editingLaunch?.approvedAtDirector ? format(new Date(editingLaunch.approvedAtDirector), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
+                                  </TableRow>
+                                  <TableRow>
+                                    <TableCell className="font-medium">Método de Aprovação</TableCell>
+                                    <TableCell colSpan={2}>
+                                      {editingLaunch?.approvedVia === 'GRID' ? 'Via Grid de Lançamentos' :
+                                        editingLaunch?.approvedVia === 'SUMMARY' ? 'Via Resumo' : '-'}
+                                    </TableCell>
+                                  </TableRow>
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                    </TabsContent>
-                  </Tabs>
+                      </TabsContent>
+                    </Tabs>
                   </DialogContent>
-                 </Dialog>
-               </div>
-             </div>
+                </Dialog>
+
+                {canImportLaunch && (
+                  <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" onClick={resetImportForm}>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Importar CSV
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[600px]">
+                      <DialogHeader>
+                        <DialogTitle>Importar Lançamentos via CSV</DialogTitle>
+                        <DialogDescription>
+                          Faça upload de um arquivo CSV com os Lançamentos. <br />
+                          O arquivo deve ter as colunas: <br />
+                          <span className="text-xs font-mono">Congregação,Tipo,Data,Nr Recibo,Valor,Contribuinte,Descrição</span>
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="csvFile" className="text-right">
+                            Arquivo CSV
+                          </Label>
+                          <Input
+                            id="csvFile"
+                            type="file"
+                            accept=".csv"
+                            onChange={handleFileChange}
+                            className="col-span-3"
+                            required
+                          />
+                        </div>
+
+                        {/* <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
+                          <p className="font-medium mb-2">Formato esperado do CSV:</p>
+                          <p className="text-xs font-mono">Codigo,Nome,CPF,CargoEclesiastico,CodCongregação,Tipo,Foto</p>
+                          <p className="text-xs font-mono">1,João Silva,12345678901,Pastor,1,Congregado,foto.jpg</p>
+                          <p className="text-xs font-mono">2,Maria Santos,98765432100,Diácono,2,Membro,foto.jpg</p>
+                          <div className="mt-3 pt-3 border-t border-gray-200">
+                            <a
+                              href="/exemplo-contribuintes.csv"
+                              download
+                              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                            >
+                              📥 Baixar arquivo de exemplo
+                            </a>
+                          </div>
+                        </div> */}
+                      </div>
+                      <DialogFooter>
+                        <Button
+                          type="button"
+                          onClick={handleImportCSV}
+                          disabled={!csvFile || importing}
+                        >
+                          {importing ? 'Importando...' : 'Importar'}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                )}
+              </div>
+            </div>
 
             {/* Filtros */}
             <div className="mb-6 flex flex-col sm:flex-row gap-4">
@@ -1371,27 +1523,26 @@ export default function Launches() {
                         {launches.map((launch) => (
                           <TableRow key={launch.id}>
                             <TableCell>
-                              <div className={`w-full py-1 px-0 rounded text-center text-white font-medium ${
-                              launch.type === 'DIZIMO' ? 'bg-blue-500' : 
-                              launch.type === 'OFERTA_CULTO'? 'bg-green-500' :
-                              launch.type === 'VOTO' ? 'bg-green-500' : 
-                              launch.type === 'EBD' ? 'bg-green-500' : 
-                              launch.type === 'CAMPANHA' ? 'bg-green-500' :
-                              launch.type === 'CARNE_REVIVER' ? 'bg-green-500' :
-                              launch.type === 'SAIDA'? 'bg-red-500' :
-                              launch.type === 'MISSAO'? 'bg-green-500' :
-                              launch.type === 'OFERTA_CULTO'? 'bg-green-500' :
-                              launch.type === 'CIRCULO'? 'bg-green-500' : ''
-                            }`}>
+                              <div className={`w-full py-1 px-0 rounded text-center text-white font-medium ${launch.type === 'DIZIMO' ? 'bg-blue-500' :
+                                  launch.type === 'OFERTA_CULTO' ? 'bg-green-500' :
+                                    launch.type === 'VOTO' ? 'bg-green-500' :
+                                      launch.type === 'EBD' ? 'bg-green-500' :
+                                        launch.type === 'CAMPANHA' ? 'bg-green-500' :
+                                          launch.type === 'CARNE_REVIVER' ? 'bg-green-500' :
+                                            launch.type === 'SAIDA' ? 'bg-red-500' :
+                                              launch.type === 'MISSAO' ? 'bg-green-500' :
+                                                launch.type === 'OFERTA_CULTO' ? 'bg-green-500' :
+                                                  launch.type === 'CIRCULO' ? 'bg-green-500' : ''
+                                }`}>
                                 {launch.type === 'VOTO' ? 'Voto' :
-                                 launch.type === 'OFERTA_CULTO' ? 'Oferta do Culto' :
-                                 launch.type === 'EBD' ? 'EBD' :
-                                 launch.type === 'CAMPANHA' ? 'Campanha' :
-                                 launch.type === 'DIZIMO' ? 'Dízimo' :
-                                 launch.type === 'CARNE_REVIVER' ? 'Carnê Reviver' :
-                                 launch.type === 'SAIDA' ? 'Saída' :
-                                 launch.type === 'MISSAO' ? 'Missão' :
-                                 launch.type === 'CIRCULO' ? 'Círculo de Oração' : ''}
+                                  launch.type === 'OFERTA_CULTO' ? 'Oferta do Culto' :
+                                    launch.type === 'EBD' ? 'EBD' :
+                                      launch.type === 'CAMPANHA' ? 'Campanha' :
+                                        launch.type === 'DIZIMO' ? 'Dízimo' :
+                                          launch.type === 'CARNE_REVIVER' ? 'Carnê Reviver' :
+                                            launch.type === 'SAIDA' ? 'Saída' :
+                                              launch.type === 'MISSAO' ? 'Missão' :
+                                                launch.type === 'CIRCULO' ? 'Círculo de Oração' : ''}
                               </div>
                             </TableCell>
                             <TableCell>{format(new Date(launch.date), 'dd/MM/yyyy')}</TableCell>
@@ -1409,7 +1560,7 @@ export default function Launches() {
                                     launch.status === 'APPROVED' ? 'Aprovado' :
                                       launch.status === 'EXPORTED' ? 'Exportado' : 'Cancelado'}
                                 </Badge>
-                               {/* {launch.approvedBy && (
+                                {/* {launch.approvedBy && (
                                  <Tooltip>
                                    <TooltipTrigger asChild>
                                      <div className="text-xs text-gray-500 cursor-help">ℹ️</div>
@@ -1420,7 +1571,7 @@ export default function Launches() {
                                    </TooltipContent>
                                  </Tooltip>
                                )} */}
-                             </div>
+                              </div>
                             </TableCell>
                             <TableCell>
                               <div className="flex space-x-2">

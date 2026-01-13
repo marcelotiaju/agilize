@@ -50,15 +50,22 @@ export async function GET(request: NextRequest) {
       include: {
         Launch: {
           include: {
-            contributor: true,
-            congregation: true
+            contributor: {
+              select: {
+                name: true
+              }
+            }
           },
           orderBy: [
             { type: 'asc' },
             { date: 'asc' }
           ]
         },
-        congregation: true
+        congregation: {
+          select: {
+            name: true
+          }
+        }
       }
     })
 
@@ -127,12 +134,37 @@ export async function GET(request: NextRequest) {
 
     drawTableHeader()
 
+    // Pré-processar lançamentos para otimizar formatação
+    const processedLaunches = summary.Launch.map((launch: any) => {
+      const launchDateZoned = utcToZonedTime(launch.date, timezone)
+      const launchDate = format(launchDateZoned, 'dd/MM/yyyy', { locale: ptBR })
+      const contributorName = launch.contributor?.name || launch.contributorName || 'Não identificado'
+      const typeLabel = typeLabels[launch.type] || launch.type
+      const value = Number(launch.value)
+      const valueFormatted = formatCurrency(value)
+      
+      return { launchDate, contributorName, typeLabel, value, valueFormatted, type: launch.type }
+    })
+
     // Calcular totais por tipo
     const totaisPorTipo: Record<string, number> = {}
     let totalGeral = 0
 
+    processedLaunches.forEach((processed) => {
+      totaisPorTipo[processed.type] = (totaisPorTipo[processed.type] || 0) + processed.value
+      totalGeral += processed.value
+    })
+
+    // Pré-formatar totais por tipo
+    const totaisFormatados = Object.entries(totaisPorTipo).map(([tipo, valor]) => ({
+      tipo,
+      valor,
+      valorFormatted: formatCurrency(valor),
+      typeLabel: typeLabels[tipo] || tipo
+    }))
+
     // Listar lançamentos
-    summary.Launch.forEach((launch: any, index: number) => {
+    processedLaunches.forEach((processed, index: number) => {
       // Verificar quebra de página
       if (y > pageHeight - 40) {
         doc.addPage()
@@ -150,19 +182,10 @@ export async function GET(request: NextRequest) {
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(8)
 
-      const launchDate = format(utcToZonedTime(launch.date, timezone), 'dd/MM/yyyy', { locale: ptBR })
-      const contributorName = launch.contributor?.name || launch.contributorName || 'Não identificado'
-      const typeLabel = typeLabels[launch.type] || launch.type
-      const value = Number(launch.value)
-
-      doc.text(launchDate, cols.data + 2, y + 4)
-      doc.text(contributorName.substring(0, 45), cols.contribuinte, y + 4)
-      doc.text(typeLabel, cols.tipo, y + 4)
-      doc.text(formatCurrency(value), cols.valor, y + 4, { align: 'right' })
-
-      // Acumular totais
-      totaisPorTipo[launch.type] = (totaisPorTipo[launch.type] || 0) + value
-      totalGeral += value
+      doc.text(processed.launchDate, cols.data + 2, y + 4)
+      doc.text(processed.contributorName.substring(0, 45), cols.contribuinte, y + 4)
+      doc.text(processed.typeLabel, cols.tipo, y + 4)
+      doc.text(processed.valueFormatted, cols.valor, y + 4, { align: 'right' })
 
       y += 7
     })
@@ -179,15 +202,15 @@ export async function GET(request: NextRequest) {
     doc.text('TOTAIS POR TIPO:', margin, y + 4)
     y += 8
 
-    Object.entries(totaisPorTipo).forEach(([tipo, valor]) => {
+    totaisFormatados.forEach((total) => {
       if (y > pageHeight - 25) {
         doc.addPage()
         y = 15
       }
 
       doc.setFont('helvetica', 'normal')
-      doc.text(typeLabels[tipo] || tipo, margin + 10, y + 4)
-      doc.text(formatCurrency(valor), cols.valor, y + 4, { align: 'right' })
+      doc.text(total.typeLabel, margin + 10, y + 4)
+      doc.text(total.valorFormatted, cols.valor, y + 4, { align: 'right' })
       y += 6
     })
 

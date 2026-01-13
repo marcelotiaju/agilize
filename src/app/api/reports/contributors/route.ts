@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const year = parseInt(searchParams.get('year') || '2024')
     const position = searchParams.get('position')?.split(',') || []
+    const launchTypes = searchParams.get('launchTypes')?.split(',') || ['DIZIMO', 'CARNE_REVIVER']
     const showValues = searchParams.get('showValues') === 'true'
     const congregationIds = searchParams.get('congregationIds')?.split(',') || []
     const timezone = searchParams.get('timezone') || 'America/Sao_Paulo'
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
       orderBy: { name: 'asc' }
     })
 
-    // 1. Buscar contribuintes e seus lançamentos no ano
+    // // 1. Buscar contribuintes e seus lançamentos no ano
     const contributors = await prisma.contributor.findMany({
       where: {
         congregationId: { in: congregationIds },
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
               gte: new Date(`${year}-01-01T00:00:00Z`),
               lte: new Date(`${year}-12-31T23:59:59Z`)
             },
-            type: { in: ['DIZIMO', 'CARNE_REVIVER'] },
+            type: { in: launchTypes as any },
           }
         }
       },
@@ -115,6 +116,82 @@ export async function GET(request: NextRequest) {
     //   return a.name.localeCompare(b.name)
     // })
 
+    // Adicione após a linha 50 (const timezone = ...)
+    const preview = searchParams.get('preview') === 'true'
+    //const year = searchParams.get('year')
+    const positions = searchParams.get('position')?.split(',') || []
+
+    // Se for preview, retorna JSON com a estrutura para a tabela
+    if (preview && year) {
+        const startDate = new Date(`${year}-01-01T00:00:00Z`)
+        const endDate = new Date(`${year}-12-31T23:59:59Z`)
+        
+        const congregationsData = await prisma.congregation.findMany({
+            where: { id: { in: congregationIds } },
+            include: {
+                contributors: {
+                    where: positions.length > 0 ? { ecclesiasticalPosition: { in: positions } } : {},
+                    include: {
+                        Launch: {
+                            where: {
+                                date: { gte: startDate, lte: endDate },
+                                type: { in: launchTypes as any }
+                            }
+                        }
+                    },
+                    orderBy: { name: 'asc' }
+                }
+            },
+            orderBy: { name: 'asc' }
+        })
+        
+        let totalContributors = 0
+        let totalValue = 0
+        
+        const congregations = congregationsData.map(cong => {
+            const monthTotals = new Array(12).fill(0)
+            let grandTotal = 0
+            
+            const contributors = cong.contributors.map((contrib: any) => {
+                const months = new Array(12).fill(0)
+                let total = 0
+                
+                contrib.Launch.forEach((launch: any) => {
+                    const month = new Date(launch.date).getUTCMonth()
+                    months[month] += Number(launch.value) || 0
+                    total += Number(launch.value) || 0
+                })
+                
+                months.forEach((val, idx) => monthTotals[idx] += val)
+                grandTotal += total
+                
+                return {
+                    name: contrib.name,
+                    position: contrib.ecclesiasticalPosition || '-',
+                    months,
+                    total
+                }
+            })
+            
+            totalContributors += contributors.length
+            totalValue += grandTotal
+            
+            return {
+                name: cong.name,
+                contributors,
+                monthTotals,
+                grandTotal
+            }
+        })
+        
+        return NextResponse.json({
+            congregations,
+            totalContributors,
+            totalValue
+        })
+    }
+
+
     // 4. Iniciar PDF (Paisagem)
     const doc = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' })
     const margin = 10
@@ -148,10 +225,12 @@ export async function GET(request: NextRequest) {
     //doc.setFontSize(14).setFont('helvetica', 'bold').setTextColor(0, 51, 102)
     //doc.text('RELAÇÃO ANUAL DE CONTRIBUINTES', 148, 15, { align: 'center' })
     doc.setFontSize(10).text(`ANO: ${year} | FILTRO: ${position}`, margin, y)
+    y += 4
+    doc.setFontSize(10).text(`TIPOS DE LANÇAMENTO: ${launchTypes.join(', ')}`, margin, y)
 
     // Direita: Usuário e Data (posicionando no yPos original do bloco)
     const rightAlignX = pageWidth - margin
-    doc.text(`Usuário: ${session.user.name || 'N/A'}`, rightAlignX, y - 5, { align: 'right' })
+    doc.text(`Usuário: ${session.user?.name || 'N/A'}`, rightAlignX, y - 5, { align: 'right' })
     const now = new Date()
     doc.text(` ${format(utcToZonedTime(now, timezone), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`, rightAlignX, y, { align: 'right' })
 

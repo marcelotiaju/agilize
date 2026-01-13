@@ -1,18 +1,19 @@
 "use client"
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo} from 'react'
 import { useSession } from 'next-auth/react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { CalendarIcon, FileText } from 'lucide-react'
+import { FileText, ArrowUp, CalendarIcon, Loader2 } from 'lucide-react'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { format as formatDate } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface Congregation {
   id: string
@@ -20,20 +21,49 @@ interface Congregation {
   name: string
 }
 
-const USER_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone
+interface LaunchPreview {
+  id: string
+  type: string
+  date: string
+  description: string | null
+  contributorName: string | null
+  supplierName: string | null
+  value: number
+  isEntry: boolean
+}
+
+interface CongregationPreview {
+  name: string
+  launches: LaunchPreview[]
+  entrada: number
+  saida: number
+}
+
+interface PreviewData {
+  totalEntrada: number
+  totalSaida: number
+  byCongregation: { name: string; entrada: number; saida: number }[]
+  congregations: CongregationPreview[]
+}
 
 export default function Reports() {
   const { data: session } = useSession()
   const [congregations, setCongregations] = useState<Congregation[]>([])
-  const [selectedCongregations, setSelectedCongregations] = useState<string[]>([])
-  const [startDate, setStartDate] = useState<Date | undefined>(new Date())
-  const [endDate, setEndDate] = useState<Date | undefined>(new Date())
   const [startDateOpen, setStartDateOpen] = useState(false)
   const [endDateOpen, setEndDateOpen] = useState(false)
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([])
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const [showScrollTop, setShowScrollTop] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [loadingPreview, setLoadingPreview] = useState(false)
+  const [previewData, setPreviewData] = useState<PreviewData | null>(null)
+  
+  // Estados de Filtro (assumindo que já existem no seu código)
+  const [selectedCongregations, setSelectedCongregations] = useState<string[]>([])
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([])
+  const [startDate, setStartDate] = useState<Date>(new Date())
+  const [endDate, setEndDate] = useState<Date>(new Date())
 
-  // Determinar tipos de lançamento disponíveis baseado nas permissões do usuário
+    // Determinar tipos de lançamento disponíveis baseado nas permissões do usuário
   const availableTypes = useMemo(() => {
     const types: { value: string; label: string }[] = []
     const user = session?.user as any
@@ -51,18 +81,11 @@ export default function Reports() {
     return types
   }, [session])
 
-  useEffect(() => {
+    useEffect(() => {
     fetchCongregations()
   }, [])
 
-  // Se só houver um tipo disponível, pré-selecionar e desabilitar
-  useEffect(() => {
-    if (availableTypes.length === 1 && selectedTypes.length === 0) {
-      setSelectedTypes([availableTypes[0].value])
-    }
-  }, [availableTypes.length])
-
-  const fetchCongregations = async () => {
+    const fetchCongregations = async () => {
     try {
       const response = await fetch('/api/congregations')
       if (response.ok) {
@@ -79,7 +102,90 @@ export default function Reports() {
     }
   }
 
-  const handleCongregationSelection = (id: string, isChecked: boolean) => {
+  // 1. Lógica de Scroll Corrigida
+  useEffect(() => {
+    const container = scrollContainerRef.current
+    if (!container) return
+    const handleScroll = () => setShowScrollTop(container.scrollTop > 300)
+    container.addEventListener('scroll', handleScroll)
+    return () => container.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  const scrollToTop = () => scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+
+  // 2. Lógica de Prévia
+  const loadPreview = async () => {
+    if (selectedCongregations.length === 0 || selectedTypes.length === 0) {
+      setPreviewData(null)
+      return
+    }
+    setLoadingPreview(true)
+    try {
+      const params = new URLSearchParams({
+        congregationIds: selectedCongregations.join(','),
+        types: selectedTypes.join(','),
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        preview: 'true'
+      })
+      const res = await fetch(`/api/reports/launches?${params}`)
+      if (res.ok) {
+        const data = await res.json()
+        setPreviewData(data)
+      }
+    } catch (e) { 
+      console.error(e)
+      setPreviewData(null)
+    } finally {
+      setLoadingPreview(false)
+    }
+  }
+
+  useEffect(() => {
+    const delayDebounce = setTimeout(() => loadPreview(), 500)
+    return () => clearTimeout(delayDebounce)
+  }, [selectedCongregations, selectedTypes, startDate, endDate])
+
+  const handleGenerateReport = async () => {
+    if (selectedCongregations.length === 0) return alert("Selecione ao menos uma congregação")
+    if (selectedTypes.length === 0) return alert("Selecione ao menos um tipo de lançamento")
+
+    setIsGenerating(true)
+    try {
+      const params = new URLSearchParams({
+        congregationIds: selectedCongregations.join(','),
+        types: selectedTypes.join(','),
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString()
+      })
+
+      const response = await fetch(`/api/reports/launches?${params.toString()}`)
+      if (!response.ok) alert("Erro ao gerar arquivo")
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Relatorio_Lancamentos_${formatDate(startDate, 'dd-MM-yyyy')}_${formatDate(endDate, 'dd-MM-yyyy')}.pdf`
+      a.click()
+    } catch (error) {
+      console.error(error)
+      alert("Falha na geração do relatório")
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  const formatCurrency = (value: number) => {
+    return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  }
+
+  const getTypeLabel = (type: string) => {
+    const typeObj = availableTypes.find(t => t.value === type)
+    return typeObj?.label || type
+  }
+
+    const handleCongregationSelection = (id: string, isChecked: boolean) => {
     if (isChecked) {
       setSelectedCongregations(prev => [...prev, id])
     } else {
@@ -111,68 +217,6 @@ export default function Reports() {
     }
   }
 
-  const handleGenerateReport = async () => {
-    if (selectedCongregations.length === 0) {
-      alert('Selecione pelo menos uma congregação')
-      return
-    }
-    if (selectedTypes.length === 0) {
-      alert('Selecione pelo menos um tipo de lançamento')
-      return
-    }
-    if (!startDate || !endDate) {
-      alert('Selecione o período')
-      return
-    }
-
-    setIsGenerating(true)
-    try {
-      const params = new URLSearchParams()
-      params.append('congregationIds', selectedCongregations.join(','))
-      params.append('types', selectedTypes.join(','))
-      params.append('startDate', formatDate(startDate, 'yyyy-MM-dd'))
-      params.append('endDate', formatDate(endDate, 'yyyy-MM-dd'))
-      params.append('timezone', USER_TIMEZONE)
-
-      const response = await fetch(`/api/reports/launches?${params.toString()}`)
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `relatorio_lancamentos_${formatDate(startDate, 'yyyy-MM-dd')}_${formatDate(endDate, 'yyyy-MM-dd')}.pdf`
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
-      } else {
-        const error = await response.json()
-        alert(error.error || 'Erro ao gerar relatório')
-      }
-    } catch (error) {
-      console.error('Erro ao gerar relatório:', error)
-      alert('Erro ao gerar relatório')
-    } finally {
-      setIsGenerating(false)
-    }
-  }
-
-  if (!(session?.user as any)?.canGenerateReport) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Sidebar />
-        <div className="lg:pl-64 flex items-center justify-center">
-          <Card className="w-full max-w-md">
-            <CardContent className="pt-6 text-center">
-              <h2 className="text-xl font-semibold text-red-600 mb-2">Acesso Negado</h2>
-              <p className="text-gray-600">Você não tem permissão para acessar esta página.</p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
       <Sidebar />
@@ -182,14 +226,13 @@ export default function Reports() {
             <h1 className="text-2xl font-bold text-gray-900">Relatório de Lançamentos</h1>
             <p className="text-gray-600">Gere relatórios de lançamentos em PDF</p>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Filtros do Relatório</CardTitle>
-                </CardHeader>
-
-                <CardContent className="space-y-6">
+          
+          {/* Filtros */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Filtros do Relatório</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
                 {/* Período */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -206,10 +249,11 @@ export default function Reports() {
                           mode="single"
                           selected={startDate}
                           onSelect={(d) => {
-                            setStartDate(d)
-                            setStartDateOpen(false)
+                            if (d) {
+                              setStartDate(d)
+                              setStartDateOpen(false)
+                            }
                           }}
-                          locale={ptBR}
                         />
                       </PopoverContent>
                     </Popover>
@@ -229,10 +273,11 @@ export default function Reports() {
                           mode="single"
                           selected={endDate}
                           onSelect={(d) => {
-                            setEndDate(d)
-                            setEndDateOpen(false)
+                            if (d) {
+                              setEndDate(d)
+                              setEndDateOpen(false)
+                            }
                           }}
-                          locale={ptBR}
                         />
                       </PopoverContent>
                     </Popover>
@@ -304,22 +349,170 @@ export default function Reports() {
                       </div>
                     </div>
                   </div>
+            </CardContent>
+          </Card>
 
-                  <Button 
-                    onClick={handleGenerateReport} 
-                    disabled={isGenerating || selectedCongregations.length === 0 || selectedTypes.length === 0}
-                    className="w-full"
-                  >
-                    <FileText className="mr-2 h-4 w-4" />
-                    {isGenerating ? 'Gerando...' : 'Gerar Relatório PDF'}
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+          {/* Prévia do Relatório */}
+          {loadingPreview ? (
+            <Card className="mb-6">
+              <CardContent className="py-12 flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="ml-2">Carregando prévia...</span>
+              </CardContent>
+            </Card>
+          ) : previewData && (
+            <Card className="mb-6">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Prévia do Relatório
+                </CardTitle>
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="font-semibold text-green-600">
+                    Total Entradas: R$ {formatCurrency(previewData.totalEntrada)}
+                  </span>
+                  <span className="font-semibold text-red-600">
+                    Total Saídas: R$ {formatCurrency(previewData.totalSaida)}
+                  </span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[500px]">
+                  <div className="space-y-8">
+                    {previewData.congregations.map((cong, congIdx) => (
+                      <div key={congIdx}>
+                        <h3 className="font-bold text-lg mb-3 text-primary">
+                          {cong.name}
+                        </h3>
+                        <div className="border rounded-md overflow-x-auto -mx-1">
+                          <div className="min-w-full inline-block">
+                            <Table className="min-w-[800px]">
+                              <TableHeader>
+                                <TableRow className="bg-primary/10">
+                                  <TableHead className="font-bold whitespace-nowrap">Data</TableHead>
+                                  <TableHead className="font-bold whitespace-nowrap">Tipo</TableHead>
+                                  <TableHead className="font-bold whitespace-nowrap">Descrição</TableHead>
+                                  <TableHead className="font-bold whitespace-nowrap">Contribuinte/Fornecedor</TableHead>
+                                  <TableHead className="text-right font-bold whitespace-nowrap min-w-[100px]">Entrada</TableHead>
+                                  <TableHead className="text-right font-bold whitespace-nowrap min-w-[100px]">Saída</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {cong.launches.map((launch, idx) => (
+                                  <TableRow key={idx}>
+                                    <TableCell className="whitespace-nowrap">{formatDate(new Date(launch.date), 'dd/MM/yyyy', { locale: ptBR })}</TableCell>
+                                    <TableCell className="font-medium whitespace-nowrap">{getTypeLabel(launch.type)}</TableCell>
+                                    <TableCell className="max-w-[200px] truncate">{launch.description || '-'}</TableCell>
+                                    <TableCell className="max-w-[150px] truncate">{launch.contributorName || launch.supplierName || '-'}</TableCell>
+                                    <TableCell className="text-right text-green-600 whitespace-nowrap font-medium">
+                                      {launch.isEntry ? `R$ ${formatCurrency(launch.value)}` : '-'}
+                                    </TableCell>
+                                    <TableCell className="text-right text-red-600 whitespace-nowrap font-medium">
+                                      {!launch.isEntry ? `R$ ${formatCurrency(launch.value)}` : '-'}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                                {/* Linha de totais da congregação */}
+                                <TableRow className="bg-gray-100 font-bold">
+                                  <TableCell colSpan={4} className="whitespace-nowrap">TOTAL {cong.name}</TableCell>
+                                  <TableCell className="text-right text-green-600 whitespace-nowrap">
+                                    R$ {formatCurrency(cong.entrada)}
+                                  </TableCell>
+                                  <TableCell className="text-right text-red-600 whitespace-nowrap">
+                                    R$ {formatCurrency(cong.saida)}
+                                  </TableCell>
+                                </TableRow>
+                                {/* Linha de saldo (entrada - saída) */}
+                                <TableRow className="bg-blue-50 font-bold">
+                                  <TableCell colSpan={4} className="whitespace-nowrap">SALDO ({cong.name})</TableCell>
+                                  <TableCell colSpan={2} className="text-right whitespace-nowrap">
+                                    <span className={cong.entrada - cong.saida >= 0 ? 'text-green-600' : 'text-red-600'}>
+                                      R$ {formatCurrency(cong.entrada - cong.saida)}
+                                    </span>
+                                  </TableCell>
+                                </TableRow>
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {/* Linha de total geral se houver múltiplas congregações */}
+                    {previewData.congregations.length > 1 && (
+                      <div className="mt-4">
+                        <div className="border rounded-md overflow-x-auto -mx-1">
+                          <div className="min-w-full inline-block">
+                            <Table className="min-w-[800px]">
+                              <TableHeader>
+                                <TableRow className="bg-blue-50">
+                                  <TableHead colSpan={4} className="font-bold text-lg">TOTAL GERAL</TableHead>
+                                  <TableHead className="text-right font-bold text-lg text-green-600 whitespace-nowrap min-w-[100px]">Entrada</TableHead>
+                                  <TableHead className="text-right font-bold text-lg text-red-600 whitespace-nowrap min-w-[100px]">Saída</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                <TableRow className="bg-blue-50 font-bold">
+                                  <TableCell colSpan={4} className="text-lg">TOTAL DE TODAS AS CONGREGAÇÕES</TableCell>
+                                  <TableCell className="text-right text-lg text-green-600 whitespace-nowrap font-medium">
+                                    R$ {formatCurrency(previewData.totalEntrada)}
+                                  </TableCell>
+                                  <TableCell className="text-right text-lg text-red-600 whitespace-nowrap font-medium">
+                                    R$ {formatCurrency(previewData.totalSaida)}
+                                  </TableCell>
+                                </TableRow>
+                                {/* Linha de saldo geral */}
+                                <TableRow className="bg-blue-100 font-bold">
+                                  <TableCell colSpan={4} className="text-lg">SALDO GERAL</TableCell>
+                                  <TableCell colSpan={2} className="text-right text-lg whitespace-nowrap">
+                                    <span className={previewData.totalEntrada - previewData.totalSaida >= 0 ? 'text-green-600' : 'text-red-600'}>
+                                      R$ {formatCurrency(previewData.totalEntrada - previewData.totalSaida)}
+                                    </span>
+                                  </TableCell>
+                                </TableRow>
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Botão de Gerar PDF */}
+          <Button
+            onClick={handleGenerateReport}
+            disabled={isGenerating || selectedCongregations.length === 0 || selectedTypes.length === 0}
+            className="w-full"
+            size="lg"
+          >
+            {isGenerating ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Gerando PDF...
+              </>
+            ) : (
+              <>
+                <FileText className="mr-2 h-4 w-4" />
+                Gerar Relatório PDF
+              </>
+            )}
+          </Button>
         </div>
       </div>
+
+      {/* Botão Voltar ao Topo */}
+      {showScrollTop && (
+        <Button
+          onClick={scrollToTop}
+          className="fixed bottom-6 right-6 z-[999] rounded-full w-12 h-12 shadow-2xl bg-blue-700"
+          size="icon"
+        >
+          <ArrowUp className="h-6 w-6 text-white" />
+        </Button>
+      )}
     </div>
   )
 }
-

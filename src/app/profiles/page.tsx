@@ -59,7 +59,8 @@ export default function Profiles() {
     canApproveTreasury: false,
     canApproveAccountant: false,
     canApproveDirector: false,
-    canDeleteLaunch : false
+    canDeleteLaunch : false,
+    canImportLaunch : false
   })
 
   useEffect(() => {
@@ -114,7 +115,8 @@ export default function Profiles() {
       canApproveTreasury: false,
       canApproveAccountant: false,
       canApproveDirector: false,
-      canDeleteLaunch : false
+      canDeleteLaunch : false,
+      canImportLaunch : false
     })
   }
 
@@ -269,10 +271,14 @@ export default function Profiles() {
                             <Checkbox checked={profileForm.canLaunchExpense} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchExpense: v as boolean }))} />
                             <Label>Lançar Saída</Label>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <Checkbox checked={profileForm.canDeleteLaunch} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canDeleteLaunch: v as boolean }))} />
-                            <Label>Deletar Lançamento</Label>
-                          </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox checked={profileForm.canDeleteLaunch} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canDeleteLaunch: v as boolean }))} />
+                              <Label>Deletar Lançamento</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox checked={profileForm.canImportLaunch} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canImportLaunch: v as boolean }))} />
+                              <Label>Importar Lançamento</Label>
+                            </div>
                         </div>
                       </div>
 

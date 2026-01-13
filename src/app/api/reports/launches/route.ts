@@ -2,11 +2,10 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import prisma from "@/lib/prisma"
-import { zonedTimeToUtc, utcToZonedTime } from 'date-fns-tz'
+import { utcToZonedTime } from 'date-fns-tz'
 import { startOfDay, endOfDay, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import jsPDF from 'jspdf'
-import path from "path/win32"
 
 const fs = require('fs');
 //const imagePath = path.join(process.cwd(), '../Logo.png');
@@ -32,88 +31,88 @@ function formatLaunchType(type: string): string {
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
+  if (!session) return new NextResponse("Unauthorized", { status: 401 })
 
-  if (!session) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-  }
-
-  if (!(session.user as any).canGenerateReport) {
-    return NextResponse.json({ error: "Sem permissão para gerar relatórios" }, { status: 403 })
-  }
+  const { searchParams } = new URL(request.url)
+  const congregationIds = searchParams.get('congregationIds')?.split(',') || []
+  const types = searchParams.get('types')?.split(',') || []
+  const startDate = searchParams.get('startDate') || ''
+  const endDate = searchParams.get('endDate') || ''
+  const onlyData = searchParams.get('onlyData') === 'true'
+  const preview = searchParams.get('preview') === 'true'
+  const timezone = 'America/Maceio'
 
   try {
-    const { searchParams } = new URL(request.url)
-    const congregationIds = searchParams.get('congregationIds')?.split(',') || []
-    const types = searchParams.get('types')?.split(',') || []
-    const startDate = searchParams.get('startDate')
-    const endDate = searchParams.get('endDate')
-    const timezone = searchParams.get('timezone') || 'America/Sao_Paulo'
-
-    if (congregationIds.length === 0 || types.length === 0 || !startDate || !endDate) {
-      return NextResponse.json({ error: "Parâmetros incompletos" }, { status: 400 })
-    }
-
-    // Verificar acesso às congregações
-    const userCongregations = await prisma.userCongregation.findMany({
-      where: {
-        userId: session.user.id,
-        congregationId: { in: congregationIds }
-      },
-      select: { congregationId: true }
-    })
-
-    const allowedCongregationIds = userCongregations.map(uc => uc.congregationId)
-    const filteredCongregationIds = congregationIds.filter(id => allowedCongregationIds.includes(id))
-
-    if (filteredCongregationIds.length === 0) {
-      return NextResponse.json({ error: "Acesso não autorizado às congregações selecionadas" }, { status: 403 })
-    }
-
-    // Converter datas para UTC usando timezone
-    const startZoned = startOfDay(new Date(`${startDate}T00:00:00`))
-    const endZoned = endOfDay(new Date(`${endDate}T23:59:59`))
-    const startUtc = utcToZonedTime(startZoned, timezone)
-    const endUtc = utcToZonedTime(endZoned, timezone)
-    
-    // Buscar congregações
     const congregations = await prisma.congregation.findMany({
-      where: { id: { in: filteredCongregationIds } },
+      where: { id: { in: congregationIds } },
       orderBy: { name: 'asc' }
     })
 
-    // Buscar lançamentos para cada congregação
-    const launchesByCongregation: { [key: string]: any[] } = {}
-    let totalEntrada = 0
-    let totalSaida = 0
+    const launches = await prisma.launch.findMany({
+      where: {
+        congregationId: { in: congregationIds },
+        type: { in: types },
+        date: {
+          gte: startOfDay(new Date(startDate)),
+          lte: endOfDay(new Date(endDate)),
+        }
+      },
+      include: { congregation: true },
+      orderBy: [{ date: 'asc' }]
+    })
 
-    for (const congregation of congregations) {
-      const launches = await prisma.launch.findMany({
-        where: {
-          congregationId: congregation.id,
-          type: { in: types },
-          date: { gte: startUtc, lte: endUtc },
-          status: { in: ['NORMAL', 'APPROVED', 'EXPORTED'] }
-        },
-        include: {
-          contributor: true,
-          supplier: true
-        },
-        orderBy: [{ date: 'asc'}, {type: 'asc' }]
+    // Agrupar dados
+    const launchesByCongregation = launches.reduce((acc: any, launch) => {
+      if (!acc[launch.congregationId]) acc[launch.congregationId] = []
+      acc[launch.congregationId].push(launch)
+      return acc
+    }, {})
+
+    // Cálculo de Totais
+    const stats = congregations.map(c => {
+      const cLaunches = launchesByCongregation[c.id] || []
+      const entrada = cLaunches.filter((l: any) => l.type !== 'SAIDA').reduce((sum: number, l: any) => sum + (Number(l.value) || 0), 0)
+      const saida = cLaunches.filter((l: any) => l.type === 'SAIDA').reduce((sum: number, l: any) => sum + (Number(l.value) || 0), 0)
+      return { name: c.name, entrada, saida }
+    })
+
+    const totalEntrada = stats.reduce((sum, s) => sum + s.entrada, 0)
+    const totalSaida = stats.reduce((sum, s) => sum + s.saida, 0)
+
+    // RESPOSTA APENAS DE DADOS (PRÉVIA)
+    if (onlyData || preview) {
+      // Agrupar lançamentos por congregação para preview
+      const congregationsPreview = congregations.map(cong => {
+        const cLaunches = launchesByCongregation[cong.id] || []
+        const entrada = cLaunches.filter((l: any) => l.type !== 'SAIDA').reduce((sum: number, l: any) => sum + (Number(l.value) || 0), 0)
+        const saida = cLaunches.filter((l: any) => l.type === 'SAIDA').reduce((sum: number, l: any) => sum + (Number(l.value) || 0), 0)
+        
+        return {
+          name: cong.name,
+          launches: cLaunches.map((l: any) => ({
+            id: l.id,
+            type: l.type,
+            date: l.date ? new Date(l.date).toISOString() : null,
+            description: l.description,
+            contributorName: l.contributorName,
+            supplierName: l.supplierName,
+            value: Number(l.value) || 0,
+            isEntry: l.type !== 'SAIDA'
+          })),
+          entrada,
+          saida
+        }
       })
 
-      launchesByCongregation[congregation.id] = launches
-
-      // Calcular totais
-      launches.forEach(launch => {
-        if (launch.type === 'SAIDA') {
-          totalSaida += launch.value || 0
-        } else {
-          totalEntrada += launch.value || 0
-        }
+      return NextResponse.json({ 
+        totalEntrada, 
+        totalSaida, 
+        byCongregation: stats,
+        congregations: congregationsPreview
       })
     }
 
-    // Gerar PDF
+    // GERAÇÃO DO PDF
     const doc = new jsPDF()
     const pageWidth = doc.internal.pageSize.getWidth()
     const pageHeight = doc.internal.pageSize.getHeight()
@@ -298,6 +297,9 @@ export async function GET(request: NextRequest) {
       doc.text(`ENTRADA: R$ ${totalEntradaGeralFormatado}`, margin, yPos)
       yPos += lineHeight
       doc.text(`SAÍDA: R$ ${totalSaidaGeralFormatado}`, margin, yPos)
+      yPos += lineHeight
+      doc.text(`SALDO: R$ ${Number(totalEntrada)-Number(totalSaida)}`, margin, yPos)
+      yPos += lineHeight
     }
 
     // Adicionar número da página em todas as páginas
@@ -318,9 +320,8 @@ export async function GET(request: NextRequest) {
       }
     })
 
+
   } catch (error) {
-    console.error("Erro ao gerar relatório:", error)
-    return NextResponse.json({ error: "Erro ao gerar relatório" }, { status: 500 })
+    return new NextResponse("Error generating report", { status: 500 })
   }
 }
-

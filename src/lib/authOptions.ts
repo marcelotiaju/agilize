@@ -58,7 +58,8 @@ export const authOptions : NextAuthOptions = {
           canApproveTreasury: !!p?.canApproveTreasury,
           canApproveAccountant: !!p?.canApproveAccountant,
           canApproveDirector: !!p?.canApproveDirector,
-          canDeleteLaunch : !!p?.canDeleteLaunch
+          canDeleteLaunch : !!p?.canDeleteLaunch,
+          canImportLaunch : !!p?.canImportLaunch
         }
 
         return {
@@ -134,7 +135,8 @@ export const authOptions : NextAuthOptions = {
           canApproveTreasury: (user as any).canApproveTreasury,
           canApproveAccountant: (user as any).canApproveAccountant,
           canApproveDirector: (user as any).canApproveDirector,
-          canDeleteLaunch : (user as any).canDeleteLaunch
+          canDeleteLaunch : (user as any).canDeleteLaunch,
+          canImportLaunch : (user as any).canImportLaunch
         }
       }
       return token
@@ -180,7 +182,8 @@ export const authOptions : NextAuthOptions = {
         canApproveTreasury: typeof token.canApproveTreasury === "boolean" ? token.canApproveTreasury : undefined,
         canApproveAccountant: typeof token.canApproveAccountant === "boolean" ? token.canApproveAccountant : undefined,
         canApproveDirector: typeof token.canApproveDirector === "boolean" ? token.canApproveDirector : undefined,
-        canDeleteLaunch : typeof token.canDeleteLaunch === "boolean" ? token.canDeleteLaunch : undefined
+        canDeleteLaunch : typeof token.canDeleteLaunch === "boolean" ? token.canDeleteLaunch : undefined,
+        canImportLaunch : typeof token.canImportLaunch === "boolean" ? token.canImportLaunch : undefined
       }
       if (typeof token.exp === 'number') {
         session.expires = new Date(token.exp * 1000).toISOString()

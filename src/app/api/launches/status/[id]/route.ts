@@ -83,6 +83,10 @@ export async function PUT(request: NextRequest, props: any) {
           updateData.approvedByDirector = approvedBy
           updateData.approvedAtDirector = new Date(approvedAt)
         }
+        // Identificar método de aprovação: via grid (não tem summaryId)
+        if (!existingLaunch.summaryId) {
+          updateData.approvedVia = 'GRID'
+        }
       }
       
       // Se desaprovando (voltando para NORMAL), limpar informações de aprovação

@@ -70,7 +70,8 @@ export const authOptions : NextAuthOptions = {
           canApproveAccountant: !!p?.canApproveAccountant,
           canApproveDirector: !!p?.canApproveDirector,
           canGenerateReport: !!p?.canGenerateReport,
-          canDeleteLaunch : !!p?.canDeleteLaunch
+          canDeleteLaunch : !!p?.canDeleteLaunch,
+          canImportLaunch : !!p?.canImportLaunch
         }
 
         return {
@@ -147,7 +148,8 @@ export const authOptions : NextAuthOptions = {
           canApproveAccountant: (user as any).canApproveAccountant,
           canApproveDirector: (user as any).canApproveDirector,
           canGenerateReport: (user as any).canGenerateReport,
-          canDeleteLaunch : (user as any).canDeleteLaunch
+          canDeleteLaunch : (user as any).canDeleteLaunch,
+          canImportLaunch : (user as any).canImportLaunch
         }
       }
       return token
@@ -197,7 +199,8 @@ export const authOptions : NextAuthOptions = {
         canApproveAccountant: typeof token.canApproveAccountant === "boolean" ? token.canApproveAccountant : undefined,
         canApproveDirector: typeof token.canApproveDirector === "boolean" ? token.canApproveDirector : undefined,
         canGenerateReport: typeof token.canGenerateReport === "boolean" ? token.canGenerateReport : undefined,
-        canDeleteLaunch : typeof token.canDeleteLaunch === "boolean" ? token.canDeleteLaunch : undefined
+        canDeleteLaunch : typeof token.canDeleteLaunch === "boolean" ? token.canDeleteLaunch : undefined,
+        canImportLaunch : typeof token.canImportLaunch === "boolean" ? token.canImportLaunch : undefined
       }
       // Definir expiração da sessão baseada no token exp
       if (typeof token.exp === 'number') {
