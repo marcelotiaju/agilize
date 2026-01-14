@@ -133,16 +133,16 @@ export async function POST(request: NextRequest) {
     let allowedTypes: string[] = []
     switch (summaryType) {
       case 'PADRAO':
-        allowedTypes = ['DIZIMO', 'OFERTA_CULTO', 'VOTO', 'EBD', 'CAMPANHA','MISSAO']
+        allowedTypes = ['DIZIMO', 'OFERTA_CULTO', 'VOTO', 'EBD', 'CAMPANHA','MISSAO','SAIDA']
         break
       // case 'MISSAO':
       //   allowedTypes = ['MISSAO']
       //   break
       case 'CARNE_REVIVER':
-        allowedTypes = ['CARNE_REVIVER']
+        allowedTypes = ['CARNE_REVIVER','SAIDA']
         break
       case 'CIRCULO':
-        allowedTypes = ['CIRCULO']
+        allowedTypes = ['CIRCULO','SAIDA']
         break
       default:
         return NextResponse.json({ error: "Tipo de resumo inválido" }, { status: 400 })
@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
         congregationId,
         date: { gte: startUtc, lte: endUtc },
         type: { in: allowedTypes },
-        status: { in: ["NORMAL", "APPROVED"], not: "IMPORTED" },
+        status: { in: ["NORMAL", "APPROVED", "EXPORTED"], not: "IMPORTED" },
         summaryId: null
       },
       include: { congregation: true },
@@ -283,7 +283,7 @@ export async function POST(request: NextRequest) {
             congregationId: summary.congregationId,
             date: { gte: startUtc, lte: endUtc },
             summaryId: null,
-            status:  { in: ["NORMAL", "APPROVED"] },
+            status:  { in: ["NORMAL", "APPROVED", "EXPORTED"] },
         },
         data: { summaryId: summary.id },
     });

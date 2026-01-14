@@ -11,7 +11,7 @@ import { FileText, ArrowUp, CalendarIcon, Loader2 } from 'lucide-react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
 import { format as formatDate } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -384,15 +384,19 @@ export default function Reports() {
                         <h3 className="font-bold text-lg mb-3 text-primary">
                           {cong.name}
                         </h3>
-                        <div className="border rounded-md overflow-x-auto -mx-1">
-                          <div className="min-w-full inline-block">
-                            <Table className="min-w-[800px]">
+                        <div className="border rounded-md">
+                          <ScrollArea className="w-full whitespace-nowrap">
+                            <div
+                              className="border rounded-md overflow-x-auto"
+                              style={{ WebkitOverflowScrolling: "touch" }}
+                            >
+                              <Table className="min-w-[800px] w-max">
                               <TableHeader>
                                 <TableRow className="bg-primary/10">
                                   <TableHead className="font-bold whitespace-nowrap">Data</TableHead>
                                   <TableHead className="font-bold whitespace-nowrap">Tipo</TableHead>
-                                  <TableHead className="font-bold whitespace-nowrap">Descrição</TableHead>
                                   <TableHead className="font-bold whitespace-nowrap">Contribuinte/Fornecedor</TableHead>
+                                  <TableHead className="font-bold whitespace-nowrap">Descrição</TableHead>
                                   <TableHead className="text-right font-bold whitespace-nowrap min-w-[100px]">Entrada</TableHead>
                                   <TableHead className="text-right font-bold whitespace-nowrap min-w-[100px]">Saída</TableHead>
                                 </TableRow>
@@ -402,8 +406,8 @@ export default function Reports() {
                                   <TableRow key={idx}>
                                     <TableCell className="whitespace-nowrap">{formatDate(new Date(launch.date), 'dd/MM/yyyy', { locale: ptBR })}</TableCell>
                                     <TableCell className="font-medium whitespace-nowrap">{getTypeLabel(launch.type)}</TableCell>
-                                    <TableCell className="max-w-[200px] truncate">{launch.description || '-'}</TableCell>
                                     <TableCell className="max-w-[150px] truncate">{launch.contributorName || launch.supplierName || '-'}</TableCell>
+                                    <TableCell className="max-w-[200px] truncate">{launch.description || '-'}</TableCell>
                                     <TableCell className="text-right text-green-600 whitespace-nowrap font-medium">
                                       {launch.isEntry ? `R$ ${formatCurrency(launch.value)}` : '-'}
                                     </TableCell>
@@ -434,8 +438,10 @@ export default function Reports() {
                               </TableBody>
                             </Table>
                           </div>
-                        </div>
+                          <ScrollBar orientation="horizontal" />
+                        </ScrollArea>
                       </div>
+                    </div>
                     ))}
                     {/* Linha de total geral se houver múltiplas congregações */}
                     {previewData.congregations.length > 1 && (

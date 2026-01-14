@@ -725,9 +725,11 @@ export default function Launches() {
           </div>
 
           {(launch.contributor?.name || launch.contributorName || launch.supplier?.razaoSocial || launch.supplierName) && (
-            <div className="flex items-center text-sm font-normal truncate">
-              <User className="h-4 w-4 mr-1" />
-              {launch.contributor?.name || launch.contributorName || launch.supplier?.razaoSocial || launch.supplierName}
+            <div className="flex items-center text-sm font-normal min-w-0 w-full overflow-hidden">
+              <User className="h-4 w-4 mr-1 shrink-0 text-slate-500" />
+              <span className="truncate flex-1 block">
+                {launch.contributor?.name || launch.contributorName || launch.supplier?.razaoSocial || launch.supplierName}
+              </span>
             </div>
           )}
         </div>
