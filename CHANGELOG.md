@@ -1,5 +1,12 @@
 # Histórico de Alterações
 
+### [1.3.13](https://github.com/marcelotiaju/agilize/compare/v1.3.12...v1.3.13) (2026-01-14)
+
+
+### 🐛 Correções de Erros
+
+* Ajuste Saidas ([f522eae](https://github.com/marcelotiaju/agilize/commit/f522eaeac5615fac6e29304c9f1bcb3dccbd3035))
+
 ### [1.3.12](https://github.com/marcelotiaju/agilize/compare/v1.3.11...v1.3.12) (2026-01-13)
 
 
