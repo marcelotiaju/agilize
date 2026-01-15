@@ -248,6 +248,7 @@ export default function Reports() {
                         <Calendar
                           mode="single"
                           selected={startDate}
+                          locale={ptBR}
                           onSelect={(d) => {
                             if (d) {
                               setStartDate(d)
@@ -272,6 +273,7 @@ export default function Reports() {
                         <Calendar
                           mode="single"
                           selected={endDate}
+                          locale={ptBR}
                           onSelect={(d) => {
                             if (d) {
                               setEndDate(d)
@@ -377,7 +379,7 @@ export default function Reports() {
                 </div>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-[500px]">
+                {/* <ScrollArea className="h-96"> */}
                   <div className="space-y-8">
                     {previewData.congregations.map((cong, congIdx) => (
                       <div key={congIdx}>
@@ -386,11 +388,8 @@ export default function Reports() {
                         </h3>
                         <div className="border rounded-md">
                           <ScrollArea className="w-full whitespace-nowrap">
-                            <div
-                              className="border rounded-md overflow-x-auto"
-                              style={{ WebkitOverflowScrolling: "touch" }}
-                            >
-                              <Table className="min-w-[800px] w-max">
+                            <div className="border rounded-md overflow-x-auto">
+                              <Table className='w-full'>
                               <TableHeader>
                                 <TableRow className="bg-primary/10">
                                   <TableHead className="font-bold whitespace-nowrap">Data</TableHead>
@@ -482,7 +481,7 @@ export default function Reports() {
                       </div>
                     )}
                   </div>
-                </ScrollArea>
+                {/* </ScrollArea> */}
               </CardContent>
             </Card>
           )}

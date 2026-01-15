@@ -53,6 +53,7 @@ export default function ReportsPage() {
 
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString())
     const [showValues, setShowValues] = useState(true)
+    const [contributionFilter, setContributionFilter] = useState('BOTH') // BOTH, WITH_LAUNCH, WITHOUT_LAUNCH
 
     const years = Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString())
 
@@ -85,7 +86,7 @@ export default function ReportsPage() {
         } else {
             setPreviewData(null)
         }
-    }, [selectedCongregations, selectedTypes, selectedYear, selectedLaunchTypes])
+    }, [selectedCongregations, selectedTypes, selectedYear, selectedLaunchTypes, contributionFilter])
 
     const fetchCongregations = async () => {
         try {
@@ -109,6 +110,7 @@ export default function ReportsPage() {
                 year: selectedYear,
                 position: selectedTypes.join(','),
                 launchTypes: selectedLaunchTypes.join(','),
+                contributionFilter: contributionFilter, // Adicionado
                 showValues: showValues.toString(),
                 congregationIds: selectedCongregations.join(','),
                 timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -184,6 +186,7 @@ export default function ReportsPage() {
                 year: selectedYear,
                 position: selectedTypes.join(','),
                 launchTypes: selectedLaunchTypes.join(','),
+                contributionFilter: contributionFilter, // Adicionado
                 showValues: showValues.toString(),
                 congregationIds: selectedCongregations.join(','),
                 timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -326,7 +329,8 @@ export default function ReportsPage() {
                             </div>
 
                             {/* Seleção de Tipo de Lançamento */}
-                            <div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             <div>
                                 <Label>Tipos de Lançamento</Label>
                                 <div className="space-y-2 mt-2 border p-3 rounded-md max-h-40 overflow-y-auto">
                                     <div className="flex items-center space-x-2 pb-1 border-b">
@@ -354,6 +358,26 @@ export default function ReportsPage() {
                                         </div>
                                     ))}
                                 </div>
+                            </div>
+
+                            {/* Novo Filtro de Contribuição */}
+                            <div className="space-y-2">
+                                <Label>Filtro de Contribuição</Label>
+                                <Select value={contributionFilter} onValueChange={setContributionFilter}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Selecione o tipo de visualização" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="BOTH">Ambos (Mostrar todos)</SelectItem>
+                                        <SelectItem value="WITH_LAUNCH">Com Lançamento (Apenas quem contribuiu)</SelectItem>
+                                        <SelectItem value="WITHOUT_LAUNCH">Sem Lançamento (Apenas quem não contribuiu)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <p className="text-[12px] text-gray-500 mt-2 italic">
+                                    {contributionFilter === 'WITH_LAUNCH' && "* Filtrando apenas registros com valor maior que zero em algum mês."}
+                                    {contributionFilter === 'WITHOUT_LAUNCH' && "* Filtrando apenas registros sem nenhuma contribuição no período."}
+                                </p>
+                            </div>
                             </div>
                         </CardContent>
                     </Card>
@@ -385,7 +409,7 @@ export default function ReportsPage() {
                                 </div>
                             </CardHeader>
                             <CardContent>
-                                <ScrollArea className="h-[500px]">
+                                {/* <ScrollArea className="h-[500px]"> */}
                                     {previewData.congregations.map((cong, congIdx) => (
                                         <div key={congIdx} className="mb-8">
                                             <h3 className="font-bold text-lg mb-3 text-primary">
@@ -440,7 +464,7 @@ export default function ReportsPage() {
                                             </div>
                                         </div>
                                     ))}
-                                </ScrollArea>
+                                {/* </ScrollArea> */}
                             </CardContent>
                         </Card>
                     )}

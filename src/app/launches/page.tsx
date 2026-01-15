@@ -146,6 +146,10 @@ export default function Launches() {
     summaryId: '',
   })
 
+  function truncateString(str: string, num: number) {
+    return str.length > num ? str.slice(0, num) + '...' : str;
+  }
+
   useEffect(() => {
     fetchLaunches()
     fetchCongregations()
@@ -667,7 +671,7 @@ export default function Launches() {
   )
 
   const LaunchCard = ({ launch }) => (
-    <Card key={launch.id} className="mb-2">
+    <Card key={launch.id} className="mb-2 shadow-sm hover:shadow-md transition-shadow">
       <CardContent className="p-4 pt-0.5 pb-1">
         <div className="flex justify-between items-start mb-1">
           <div className={`px-3 py-1 rounded text-white text-sm font-medium ${launch.type === 'VOTO' ? 'bg-green-500' :
@@ -725,9 +729,9 @@ export default function Launches() {
           </div>
 
           {(launch.contributor?.name || launch.contributorName || launch.supplier?.razaoSocial || launch.supplierName) && (
-            <div className="flex items-center text-sm font-normal min-w-0 w-full overflow-hidden">
-              <User className="h-4 w-4 mr-1 shrink-0 text-slate-500" />
-              <span className="truncate flex-1 block">
+            <div className="flex items-center text-sm font-normal">
+              <User className="h-4 w-4 mr-1 shrink-0 text-gray-500" />
+              <span className="truncate">
                 {launch.contributor?.name || launch.contributorName || launch.supplier?.razaoSocial || launch.supplierName}
               </span>
             </div>
@@ -1257,7 +1261,7 @@ export default function Launches() {
                                       disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null)}
                                       onChange={(value) => handleSelectChange('supplierId', value)}
                                       name="supplierId"
-                                      data={suppliers.map(s => ({ key: s.id, id: s.id, name: s.razaoSocial, document: s.cpfcnpj }))}
+                                      data={suppliers.map(s => ({ key: s.id, id: s.id, name: truncateString(s.razaoSocial, 45), document: s.cpfcnpj }))}
                                       searchKeys={['name', 'document']}
                                     />
                                   </div>

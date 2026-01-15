@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
     const showValues = searchParams.get('showValues') === 'true'
     const congregationIds = searchParams.get('congregationIds')?.split(',') || []
     const timezone = searchParams.get('timezone') || 'America/Sao_Paulo'
+    const contributionFilter = searchParams.get('contributionFilter') || 'BOTH';
 
     // 1. Buscamos todas as congregações selecionadas para garantir que todas apareçam
     const selectedCongs = await prisma.congregation.findMany({
@@ -152,7 +153,7 @@ export async function GET(request: NextRequest) {
             const monthTotals = new Array(12).fill(0)
             let grandTotal = 0
             
-            const contributors = cong.contributors.map((contrib: any) => {
+            let contributors = cong.contributors.map((contrib: any) => {
                 const months = new Array(12).fill(0)
                 let total = 0
                 
@@ -162,8 +163,8 @@ export async function GET(request: NextRequest) {
                     total += Number(launch.value) || 0
                 })
                 
-                months.forEach((val, idx) => monthTotals[idx] += val)
-                grandTotal += total
+                //months.forEach((val, idx) => monthTotals[idx] += val)
+                //grandTotal += total
                 
                 return {
                     name: contrib.name,
@@ -173,22 +174,36 @@ export async function GET(request: NextRequest) {
                 }
             })
             
-            totalContributors += contributors.length
-            totalValue += grandTotal
             
+            // APLICAÇÃO DO FILTRO SOLICITADO
+            if (contributionFilter === 'WITH_LAUNCH') {
+              contributors = contributors.filter(c => c.total > 0)
+            } else if (contributionFilter === 'WITHOUT_LAUNCH') {
+              contributors = contributors.filter(c => c.total === 0)
+            }
+            
+            // Calcula totais da congregação após filtro
+            contributors.forEach(c => {
+              c.months.forEach((val, idx) => monthTotals[idx] += val)
+              grandTotal += c.total
+            })
+            
+            //totalContributors += contributors.length
+            //totalValue += grandTotal
             return {
                 name: cong.name,
                 contributors,
                 monthTotals,
                 grandTotal
             }
-        })
-        
-        return NextResponse.json({
-            congregations,
-            totalContributors,
-            totalValue
-        })
+        }).filter(cong => cong.contributors.length > 0) // Remove congregações vazias
+
+        // 3. Resposta para Preview (JSON)
+        if (preview) {
+          const totalContributors = congregations.reduce((sum, c) => sum + c.contributors.length, 0)
+          const totalValue = congregations.reduce((sum, c) => sum + c.grandTotal, 0)
+          return NextResponse.json({ congregations, totalContributors, totalValue })
+        }
     }
 
 

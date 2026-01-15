@@ -249,12 +249,12 @@ export async function GET(request: NextRequest) {
         const valorFormatado = valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
         if (launch.type === 'SAIDA') {
-          doc.text('-', colX[4], yPos + (maxLines > 1 ? lineHeight * 0.5 : 0))
-          doc.text(`R$ ${valorFormatado}`, colX[5], yPos + (maxLines > 1 ? lineHeight * 0.5 : 0))
+          doc.text('-', colX[4]+8, yPos + (maxLines > 1 ? lineHeight * 0.5 : 0), { align: 'right' })
+          doc.text(`R$ ${valorFormatado}`, colX[5]+8, yPos + (maxLines > 1 ? lineHeight * 0.5 : 0), { align: 'right' })
           congSaida += valor
         } else {
-          doc.text(`R$ ${valorFormatado}`, colX[4], yPos + (maxLines > 1 ? lineHeight * 0.5 : 0))
-          doc.text('-', colX[5], yPos + (maxLines > 1 ? lineHeight * 0.5 : 0))
+          doc.text(`R$ ${valorFormatado}`, colX[4]+8, yPos + (maxLines > 1 ? lineHeight * 0.5 : 0), { align: 'right' })
+          doc.text('-', colX[5]+8, yPos + (maxLines > 1 ? lineHeight * 0.5 : 0), { align: 'right' })
           congEntrada += valor
         }
 
@@ -274,9 +274,12 @@ export async function GET(request: NextRequest) {
       const totalEntradaFormatado = congEntrada.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
       const totalSaidaFormatado = congSaida.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
       doc.text('TOTAL CONGREGAÇÃO', colX[0], yPos)
-      doc.text(`R$ ${totalEntradaFormatado}`, colX[4], yPos)
-      doc.text(congSaida > 0 ? `R$ ${totalSaidaFormatado}` : 'R$ -', colX[5], yPos)
-      yPos += lineHeight * 2
+      doc.text(`    R$ ${totalEntradaFormatado}`, colX[4]+8, yPos, { align: 'right'})
+      doc.text(congSaida > 0 ? `    R$ ${totalSaidaFormatado}` : 'R$ -', colX[5]+8, yPos, { align: 'right'})
+      yPos += lineHeight
+      doc.text('SALDO CONGREGAÇÃO', colX[0], yPos)
+      doc.text(`    R$ ${(Number(congEntrada)-Number(congSaida)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, colX[5]+8, yPos, { align: 'right'})
+      yPos += lineHeight
     }
 
     // --- TOTAL DA CONGREGAÇÃO (Cor Azul Claro) ---
@@ -298,7 +301,7 @@ export async function GET(request: NextRequest) {
       yPos += lineHeight
       doc.text(`SAÍDA: R$ ${totalSaidaGeralFormatado}`, margin, yPos)
       yPos += lineHeight
-      doc.text(`SALDO: R$ ${Number(totalEntrada)-Number(totalSaida)}`, margin, yPos)
+      doc.text(`SALDO: R$ ${(Number(totalEntrada)-Number(totalSaida)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, margin, yPos)
       yPos += lineHeight
     }
 
