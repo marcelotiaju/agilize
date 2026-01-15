@@ -55,6 +55,7 @@ export async function GET(request: NextRequest) {
               lte: new Date(`${year}-12-31T23:59:59Z`)
             },
             type: { in: launchTypes as any },
+            status: { not: 'CANCELED' }
           }
         }
       },
@@ -136,7 +137,8 @@ export async function GET(request: NextRequest) {
                         Launch: {
                             where: {
                                 date: { gte: startDate, lte: endDate },
-                                type: { in: launchTypes as any }
+                                type: { in: launchTypes as any },
+                                status: { not: 'CANCELED' }
                             }
                         }
                     },
