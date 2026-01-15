@@ -1,5 +1,12 @@
 # Histórico de Alterações
 
+### [1.3.14](https://github.com/marcelotiaju/agilize/compare/v1.3.13...v1.3.14) (2026-01-15)
+
+
+### 🐛 Correções de Erros
+
+* Ajuste Relatórios Barra horizontal ([1ba1ba0](https://github.com/marcelotiaju/agilize/commit/1ba1ba06913efe155c2c8dcb8861aed64057e2c1))
+
 ### [1.3.13](https://github.com/marcelotiaju/agilize/compare/v1.3.12...v1.3.13) (2026-01-14)
 
 
