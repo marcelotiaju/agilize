@@ -1,5 +1,12 @@
 # Histórico de Alterações
 
+### [1.3.15](https://github.com/marcelotiaju/agilize/compare/v1.3.14...v1.3.15) (2026-01-15)
+
+
+### 🐛 Correções de Erros
+
+* Ajuste lancamentos cancelados relatorio contribuinte ([25fb17e](https://github.com/marcelotiaju/agilize/commit/25fb17e96b25762d3124772260bf1f08488cea58))
+
 ### [1.3.14](https://github.com/marcelotiaju/agilize/compare/v1.3.13...v1.3.14) (2026-01-15)
 
 
