@@ -20,38 +20,42 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const file = formData.get('file') as File
-    const launchType = formData.get('launchType') as string // 'DIZIMO' ou 'CARNE_REVIVER'
-    const congregationId = formData.get('congregationId') as string
+    //const launchType = formData.get('launchType') as string // 'DIZIMO' ou 'CARNE_REVIVER'
+    //const congregation = formData.get('Congregacao') as string
 
     if (!file) {
       return NextResponse.json({ error: "Arquivo não fornecido" }, { status: 400 })
     }
 
-    if (!launchType || (launchType !== 'DIZIMO' && launchType !== 'CARNE_REVIVER')) {
-      return NextResponse.json({ error: "Tipo de lançamento inválido. Deve ser DIZIMO ou CARNE_REVIVER" }, { status: 400 })
-    }
+    // if (!launchType || (launchType !== 'DIZIMO' && launchType !== 'CARNE_REVIVER')) {
+    //   return NextResponse.json({ error: "Tipo de lançamento inválido. Deve ser DIZIMO ou CARNE_REVIVER" }, { status: 400 })
+    // }
 
-    if (!congregationId) {
-      return NextResponse.json({ error: "Congregação não informada" }, { status: 400 })
-    }
+    // if (!congregation) {
+    //   return NextResponse.json({ error: "Congregação não informada" }, { status: 400 })
+    // }
 
     // Verificar permissão para o tipo específico
-    if (launchType === 'DIZIMO' && !session.user.canLaunchTithe) {
-      return NextResponse.json({ error: "Sem permissão para importar lançamentos do tipo Dízimo" }, { status: 403 })
-    }
+    // if (launchType === 'DIZIMO' && !session.user.canLaunchTithe) {
+    //   return NextResponse.json({ error: "Sem permissão para importar lançamentos do tipo Dízimo" }, { status: 403 })
+    // }
 
-    if (launchType === 'CARNE_REVIVER' && !session.user.canLaunchCarneReviver) {
-      return NextResponse.json({ error: "Sem permissão para importar lançamentos do tipo Carnê Reviver" }, { status: 403 })
-    }
+    // if (launchType === 'CARNE_REVIVER' && !session.user.canLaunchCarneReviver) {
+    //   return NextResponse.json({ error: "Sem permissão para importar lançamentos do tipo Carnê Reviver" }, { status: 403 })
+    // }
 
-    // Verificar acesso à congregação
-    const userCongregation = await prisma.userCongregation.findFirst({
-      where: { userId: session.user.id, congregationId }
-    })
+    //   const congregationId = await prisma.congregation.findUnique({
+    //     where: { code: congregation }
+    //   })
 
-    if (!userCongregation) {
-      return NextResponse.json({ error: "Acesso não autorizado a esta congregação" }, { status: 403 })
-    }
+    // // Verificar acesso à congregação
+    // const userCongregation = await prisma.userCongregation.findFirst({
+    //   where: { userId: session.user.id, congregationId: congregationId }
+    // })
+
+    // if (!userCongregation) {
+    //   return NextResponse.json({ error: "Acesso não autorizado a esta congregação" }, { status: 403 })
+    // }
 
     if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
       return NextResponse.json({ error: "Arquivo deve ser CSV" }, { status: 400 })
@@ -76,6 +80,7 @@ export async function POST(request: NextRequest) {
     const dataLines = lines.slice(1)
     
     let imported = 0
+    let skipped = 0
     let errors: string[] = []
     const timezone = 'America/Sao_Paulo'
 
@@ -84,43 +89,51 @@ export async function POST(request: NextRequest) {
       if (!line) continue
 
       const columns = line.split(',').map(col => col.trim())
-      
-      if (columns.length < 3) {
-        errors.push(`Linha ${i + 2}: Formato inválido - esperado pelo menos Data,Valor,Contribuinte`)
+
+      if (columns.length < 4) {
+        errors.push(`Linha ${i + 2}: Formato inválido - esperado pelo menos Congregacao,Data,Valor,Contribuinte`)
         continue
       }
 
       // Tentar identificar colunas por posição ou nome
+      let congregationCode = ''
+      let launchType = ''
       let dateStr = ''
-      let valueStr = ''
-      let contributorName = ''
-      let description = ''
       let talonNumber = ''
+      let valueStr = ''
+      let contributorCode = ''
+      let description = ''
 
       // Se tiver cabeçalho, tentar identificar por nome
       if (headers.length > 0) {
+        const congIdx = headers.findIndex(h => h.includes('congrega') || h.includes('congregação') || h.includes('congregacao'))
+        const typeIdx = headers.findIndex(h => h.includes('tipo'))
         const dateIdx = headers.findIndex(h => h.includes('data'))
         const valueIdx = headers.findIndex(h => h.includes('valor'))
         const contributorIdx = headers.findIndex(h => h.includes('contribuinte') || h.includes('nome'))
         const descIdx = headers.findIndex(h => h.includes('descrição') || h.includes('descricao'))
-        const talonIdx = headers.findIndex(h => h.includes('recibo') || h.includes('talão') || h.includes('talao') || h.includes('nr'))
+        const talonIdx = headers.findIndex(h => h.includes('recibo') || h.includes('talão') || h.includes('talao') || h.includes('numero'))
 
-        dateStr = dateIdx >= 0 && columns[dateIdx] ? columns[dateIdx] : columns[0]
-        valueStr = valueIdx >= 0 && columns[valueIdx] ? columns[valueIdx] : columns[1]
-        contributorName = contributorIdx >= 0 && columns[contributorIdx] ? columns[contributorIdx] : columns[2]
-        description = descIdx >= 0 && columns[descIdx] ? columns[descIdx] : (columns[3] || '')
-        talonNumber = talonIdx >= 0 && columns[talonIdx] ? columns[talonIdx] : (columns[4] || '')
+        congregationCode = congIdx >= 0 && columns[congIdx] ? columns[congIdx] : columns[0]
+        launchType = typeIdx >= 0 && columns[typeIdx] ? columns[typeIdx].toUpperCase() : 'DIZIMO'
+        dateStr = dateIdx >= 0 && columns[dateIdx] ? columns[dateIdx] : columns[2]
+        talonNumber = talonIdx >= 0 && columns[talonIdx] ? columns[talonIdx] : (columns[3] || '')
+        valueStr = valueIdx >= 0 && columns[valueIdx] ? columns[valueIdx] : columns[4]
+        contributorCode = contributorIdx >= 0 && columns[contributorIdx] ? columns[contributorIdx] : columns[5]
+        description = descIdx >= 0 && columns[descIdx] ? columns[descIdx] : (columns[6] || '')
       } else {
         // Sem cabeçalho, usar posição fixa
-        dateStr = columns[0] || ''
-        valueStr = columns[1] || ''
-        contributorName = columns[2] || ''
-        description = columns[3] || ''
-        talonNumber = columns[4] || ''
+        congregationCode = columns[0] || ''
+        launchType = columns[1] || ''
+        dateStr = columns[2] || ''
+        talonNumber = columns[3] || ''
+        valueStr = columns[4] || ''
+        contributorCode = columns[5] || ''
+        description = columns[6] || ''
       }
 
-      if (!dateStr || !valueStr || !contributorName) {
-        errors.push(`Linha ${i + 2}: Data, Valor e Contribuinte são obrigatórios`)
+      if (!congregationCode || !dateStr || !valueStr || !contributorCode) {
+        errors.push(`Linha ${i + 2}: Congregacao, Data, Valor e Contribuinte são obrigatórios`)
         continue
       }
 
@@ -173,34 +186,62 @@ export async function POST(request: NextRequest) {
       }
 
       // Normalizar nome do contribuinte (maiúsculas)
-      contributorName = contributorName.toUpperCase().trim()
-      if (!contributorName) {
-        errors.push(`Linha ${i + 2}: Nome do contribuinte não pode estar vazio`)
-        continue
-      }
+      // contributorName = contributorName.toUpperCase().trim()
+      // if (!contributorName) {
+      //   errors.push(`Linha ${i + 2}: Nome do contribuinte não pode estar vazio`)
+      //   continue
+      // }
 
-      // Tentar encontrar contribuinte cadastrado pelo nome
-      let contributorId: string | null = null
-      const contributor = await prisma.contributor.findFirst({
-        where: {
-          congregationId,
-          name: { equals: contributorName, mode: 'insensitive' }
-        }
+      const congregation = await prisma.congregation.findUnique({
+        where: { code: congregationCode },select: { id: true }
       })
 
-      if (contributor) {
-        contributorId = contributor.id
-      }
+      const contributor = await prisma.contributor.findUnique({
+        where: { code: contributorCode },select: { id: true }
+      })
+
+      // Tentar encontrar contribuinte cadastrado pelo nome
+      // let contributorId: string | null = null
+      // const contributor = await prisma.contributor.findFirst({
+      //   where: {
+      //     congregationId,
+      //     name: { equals: contributorName, mode: 'insensitive' }
+      //   }
+      // })
+
+      // if (contributor) {
+      //   contributorId = contributor.id
+      // }
 
       try {
+
+        // 1. VERIFICAÇÃO DE DUPLICIDADE
+        // Procuramos um lançamento idêntico já existente
+        const existingLaunch = await prisma.launch.findFirst({
+          where: {
+            congregationId: congregation?.id || null,
+            type: launchType,
+            date: launchDate,
+            value: value,
+            contributorId: contributor?.id || null,
+            // Opcional: remover o status se quiser evitar duplicados mesmo que não sejam 'IMPORTED'
+            status: 'IMPORTED' 
+          }
+        })
+
+        if (existingLaunch) {
+          skipped++ // Se encontrou, pula para a próxima linha
+          continue
+        }
+        // 2. CRIAÇÃO DO LANÇAMENTO 
         await prisma.launch.create({
           data: {
-            congregationId,
+            congregationId: congregation?.id || null,
             type: launchType,
             date: launchDate,
             value,
-            contributorName: contributorId ? null : contributorName,
-            contributorId: contributorId || null,
+            //contributorName: contributorId ? null : contributorName,
+            contributorId: contributor?.id || null,
             description: description || null,
             talonNumber: talonNumber || null,
             status: 'IMPORTED',
@@ -226,7 +267,6 @@ export async function POST(request: NextRequest) {
       imported,
       errors: errors.length > 0 ? errors : undefined
     })
-
   } catch (error: any) {
     console.error('Erro na importação CSV:', error)
     return NextResponse.json({ error: "Erro interno do servidor: " + error.message }, { status: 500 })

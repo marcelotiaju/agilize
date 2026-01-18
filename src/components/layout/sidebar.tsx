@@ -41,6 +41,7 @@ export function Sidebar() {
      'canLaunchCircle',
      'canLaunchServiceOffer',
      'canLaunchExpense',
+     'canLaunchCarneReviver',
      'canApproveVote',
      'canApproveEbd', 
      'canApproveCampaign',

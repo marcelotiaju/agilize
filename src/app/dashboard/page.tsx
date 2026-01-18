@@ -32,6 +32,7 @@ export default function Dashboard() {
       'canLaunchCircle',
       'canLaunchServiceOffer',
       'canLaunchExpense',
+      'canLaunchCarneReviver',
       'canApproveVote',
       'canApproveEbd', 
       'canApproveCampaign',
@@ -52,6 +53,21 @@ export default function Dashboard() {
       href: "/launches",
       color: "from-sky-700 to-indigo-800",
       permission: `${hasLaunchPermission}`
+    },
+    {
+      title: "Resumo Diário",
+      description: "Visualize Resumo diário",
+      icon: PieChart,
+      href: "/congregation-summary",
+      color: "from-yellow-600 to-amber-700",
+      permission: `${hasSummaryPermission}`
+    },
+    {
+      title: "Acesso",
+      description: "Meus dados",
+      icon: User,
+      href: "/profile",
+      color: "from-indigo-700 to-violet-800"
     },
     {
       title: "Exportar Dados",
@@ -100,21 +116,6 @@ export default function Dashboard() {
       href: "/classifications",
       color: "from-cyan-700 to-sky-800",
       permission: "canCreate"
-    },
-    {
-      title: "Acesso",
-      description: "Meus dados",
-      icon: User,
-      href: "/profile",
-      color: "from-indigo-700 to-violet-800"
-    },
-    {
-      title: "Resumo Diário",
-      description: "Visualize Resumo diário",
-      icon: PieChart,
-      href: "/congregation-summary",
-      color: "from-yellow-600 to-amber-700",
-      permission: `${hasSummaryPermission}`
     },
   ]
 

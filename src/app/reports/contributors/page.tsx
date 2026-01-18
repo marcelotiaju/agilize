@@ -437,7 +437,7 @@ export default function ReportsPage() {
                                                                 {contrib.months.map((val, monthIdx) => (
                                                                     <TableCell 
                                                                         key={monthIdx} 
-                                                                        className={`text-center ${val === 0 ? 'bg-yellow-100' : ''}`}
+                                                                        className={`text-center ${val === 0 && monthIdx < new Date().getMonth() ? 'bg-yellow-100' : ''}`}
                                                                     >
                                                                         {showValues ? (val > 0 ? formatCurrency(val) : '-') : (val > 0 ? '✓' : '-')}
                                                                     </TableCell>

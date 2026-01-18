@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Button } from '@/components/ui/button'
@@ -30,6 +30,8 @@ import {
 } from "@/components/ui/tooltip"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { cn } from "@/lib/utils";
+import { useRouter } from 'next/navigation'
+import { PieChart } from 'lucide-react'
 
 // Get the user's timezone
 const USER_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -66,6 +68,7 @@ export default function Launches() {
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
   const [pageYPosition, setPageYPosition] = useState(0);
+  const router = useRouter()
 
   // Tipos
   type Congregation = { id: string; name: string }
@@ -126,11 +129,37 @@ export default function Launches() {
   const canApproveDirector = session?.user?.canApproveDirector
   const canDeleteLaunch = session?.user?.canDeleteLaunch
   const canImportLaunch = session?.user?.canImportLaunch
+  const canGenerateSummary = session?.user?.canGenerateSummary
+  const canListSummary = session?.user?.canListSummary
+
+      // Adicione esse useMemo para calcular os tipos permitidos
+const allowedLaunchTypes = useMemo(() => {
+  const types: { value: string; label: string }[] = [];
+  if (canLaunchTithe) types.push({ value: 'DIZIMO', label: 'Dízimos' });
+  if (canLaunchServiceOffer) types.push({ value: 'OFERTA_CULTO', label: 'Oferta do Culto' });
+  if (canLaunchCarneReviver) types.push({ value: 'CARNE_REVIVER', label: 'Carnê Reviver' });
+  if (canLaunchVote) types.push({ value: 'VOTO', label: 'Voto' });
+  if (canLaunchEbd) types.push({ value: 'EBD', label: 'EBD' });
+  if (canLaunchCampaign) types.push({ value: 'CAMPANHA', label: 'Campanha' });
+  if (canLaunchMission) types.push({ value: 'MISSAO', label: 'Missão' });
+  if (canLaunchCircle) types.push({ value: 'CIRCULO', label: 'Círculo de Oração' });
+  if (canLaunchExpense) types.push({ value: 'SAIDA', label: 'Saídas' });
+  return types;
+}, [canLaunchTithe, canLaunchServiceOffer, canLaunchCarneReviver, canLaunchVote, canLaunchEbd, canLaunchCampaign, canLaunchMission, canLaunchCircle, canLaunchExpense]);
+
+// Adicione um useEffect para auto-selecionar
+useEffect(() => {
+  if (allowedLaunchTypes.length === 1) {
+    setFormData(prev => ({ ...prev, type: allowedLaunchTypes[0].value }));
+  }
+}, [allowedLaunchTypes]);
 
   const [editingLaunch, setEditingLaunch] = useState<Launch | null>(null)
   const [formData, setFormData] = useState({
     congregationId: '',
-    type: 'DIZIMO',
+    type: allowedLaunchTypes.length === 1 
+    ? allowedLaunchTypes[0].value 
+    : 'DIZIMO',
     date: format(new Date(), 'yyyy-MM-dd'),
     talonNumber: '',
     value: '',
@@ -528,7 +557,7 @@ export default function Launches() {
       value: launch.value?.toFixed(2) || '',
       description: launch.description || '',
       contributorId: launch.contributorId?.toString() || '',
-      contributorName: launch.contributorName || '',
+      contributorName: launch.contributor?.name || launch.contributorName || '',
       isContributorRegistered: !!launch.contributorId,
       isAnonymous: launch.contributorName === 'ANÔNIMO' && !launch.contributorId,
       supplierId: launch.supplierId?.toString() || '',
@@ -542,6 +571,7 @@ export default function Launches() {
 
   const handleCancel = async (id: string) => {
     setError(null)
+    if (confirm('Tem certeza que deseja cancelar este lançamento?')) {
     try {
       const launch = launches.find(l => l.id === id)
 
@@ -569,6 +599,7 @@ export default function Launches() {
     } catch (error) {
       console.error('Erro ao cancelar lançamento:', error)
       setError('Erro ao cancelar lançamento. Tente novamente.')
+    }
     }
   }
 
@@ -637,7 +668,7 @@ export default function Launches() {
     setEditingLaunch(null)
     setFormData({
       congregationId: congregations.length === 1 ? congregations[0].id : '',
-      type: 'DIZIMO',
+      type: allowedLaunchTypes.length === 1 ? allowedLaunchTypes[0].value : 'DIZIMO',
       date: format(new Date(), 'yyyy-MM-dd'),
       talonNumber: '',
       value: '',
@@ -694,15 +725,18 @@ export default function Launches() {
                           launch.type === 'OFERTA_CULTO' ? 'Oferta do Culto' :
                             launch.type === 'CIRCULO' ? 'Círculo de Oração' : ''}
           </div>
-          <div className="flex items-center space-x-2">
-            <Badge variant={
+          <div className={`flex items-center space-x-2`}>
+            <Badge className={`${launch.status === 'IMPORTED' ? 'bg-orange-500 hover:bg-orange-600' : ''}`}
+            variant={
               launch.status === 'NORMAL' ? 'default' :
                 launch.status === 'APPROVED' ? 'default' :
-                  launch.status === 'EXPORTED' ? 'secondary' : 'destructive'
+                  launch.status === 'EXPORTED' ? 'secondary' : 
+                    launch.status === 'IMPORTED' ? 'destructive' : 'destructive'
             }>
               {launch.status === 'NORMAL' ? 'Normal' :
                 launch.status === 'APPROVED' ? 'Aprovado' :
-                  launch.status === 'EXPORTED' ? 'Exportado' : 'Cancelado'}
+                  launch.status === 'EXPORTED' ? 'Exportado' : 
+                  launch.status === 'IMPORTED' ? 'Importado' : 'Cancelado'}
             </Badge>
             {launch.approvedBy && (
               <Tooltip>
@@ -863,9 +897,18 @@ export default function Launches() {
           <div className="p-2">
             <div className="flex justify-end mb-2">
               <div className="flex space-x-2">
+                {(canGenerateSummary || canListSummary) && 
+                <Button
+                  //variant="defaulSt"
+                  onClick={() => router.push('/congregation-summary')}
+                  className="md:flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white"
+                >
+                  <PieChart className="h-4 w-4" />
+                  Resumo
+                </Button>}
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button onClick={resetForm} disabled={!canLaunchVote && !canLaunchEbd && !canLaunchCampaign && !canLaunchTithe && !canLaunchExpense && !canLaunchMission && !canLaunchCircle && !canLaunchServiceOffer}>
+                    <Button onClick={resetForm} disabled={!canLaunchVote && !canLaunchEbd && !canLaunchCampaign && !canLaunchTithe && !canLaunchExpense && !canLaunchMission && !canLaunchCircle && !canLaunchServiceOffer && !canLaunchCarneReviver}>
                       <Plus className="mr-2 h-4 w-4" />
                       Novo
                     </Button>
@@ -877,7 +920,7 @@ export default function Launches() {
                         {editingLaunch && editingLaunch.status !== 'NORMAL' && editingLaunch.status !== 'IMPORTED' && (
                           <div className="mt-2 p-2 bg-yellow-50 text-red-800 rounded-md flex items-center">
                             <AlertCircle className="h-4 w-4 mr-2" />
-                            Este lançamento não pode ser editado porque está com status "{editingLaunch.status === 'CANCELED' ? 'CANCELADO' : editingLaunch.status === 'APPROVED' ? 'APROVADO' : editingLaunch.status === 'EXPORTED' ? 'EXPORTADO' : ''}"
+                            Este lançamento não pode ser editado porque está com status "{editingLaunch.status === 'CANCELED' ? 'CANCELADO' : editingLaunch.status === 'APPROVED' ? 'APROVADO' : editingLaunch.status === 'EXPORTED' ? 'EXPORTADO' : editingLaunch.status === 'IMPORTED' ? 'IMPORTADO' : ''}".
                           </div>
                         )}
                       </DialogDescription>
@@ -936,7 +979,8 @@ export default function Launches() {
                                 <Select
                                   value={formData.type}
                                   onValueChange={(value) => handleSelectChange('type', value)}
-                                  disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null)}
+                                  disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null) || allowedLaunchTypes.length === 1}
+                                  data={allowedLaunchTypes.map(t => t.value)}
                                 >
                                   <SelectTrigger className="w-full">
                                     <SelectValue />
@@ -958,34 +1002,20 @@ export default function Launches() {
                               {formData.type === 'SAIDA' && (
                                 <div className="w-full">
                                   <Label htmlFor="classificationId">Classificação</Label>
-                                  <Select
-                                    key={formData.classificationId}
+                                  <SearchableSelect
+                                    label="Buscar Classificação"
+                                    placeholder="Selecione uma classificação"
                                     value={formData.classificationId}
-                                    onValueChange={(value) => handleSelectChange('classificationId', value)}
-                                    disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null)}
-                                  >
-                                    <SelectTrigger className="w-full">
-                                      <SelectValue placeholder="Selecione uma classificação" />
-                                    </SelectTrigger>
-                                    <SelectContent
-                                      className="max-w-[calc(100vw-3rem)] sm:max-w-[var(--radix-select-trigger-width)] max-h-[300px]"
-                                      position="popper"
-                                    >
-                                      {classifications.map((classification) => (
-                                        <SelectItem
-                                          key={classification.id}
-                                          value={classification.id}
-                                          className="break-words whitespace-normal max-w-full"
-                                        >
-                                          <span className="block max-w-full break-words">{classification.description}</span>
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
+                                    disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}
+                                    onChange={(value) => handleSelectChange('classificationId', value)}
+                                    name="classificationId"
+                                    data={classifications.map(c => ({ id: c.id, name: c.description }))}
+                                    itemRenderMode="classification"
+                                    searchKeys={['name']}
+                                  />
+                              </div>
                               )}
                             </div>
-
                             <div className="grid grid-cols-2 gap-4">
                               <div>
                                 <Label htmlFor="date">Data</Label>
@@ -1004,7 +1034,7 @@ export default function Launches() {
 
                               <div>
                                 {formData.type === 'SAIDA' ? <Label htmlFor="talonNumber">Nr. Doc</Label> : formData.type === 'DIZIMO' ? <Label htmlFor="talonNumber">Nr. Recibo</Label> : formData.type === 'CARNE_REVIVER' || formData.type === 'MISSAO' ? '' : <Label htmlFor="talonNumber">Nr. Talão</Label>}
-                                {formData.type !== 'CARNE_REVIVER' && formData.type !== 'MISSAO' && (
+                                {(formData.type !== 'CARNE_REVIVER' && formData.type !== 'MISSAO') && (
                                   <Input
                                     id="talonNumber"
                                     name="talonNumber"
@@ -1086,7 +1116,7 @@ export default function Launches() {
                                         type="button"
                                         variant={formData.isAnonymous ? "default" : "outline"}
                                         size="sm"
-                                        disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null)}
+                                        disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
                                         className={cn(
                                           "h-9 px-3 transition-all flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start",
                                           formData.isAnonymous
@@ -1114,7 +1144,7 @@ export default function Launches() {
                                       label="Buscar Contribuinte"
                                       placeholder="Selecione o contribuinte"
                                       value={formData.contributorId ?? ''}
-                                      disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null)}
+                                      disabled={editingLaunch && (editingLaunch.status !== 'NORMAL'|| editingLaunch.summaryId != null)}
                                       onChange={(value) => handleSelectChange('contributorId', value)}
                                       name="contributorId"
                                       data={contributors.filter(f => (f.congregationId == formData.congregationId)).map(c => ({ key: c.id, id: c.id, name: c.name, document: c.cpf, cargo: c.ecclesiasticalPosition, photoUrl: c.photoUrl, photoExists: c.photoExists }))}
@@ -1252,7 +1282,7 @@ export default function Launches() {
                                 </div>
                                 {formData.isSupplierRegistered ? (
                                   <div>
-                                    <Label htmlFor="supplierId">Nome do Fornecedor</Label>
+                                    <Label htmlFor="supplierId">Fornecedor</Label>
                                     <SearchableSelect
                                       key={formData.supplierId}
                                       label="Buscar Fornecedor"
@@ -1263,11 +1293,12 @@ export default function Launches() {
                                       name="supplierId"
                                       data={suppliers.map(s => ({ key: s.id, id: s.id, name: truncateString(s.razaoSocial, 45), document: s.cpfcnpj }))}
                                       searchKeys={['name', 'document']}
+                                      itemRenderMode="supplier"
                                     />
                                   </div>
                                 ) : (
                                   <div>
-                                    <Label htmlFor="supplierName">Fornecedor</Label>
+                                    <Label htmlFor="supplierName">Nome do Fornecedor</Label>
                                     <Input
                                       id="supplierName"
                                       name="supplierName"
@@ -1375,7 +1406,7 @@ export default function Launches() {
                         <DialogDescription>
                           Faça upload de um arquivo CSV com os Lançamentos. <br />
                           O arquivo deve ter as colunas: <br />
-                          <span className="text-xs font-mono">Congregação,Tipo,Data,Nr Recibo,Valor,Contribuinte,Descrição</span>
+                          <span className="text-xs font-mono">Congregação,Tipo,Data,Numero,Valor,Contribuinte,Descrição</span>
                         </DialogDescription>
                       </DialogHeader>
                       <div className="grid gap-4 py-4">
@@ -1557,14 +1588,20 @@ export default function Launches() {
                             <TableCell>{launch.talonNumber}</TableCell>
                             <TableCell>
                               <div className="flex items-center space-x-2">
-                                <Badge className={`w-32 text-center py-1.5 px-1 rounded ${launch.status === 'EXPORTED' ? 'text-black' : 'text-white'} font-medium`} variant={
+                                <Badge className={`w-32 text-center py-1.5 px-1 rounded 
+                                ${launch.status === 'EXPORTED' ? 'text-black' : 'text-white'} 
+                                ${launch.status === 'IMPORTED' ? 'bg-orange-500 hover:bg-orange-600' : ''} font-medium`} 
+                                
+                                variant={
                                   launch.status === 'NORMAL' ? 'default' :
                                     launch.status === 'APPROVED' ? 'default' :
-                                      launch.status === 'EXPORTED' ? 'secondary' : 'destructive'
+                                      launch.status === 'EXPORTED' ? 'secondary' : 
+                                        launch.status === 'IMPORTED' ? 'secondary' : 'destructive'
                                 }>
                                   {launch.status === 'NORMAL' ? 'Normal' :
                                     launch.status === 'APPROVED' ? 'Aprovado' :
-                                      launch.status === 'EXPORTED' ? 'Exportado' : 'Cancelado'}
+                                      launch.status === 'EXPORTED' ? 'Exportado' : 
+                                        launch.status === 'IMPORTED' ? 'Importado' : 'Cancelado'}
                                 </Badge>
                                 {/* {launch.approvedBy && (
                                  <Tooltip>

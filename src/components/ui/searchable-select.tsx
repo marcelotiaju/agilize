@@ -140,7 +140,7 @@ export function SearchableSelect({
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               ref={searchInputRef}
-              placeholder="Buscar por nome ou documento..."
+              placeholder={(itemRenderMode === 'congregation' || itemRenderMode === 'supplier') ? "Buscar por nome..." : itemRenderMode === 'classification' ? "Buscar por descrição..." : "Buscar por nome ou documento..."}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9"
@@ -172,7 +172,7 @@ export function SearchableSelect({
             >
             <CardContent className="p-3">
               <div className="flex items-center space-x-3">
-                {itemRenderMode !== 'congregation' && (
+                {itemRenderMode !== 'congregation' && itemRenderMode !== 'classification' && itemRenderMode !== 'supplier' && (
                   <>
                     <div key={item.id} className="shrink-0"></div>
                     <div className="shrink-0">

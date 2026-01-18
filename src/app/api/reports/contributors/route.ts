@@ -298,7 +298,8 @@ export async function GET(request: NextRequest) {
       drawTableHeader(cong.name)
 
       // Filtramos os contribuintes desta congregação específica
-      const congContributors = contributors.filter(c => c.congregationId === cong.id)
+      const congContributors = contributors.filter(c => c.congregationId === cong.id && contributionFilter === 'WITH_LAUNCH'? c.Launch.length > 0 : contributionFilter === 'WITHOUT_LAUNCH' ? c.Launch.length === 0  : true)
+      
 
       if (congContributors.length === 0) {
         doc.setFont('helvetica', 'italic').setTextColor(100)
