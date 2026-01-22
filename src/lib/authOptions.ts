@@ -59,7 +59,12 @@ export const authOptions : NextAuthOptions = {
           canApproveAccountant: !!p?.canApproveAccountant,
           canApproveDirector: !!p?.canApproveDirector,
           canDeleteLaunch : !!p?.canDeleteLaunch,
-          canImportLaunch : !!p?.canImportLaunch
+          canImportLaunch : !!p?.canImportLaunch,
+          canReportLaunches: !!p?.canReportLaunches,
+          canReportContributors: !!p?.canReportContributors,
+          canReportMonthlySummary: !!p?.canReportMonthlySummary,
+          canReportSummary: !!p?.canReportSummary,
+          canDeleteSummary: !!p?.canDeleteSummary
         }
 
         return {
@@ -136,7 +141,12 @@ export const authOptions : NextAuthOptions = {
           canApproveAccountant: (user as any).canApproveAccountant,
           canApproveDirector: (user as any).canApproveDirector,
           canDeleteLaunch : (user as any).canDeleteLaunch,
-          canImportLaunch : (user as any).canImportLaunch
+          canImportLaunch : (user as any).canImportLaunch,
+          canReportLaunches : (user as any).canReportLaunches,
+          canReportContributors : (user as any).canReportContributors,
+          canReportMonthlySummary : (user as any).canReportMonthlySummary,
+          canReportSummary : (user as any).canReportSummary,
+          canDeleteSummary : (user as any).canDeleteSummary
         }
       }
       return token
@@ -183,7 +193,12 @@ export const authOptions : NextAuthOptions = {
         canApproveAccountant: typeof token.canApproveAccountant === "boolean" ? token.canApproveAccountant : undefined,
         canApproveDirector: typeof token.canApproveDirector === "boolean" ? token.canApproveDirector : undefined,
         canDeleteLaunch : typeof token.canDeleteLaunch === "boolean" ? token.canDeleteLaunch : undefined,
-        canImportLaunch : typeof token.canImportLaunch === "boolean" ? token.canImportLaunch : undefined
+        canImportLaunch : typeof token.canImportLaunch === "boolean" ? token.canImportLaunch : undefined,
+        canReportLaunches : typeof token.canReportLaunches === "boolean" ? token.canReportLaunches : undefined,
+        canReportContributors : typeof token.canReportContributors === "boolean" ? token.canReportContributors : undefined,
+        canReportMonthlySummary : typeof token.canReportMonthlySummary === "boolean" ? token.canReportMonthlySummary : undefined,
+        canReportSummary : typeof token.canReportSummary === "boolean" ? token.canReportSummary : undefined,
+        canDeleteSummary : typeof token.canDeleteSummary === "boolean" ? token.canDeleteSummary : undefined
       }
       if (typeof token.exp === 'number') {
         session.expires = new Date(token.exp * 1000).toISOString()

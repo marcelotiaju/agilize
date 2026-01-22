@@ -309,12 +309,12 @@ useEffect(() => {
     }
   }
 
-
   const fetchLaunches = async () => {
     try {
       const params = new URLSearchParams()
       params.append('page', currentPage.toString())
       params.append('limit', itemsPerPage.toString())
+      params.append('type', allowedLaunchTypes.map(t => t.value).join(','))
       if (searchTerm) params.append('searchTerm', searchTerm)
       if (selectedCongregation !== 'all') params.append('congregationId', selectedCongregation)
       params.append('timezone', USER_TIMEZONE)
@@ -901,7 +901,7 @@ useEffect(() => {
                 <Button
                   //variant="defaulSt"
                   onClick={() => router.push('/congregation-summary')}
-                  className="md:flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white"
+                  className="md:flex items-center gap-2 bg-amber-600 text-white"
                 >
                   <PieChart className="h-4 w-4" />
                   Resumo
@@ -1722,7 +1722,7 @@ useEffect(() => {
               {launches.map((launch) => (
                 <LaunchCard key={launch.id} launch={launch} />
               ))}
-              {/* <div className="mt-4">
+              <div className="mt-4">
                 <Pagination
                   currentPage={currentPage}
                   totalPages={totalPages}
@@ -1731,7 +1731,7 @@ useEffect(() => {
                   onItemsPerPageChange={handleItemsPerPageChange}
                   totalItems={totalCount}
                 />
-              </div> */}
+              </div>
             </div>
           </div>
         </div>

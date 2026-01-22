@@ -51,12 +51,16 @@ export function Sidebar() {
      'canApproveServiceOffer',
      'canApproveExpense'];
   const canAccesSummary = ['canListSummary', 'canGenerateSummary'];
+  const canGenerateReport = ['canReportLaunches', 'canReportContributors', 'canReportMonthlySummary'];
   const hasLaunchPermission = Boolean(canAccessLaunches.find(perm => session?.user?.[perm]));
   const hasSummaryPermission = Boolean(canAccesSummary.find(perm => session?.user?.[perm]));
-  const canGenerateReport = Boolean((session?.user as any)?.canGenerateReport)
+  const hasGenerateReport = Boolean(canGenerateReport.find(perm => session?.user?.[perm]));
 
   const canCreate = Boolean(session?.user?.canCreate)
   const canManageUsers = Boolean(session?.user?.canManageUsers)
+  const canReportLaunches = Boolean(session?.user?.canReportLaunches)
+  const canReportContributors = Boolean(session?.user?.canReportContributors)
+  const canReportMonthlySummary = Boolean(session?.user?.canReportMonthlySummary)
 
   const [openTesouraria, setOpenTesouraria] = useState(true)
   const [openCadastros, setOpenCadastros] = useState(false)
@@ -68,7 +72,7 @@ export function Sidebar() {
     const isTesouraria = path.startsWith('/launches') || path.startsWith('/congregation-summary') || path.startsWith('/reports') || path.startsWith('/export') || path.startsWith('/delete-history')
     const isCadastros = path.startsWith('/contributors') || path.startsWith('/congregations') || path.startsWith('/suppliers') || path.startsWith('/classifications')
     const isSeguranca = path.startsWith('/users') || path.startsWith('/profiles') || path.startsWith('/profile')
-    const isReports = path.startsWith('/reports/launches') || path.startsWith('/reports/contributors') || path.startsWith('/reports/congregations') || path.startsWith('/reports/summaries')
+    const isReports = path.startsWith('/reports/launches') || path.startsWith('/reports/contributors')
 
     setOpenTesouraria(isTesouraria)
     setOpenCadastros(isCadastros)
@@ -114,7 +118,7 @@ export function Sidebar() {
                       {hasSummaryPermission && (<Link href="/congregation-summary" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/congregation-summary' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><PieChart className="mr-3 h-5 w-5 shrink-0" />Resumo Diário</Link>)}
                       
                       {/* Submenu Relatórios */}
-                      {canGenerateReport && (
+                      {hasGenerateReport && (
                         <div className="mt-1">
                           <button type="button" onClick={() => setOpenReports(!openReports)} className="w-full flex items-center justify-between px-2 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-50">
                             <span className="flex items-center"><FileText className="mr-3 h-5 w-5 shrink-0" />Relatórios</span>
@@ -122,8 +126,9 @@ export function Sidebar() {
                           </button>
                           {openReports && (
                             <div className="mt-1 space-y-1 pl-8">
-                              <Link href="/reports/launches" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/launches' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><FileText className="mr-3 h-5 w-5 shrink-0" />Relatório de Lançamentos</Link>
-                              <Link href="/reports/contributors" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/contributors' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><FileText className="mr-3 h-5 w-5 shrink-0" />Relatório de Contribuintes</Link>
+                              {canReportLaunches && <Link href="/reports/launches" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/launches' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><FileText className="mr-3 h-5 w-5 shrink-0" />Relatório de Lançamentos</Link>}
+                              {canReportContributors && <Link href="/reports/contributors" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/contributors' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><FileText className="mr-3 h-5 w-5 shrink-0" />Relatório de Contribuintes</Link>}
+                              {canReportMonthlySummary && <Link href="/reports/monthly-summary" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/monthly-summary' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><FileText className="mr-3 h-5 w-5 shrink-0" />Resumo Mensal</Link>}
                             </div>
                           )}
                         </div>
@@ -221,7 +226,7 @@ export function Sidebar() {
               </Link>
 
               {/* Tesouraria */}
-              {(hasLaunchPermission || hasSummaryPermission || canGenerateReport) && (
+              {(hasLaunchPermission || hasSummaryPermission || hasGenerateReport) && (
                 <div className="mt-3">
                   <button type="button" onClick={() => setOpenTesouraria(!openTesouraria)} className="w-full flex items-center justify-between px-2 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-50">
                     <span className="flex items-center"><FileText className="mr-3 h-5 w-5 shrink-0" /> Tesouraria</span>
@@ -233,7 +238,7 @@ export function Sidebar() {
                       {hasSummaryPermission && (<Link href="/congregation-summary" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/congregation-summary' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><PieChart className="mr-3 h-5 w-5 shrink-0" />Resumo Diário</Link>)}
                       
                       {/* Submenu Relatórios */}
-                      {canGenerateReport && (
+                      {hasGenerateReport && (
                         <div className="mt-1">
                           <button type="button" onClick={() => setOpenReports(!openReports)} className="w-full flex items-center justify-between px-2 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-50">
                             <span className="flex items-center"><FileText className="mr-3 h-5 w-5 shrink-0" />Relatórios</span>
@@ -241,8 +246,9 @@ export function Sidebar() {
                           </button>
                           {openReports && (
                             <div className="mt-1 space-y-1 pl-8">
-                              <Link href="/reports/launches" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/launches' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><FileText className="mr-3 h-5 w-5 shrink-0" />Relatório de Lançamentos</Link>
-                              <Link href="/reports/contributors" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/contributors' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><FileText className="mr-3 h-5 w-5 shrink-0" />Relatório de Contribuintes</Link>
+                              {canReportLaunches && <Link href="/reports/launches" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/launches' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><FileText className="mr-3 h-5 w-5 shrink-0" />Relatório de Lançamentos</Link>}
+                              {canReportContributors && <Link href="/reports/contributors" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/contributors' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><FileText className="mr-3 h-5 w-5 shrink-0" />Relatório de Contribuintes</Link>}
+                              {canReportMonthlySummary && <Link href="/reports/monthly-summary" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/monthly-summary' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><FileText className="mr-3 h-5 w-5 shrink-0" />Resumo Mensal</Link>}
                             </div>
                           )}
                         </div>

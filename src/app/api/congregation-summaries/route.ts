@@ -87,7 +87,14 @@ export async function GET(request: NextRequest) {
     const summaries = await prisma.congregationSummary.findMany({
       where: { ...where },
       include: { Launch: true, congregation: true },
-      orderBy: { startDate: 'desc' }
+      orderBy: [
+        { startDate: 'desc' },
+        { 
+          congregation: { 
+            name: 'asc'
+          }
+        }
+      ]
     })
 
     // Serializa datas como ISO UTC para o frontend

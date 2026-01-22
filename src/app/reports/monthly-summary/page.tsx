@@ -52,29 +52,18 @@ export default function ReportsPage() {
     const [previewData, setPreviewData] = useState<PreviewData | null>(null)
 
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString())
-    const [showValues, setShowValues] = useState(true)
-    const [contributionFilter, setContributionFilter] = useState('BOTH') // BOTH, WITH_LAUNCH, WITHOUT_LAUNCH
+    //const [showValues, setShowValues] = useState(true)
+    //const [contributionFilter, setContributionFilter] = useState('BOTH') // BOTH, WITH_LAUNCH, WITHOUT_LAUNCH
 
     const years = Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString())
 
-    const availableTypes = useMemo(() => {
-        const types: { value: string; label: string }[] = []
-        types.push({ value: 'MEMBRO', label: 'Membro' })
-        types.push({ value: 'CONGREGADO', label: 'Congregado' })
-        types.push({ value: 'AUXILIAR', label: 'Auxiliar' })
-        types.push({ value: 'DIACONO', label: 'Diácono' })
-        types.push({ value: 'PRESBITERO', label: 'Presbítero' })
-        types.push({ value: 'EVANGELISTA', label: 'Evangelista' })
-        types.push({ value: 'PASTOR', label: 'Pastor' })
-        return types
-    }, [])
-
     const availableLaunchTypes = useMemo(() => {
-        return [
-             (session?.user as any)?.canLaunchTithe ? {value: 'DIZIMO', label: 'Dízimo' } : null,
-            (session?.user as any)?.canLaunchCarneReviver ? {value: 'CARNE_REVIVER', label: 'Carnê Reviver' } : null
-        ]
-    }, [session] ).filter(Boolean) as { value: string; label: string }[]
+    return [
+            (session?.user as any)?.canLaunchTithe ? {value: 'DIZIMO', label: 'Dízimo' } : null,
+        (session?.user as any)?.canLaunchCarneReviver ? {value: 'CARNE_REVIVER', label: 'Carnê Reviver' } : null,
+        {value: 'SAIDA', label: 'Saída' },
+    ]   
+    }, [session] ).filter(Boolean) as {value: string, label: string}[]
 
     useEffect(() => {
         if (availableLaunchTypes.length === 1 && selectedLaunchTypes.length === 0) {
@@ -87,12 +76,12 @@ export default function ReportsPage() {
     }, [])
 
     useEffect(() => {
-        if (selectedCongregations.length > 0 && selectedTypes.length > 0 && selectedLaunchTypes.length > 0) {
+        if (selectedCongregations.length > 0 && selectedLaunchTypes.length > 0) {
             fetchPreview()
         } else {
             setPreviewData(null)
         }
-    }, [selectedCongregations, selectedTypes, selectedYear, selectedLaunchTypes, contributionFilter])
+    }, [selectedCongregations, selectedYear, selectedLaunchTypes])
 
     const fetchCongregations = async () => {
         try {
@@ -114,18 +103,19 @@ export default function ReportsPage() {
         try {
             const params = new URLSearchParams({
                 year: selectedYear,
-                position: selectedTypes.join(','),
+                //position: selectedTypes.join(','),
                 launchTypes: selectedLaunchTypes.join(','),
-                contributionFilter: contributionFilter, // Adicionado
-                showValues: showValues.toString(),
+                //contributionFilter: contributionFilter, // Adicionado
+                //showValues: showValues.toString(),
                 congregationIds: selectedCongregations.join(','),
                 timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                 preview: 'true'
             })
 
-            const response = await fetch(`/api/reports/contributors?${params.toString()}`)
+            const response = await fetch(`/api/reports/monthly-summary?${params.toString()}`)
             if (response.ok) {
                 const data = await response.json()
+                console.log('Preview data:', data)
                 setPreviewData(data)
             }
         } catch (error) {
@@ -151,21 +141,13 @@ export default function ReportsPage() {
         }
     }
 
-    const handleTypeSelection = (type: string, isChecked: boolean) => {
-        if (isChecked) {
-            setSelectedTypes(prev => [...prev, type])
-        } else {
-            setSelectedTypes(prev => prev.filter(t => t !== type))
-        }
-    }
-
-    const handleSelectAllTypes = (isChecked: boolean) => {
-        if (isChecked) {
-            setSelectedTypes(availableTypes.map(t => t.value))
-        } else {
-            setSelectedTypes([])
-        }
-    }
+    // const handleTypeSelection = (type: string, isChecked: boolean) => {
+    //     if (isChecked) {
+    //         setSelectedTypes(prev => [...prev, type])
+    //     } else {
+    //         setSelectedTypes(prev => prev.filter(t => t !== type))
+    //     }
+    // }
 
     const handleLaunchTypeSelection = (type: string, isChecked: boolean) => {
         if (isChecked) {
@@ -190,22 +172,22 @@ export default function ReportsPage() {
         try {
             const params = new URLSearchParams({
                 year: selectedYear,
-                position: selectedTypes.join(','),
+                //position: selectedTypes.join(','),
                 launchTypes: selectedLaunchTypes.join(','),
-                contributionFilter: contributionFilter, // Adicionado
-                showValues: showValues.toString(),
+                //contributionFilter: contributionFilter, // Adicionado
+                // showValues: showValues.toString(),
                 congregationIds: selectedCongregations.join(','),
                 timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
             })
 
-            const response = await fetch(`/api/reports/contributors?${params.toString()}`)
+            const response = await fetch(`/api/reports/monthly-summary?${params.toString()}`)
             if (!response.ok) alert("Erro ao gerar arquivo")
 
             const blob = await response.blob()
             const url = window.URL.createObjectURL(blob)
             const a = document.createElement('a')
             a.href = url
-            a.download = `Relacao_Contribuintes_${selectedYear}.pdf`
+            a.download = `Resumo_Mensal_${selectedYear}.pdf`
             a.click()
         } catch (error) {
             console.error(error)
@@ -215,11 +197,13 @@ export default function ReportsPage() {
         }
     }
 
+    //const totalGeral = previewData.reduce((acc, val) => acc + val, 0)
+
     const formatCurrency = (value: number) => {
         return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     }
 
-    if (!(session?.user as any)?.canReportContributors) {
+    if (!(session?.user as any)?.canReportMonthlySummary) {
         return (
             <div className="min-h-screen bg-gray-50">
                 <Sidebar />
@@ -241,8 +225,8 @@ export default function ReportsPage() {
             <div className="lg:pl-64">
                 <div className="p-6">
                     <div className="mb-6">
-                        <h1 className="text-2xl font-bold text-gray-900">Relatório de Contribuintes</h1>
-                        <p className="text-gray-600">Gere relatório de Contribuintes em PDF</p>
+                        <h1 className="text-2xl font-bold text-gray-900">Resumo Mensal</h1>
+                        <p className="text-gray-600">Gere Resumo Mensal em PDF</p>
                     </div>
                     
                     {/* Filtros */}
@@ -262,12 +246,12 @@ export default function ReportsPage() {
                                     </Select>
                                 </div>
 
-                                <div className="flex flex-col justify-end space-y-4">
+                                {/* <div className="flex flex-col justify-end space-y-4">
                                     <div className="flex items-center justify-between p-2 border rounded-md">
                                         <Label htmlFor="show-vals" className="cursor-pointer">Exibir Valores (R$)</Label>
                                         <Switch id="show-vals" checked={showValues} onCheckedChange={setShowValues} />
                                     </div>
-                                </div>
+                                </div> */}
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -303,7 +287,7 @@ export default function ReportsPage() {
                                 </div>
 
                                 {/* Seleção de Tipos */}
-                                <div>
+                                {/* <div>
                                     <Label>Cargos</Label>
                                     <div className="space-y-2 mt-2 border p-3 rounded-md max-h-40 overflow-y-auto">
                                         <div className="flex items-center space-x-2 pb-1 border-b">
@@ -331,7 +315,7 @@ export default function ReportsPage() {
                                             </div>
                                         ))}
                                     </div>
-                                </div>
+                                </div> */}
                             </div>
 
                             {/* Seleção de Tipo de Lançamento */}
@@ -367,7 +351,7 @@ export default function ReportsPage() {
                             </div>
 
                             {/* Novo Filtro de Contribuição */}
-                            <div className="space-y-2">
+                            {/* <div className="space-y-2">
                                 <Label>Filtro de Contribuição</Label>
                                 <Select value={contributionFilter} onValueChange={setContributionFilter}>
                                     <SelectTrigger>
@@ -383,7 +367,7 @@ export default function ReportsPage() {
                                     {contributionFilter === 'WITH_LAUNCH' && "* Filtrando apenas registros com valor maior que zero em algum mês."}
                                     {contributionFilter === 'WITHOUT_LAUNCH' && "* Filtrando apenas registros sem nenhuma contribuição no período."}
                                 </p>
-                            </div>
+                            </div> */}
                             </div>
                         </CardContent>
                     </Card>
@@ -398,79 +382,46 @@ export default function ReportsPage() {
                         </Card>
                     ) : previewData && (
                         <Card className="mb-6">
-                            <CardHeader className="flex flex-row items-center justify-between">
-                                <CardTitle className="flex items-center gap-2">
-                                    <Users className="h-5 w-5" />
-                                    Prévia do Relatório - {selectedYear}
-                                </CardTitle>
-                                <div className="flex items-center gap-4 text-sm">
-                                    <span className="font-semibold">
-                                        Total: {previewData.totalContributors} contribuintes
-                                    </span>
-                                    {showValues && (
-                                        <span className="font-semibold text-green-600">
-                                            R$ {formatCurrency(previewData.totalValue)}
-                                        </span>
-                                    )}
-                                </div>
-                            </CardHeader>
                             <CardContent>
-                                {/* <ScrollArea className="h-[500px]"> */}
-                                    {previewData.congregations.map((cong, congIdx) => (
-                                        <div key={congIdx} className="mb-8">
-                                            <h3 className="font-bold text-lg mb-3 text-primary">
-                                                {cong.name}
-                                            </h3>
-                                            <div className="overflow-x-auto">
-                                                <Table>
-                                                    <TableHeader>
-                                                        <TableRow className="bg-primary/10">
-                                                            <TableHead className="font-bold min-w-[200px]">Nome</TableHead>
-                                                            <TableHead className="font-bold min-w-[100px]">Cargo</TableHead>
-                                                            {MONTHS.map(month => (
-                                                                <TableHead key={month} className="text-center font-bold min-w-[60px]">
-                                                                    {month}
-                                                                </TableHead>
-                                                            ))}
-                                                            <TableHead className="text-center font-bold min-w-[80px]">TOTAL</TableHead>
-                                                        </TableRow>
-                                                    </TableHeader>
-                                                    <TableBody>
-                                                        {cong.contributors.map((contrib, idx) => (
-                                                            <TableRow key={idx}>
-                                                                <TableCell className="font-medium">{contrib.name}</TableCell>
-                                                                <TableCell>{contrib.position}</TableCell>
-                                                                {contrib.months.map((val, monthIdx) => (
-                                                                    <TableCell 
-                                                                        key={monthIdx} 
-                                                                        className={`text-center ${val === 0 && monthIdx < new Date().getMonth() ? 'bg-yellow-100' : ''}`}
-                                                                    >
-                                                                        {showValues ? (val > 0 ? formatCurrency(val) : '-') : (val > 0 ? '✓' : '-')}
-                                                                    </TableCell>
-                                                                ))}
-                                                                <TableCell className="text-center font-bold">
-                                                                    {showValues ? formatCurrency(contrib.total) : (contrib.total > 0 ? '✓' : '-')}
-                                                                </TableCell>
-                                                            </TableRow>
-                                                        ))}
-                                                        {/* Linha de totais da congregação */}
-                                                        <TableRow className="bg-gray-100 font-bold">
-                                                            <TableCell colSpan={2}>TOTAL {cong.name}</TableCell>
-                                                            {cong.monthTotals.map((val, monthIdx) => (
-                                                                <TableCell key={monthIdx} className="text-center">
-                                                                    {showValues ? formatCurrency(val) : '-'}
-                                                                </TableCell>
-                                                            ))}
-                                                            <TableCell className="text-center">
-                                                                {showValues ? formatCurrency(cong.grandTotal) : '-'}
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    </TableBody>
-                                                </Table>
-                                            </div>
-                                        </div>
-                                    ))}
-                                {/* </ScrollArea> */}
+                            {/* Preview da Tabela */}
+                                <Card>
+                                    <CardHeader className="bg-gray-50/50">
+                                        <CardTitle className="text-sm font-medium">Preview dos Lançamentos - {selectedYear}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="pt-6">
+                                        <Table className="border">
+                                            <TableHeader>
+                                                {/* Primeira linha do cabeçalho */}
+                                                <TableRow className="bg-gray-100/50">
+                                                    <TableHead rowSpan={2} className="border-r font-bold text-gray-900">Mês</TableHead>
+                                                    <TableHead colSpan={3} className="text-center font-bold text-gray-900">Valores</TableHead>
+                                                </TableRow>
+                                                {/* Segunda linha do cabeçalho */}
+                                                <TableRow className="bg-gray-100/50">
+                                                    <TableHead className="text-right border-l text-blue-600">Entrada</TableHead>
+                                                    <TableHead className="text-right border-l text-red-600">Saída</TableHead>
+                                                    <TableHead className="text-right border-l font-bold text-gray-900">Total</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {MONTHS.map((month, index) => (
+                                                    <TableRow key={month}>
+                                                        <TableCell className="font-medium border-r">{month}</TableCell>
+                                                        <TableCell className="text-right border-l">
+                                                            {previewData.monthlyData[index]?.income?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                        </TableCell>
+                                                        <TableCell className="text-right border-l text-red-500">
+                                                            {previewData.monthlyData[index]?.expense?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                        </TableCell>
+                                                        <TableCell className={`text-right border-l font-bold ${previewData.monthlyData[index]?.total >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                            {previewData.monthlyData[index]?.total?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </CardContent>
+                                </Card>
                             </CardContent>
                         </Card>
                     )}
@@ -478,7 +429,7 @@ export default function ReportsPage() {
                     {/* Botão de Gerar PDF */}
                     <Button
                         onClick={handleGenerateReport}
-                        disabled={loading || selectedCongregations.length === 0 || selectedTypes.length === 0 || selectedLaunchTypes.length === 0}
+                        disabled={loading || selectedCongregations.length === 0 || selectedLaunchTypes.length === 0}
                         className="w-full"
                         size="lg"
                     >

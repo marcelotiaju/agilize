@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { FileText, Trash2, List, Check, Edit, CalendarIcon, Printer } from 'lucide-react'
+import { FileText, Trash2, List, Check, Edit, CalendarIcon, Printer, ArrowUp } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { NumericFormat } from 'react-number-format';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -21,6 +21,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import format from "date-fns/format";
+import { useRouter } from 'next/navigation'
 // Definindo o tipo de Congregação para usar no estado
 type Congregation = {
   id: string;
@@ -67,6 +68,23 @@ const USER_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 export default function CongregationSummary() {
   const { data: session } = useSession()
+    const canAccessLaunches = ['canLaunchVote',
+     'canLaunchEbd', 
+     'canLaunchCampaign',
+     'canLaunchTithe',
+     'canLaunchMission',
+     'canLaunchCircle',
+     'canLaunchServiceOffer',
+     'canLaunchExpense',
+     'canLaunchCarneReviver',
+     'canApproveVote',
+     'canApproveEbd', 
+     'canApproveCampaign',
+     'canApproveTithe',
+     'canApproveMission',
+     'canApproveCircle',
+     'canApproveServiceOffer',
+     'canApproveExpense'];
   const [congregations, setCongregations] = useState<any[]>([])
   const [selectedCongregations, setSelectedCongregations] = useState<string[]>([]) // MUDANÇA: Array de IDs
   const [startDate, setStartDate] = useState(formatDate(new Date(), 'yyyy-MM-dd'))
@@ -100,6 +118,7 @@ export default function CongregationSummary() {
     depositValue: null,
     cashValue: null,
     summaryType: '',
+    summaryId: '',
     treasurerApproved: false,
     accountantApproved: false,
     directorApproved: false,
@@ -115,6 +134,18 @@ export default function CongregationSummary() {
   })
   const [isLoading, setIsLoading] = useState(false)
   const [summaryType, setSummaryType] = useState<string>('')
+  const [pageYPosition, setPageYPosition] = useState(0);
+   const router = useRouter()
+
+  // Detectar scroll para mostrar/esconder botão de voltar ao topo
+  useEffect(() => {
+    const handleScroll = () => {
+      setPageYPosition(window.scrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // Determinar tipos de resumo disponíveis baseado nas permissões do usuário
   const availableSummaryTypes = useMemo(() => {
@@ -198,9 +229,10 @@ export default function CongregationSummary() {
     }
   }
 
-  const handlePrintSummary = async (summary: Summary) => {
+  const handlePrintSummary = async (summaryId: string) => {
+    if (!summaryId) return;
     const params = new URLSearchParams({
-      summaryId: summary.id,
+      summaryId: summaryId,
       timezone: USER_TIMEZONE
     })
 
@@ -358,6 +390,7 @@ export default function CongregationSummary() {
       totalTithe: summary.titheTotal ?? 0,
       totalExit: summary.exitTotal ?? 0,
       summaryType: (summary as any).summaryType || '',
+      summaryId: summary.id || '',
       createdAt: summary.createdAt || '',
       createdBy: summary.createdBy || '',
       approvedByTreasury: summary.approvedByTreasury || '',
@@ -497,9 +530,18 @@ export default function CongregationSummary() {
       
       <div className="lg:pl-64">
         <div className="p-6">
-          <div className="mb-6">
+          <div className="flex mb-6">
             <h1 className="text-2xl font-bold text-gray-900">Resumo Diário</h1>
             {/* <p className="text-gray-600">Gerencie os resumos financeiros das congregações</p> */}
+            {(canAccessLaunches) && 
+            <Button
+              //variant="defaulSt"
+              onClick={() => router.push('/launches')}
+              className="md:flex items-center gap-2 ml-2 bg-indigo-800 hover:bg-indigo-800 text-white"
+            >
+              <List className="h-4 w-4" />
+              Lançamentos
+            </Button>}
           </div>
 
           {/* Seleção de Congregações - Sempre Visível */}
@@ -540,7 +582,7 @@ export default function CongregationSummary() {
           <Tabs value={mainActiveTab} onValueChange={setMainActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               {session?.user?.canGenerateSummary && (
-                <TabsTrigger value="gerar">Gerar Resumo</TabsTrigger>
+                <TabsTrigger value="gerar" >Gerar Resumo</TabsTrigger>
               )}
               {session?.user?.canListSummary && (
                 <TabsTrigger value="listar">Visualizar Resumos</TabsTrigger>
@@ -630,8 +672,8 @@ export default function CongregationSummary() {
                         </Popover>
                       </div>
 
-                      <div className="flex items-end">
-                        <Button onClick={handleCreateSummary} disabled={isLoading || !summaryType} className="w-full">
+                      <div className="flex items-end pt-2">
+                        <Button onClick={handleCreateSummary} disabled={isLoading || !summaryType} className="w-full bg-amber-700 text-white">
                           {isLoading ? 'Gerando...' : 'Gerar Resumo'}
                         </Button>
                       </div>
@@ -787,6 +829,7 @@ export default function CongregationSummary() {
                                 >
                                   Editar
                                 </Button>
+                                {session.user?.canDeleteSummary && (
                                 <Button
                                   variant="destructive"
                                   size="sm"
@@ -795,6 +838,7 @@ export default function CongregationSummary() {
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
+                                )}
                                 {session.user?.canGenerateReport && (
                                 <Button variant="outline" size="sm" onClick={() => handlePrintSummary(summary)}>
                                   <Printer className="h-4 w-4" />
@@ -908,6 +952,7 @@ export default function CongregationSummary() {
                               >
                               <Edit className="h-4 w-4 mr-1" /> Editar
                               </Button>
+                              {session.user?.canDeleteSummary && (
                               <Button
                                 variant="destructive"
                                 size="sm"
@@ -917,11 +962,7 @@ export default function CongregationSummary() {
                               >
                                 <Trash2 className="h-4 w-4 mr-2" /> Excluir
                               </Button>
-                              {session.user?.canGenerateReport && (
-                              <Button variant="outline" size="sm" onClick={() => handlePrintSummary(summary)}>
-                                <Printer className="h-4 w-4" />
-                              </Button>
-                              )}                              
+                              )}
                             </div>
                         </CardContent>
                       </Card>
@@ -1169,9 +1210,9 @@ export default function CongregationSummary() {
                         </div>
                       )}
                     </div>
-                      <div className='grid grid-cols-1 md:grid-cols-3 gap-4 mt-2'>
+                      {/* <div className='grid grid-cols-1 md:grid-cols-3 gap-4 mt-2'> */}
 
-                        <div className='col-span-1'>
+                        {/* <div className='col-span-1'>
                             <Label htmlFor="talonNumber">Nr. Talão</Label>
                             <Input
                               id="talonNumber"
@@ -1184,7 +1225,7 @@ export default function CongregationSummary() {
                               required
                               disabled={editFormData.status === 'APPROVED'}
                             />
-                        </div>
+                        </div> */}
 
                         {/* <div>
                         <Label htmlFor="depositValue">Valor Depósito</Label>
@@ -1222,7 +1263,7 @@ export default function CongregationSummary() {
                               disabled={editFormData.status === 'APPROVED'}                              
                             />  
                         </div> */}                     
-                      </div>
+                      {/* </div> */}
 
                       {/* ⭐️ NOVO: CARD TOTAL DE DEPÓSITO + ESPÉCIE ⭐️ */}
                         {/* <div className="bg-yellow-50 p-1 rounded-lg mt-2">
@@ -1492,6 +1533,11 @@ export default function CongregationSummary() {
               </Tabs>
               
               <DialogFooter className="mt-auto">
+                {session.user?.canReportSummary && editFormData.summaryId && (
+                  <Button variant="outline" size="sm" onClick={() => handlePrintSummary(editFormData.summaryId)}>
+                    <Printer className="h-4 w-4" />
+                  </Button>
+                )}    
                 <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
                   Cancelar
                 </Button>
@@ -1504,6 +1550,27 @@ export default function CongregationSummary() {
           </Dialog>
         </div>
       </div>
+      {/* Botão flutuante de voltar ao topo - apenas mobile */}
+      {pageYPosition > 10 && (
+        <a
+          href="#container"
+          style={{
+            position: "fixed",
+            bottom: "20px",
+            right: "15px",
+            background: "#333",
+            color: "white",
+            padding: "10px 15px",
+            borderRadius: "5px",
+            textDecoration: "none",
+          }}
+          onClick={(e) => {
+            e.preventDefault();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        >
+          <ArrowUp className="h-6 w-6" />
+        </a>)}
     </div>
   )
 }

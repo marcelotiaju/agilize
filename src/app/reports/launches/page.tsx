@@ -82,8 +82,14 @@ export default function Reports() {
   }, [session])
 
     useEffect(() => {
-    fetchCongregations()
-  }, [])
+        if (availableTypes.length === 1 && selectedTypes.length === 0) {
+            setSelectedTypes([availableTypes[0].value])
+        }
+    }, [availableTypes, selectedTypes.length])
+
+    useEffect(() => {
+      fetchCongregations()
+    }, [])
 
     const fetchCongregations = async () => {
     try {

@@ -12,6 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Plus, Edit, Trash2, Copy } from 'lucide-react'
 import { PermissionGuard } from '@/components/auth/PermissionGuard'
+import { ca } from 'date-fns/locale'
 
 interface Profile {
   id: string
@@ -60,7 +61,11 @@ export default function Profiles() {
     canApproveAccountant: false,
     canApproveDirector: false,
     canDeleteLaunch : false,
-    canImportLaunch : false
+    canImportLaunch : false,
+    canReportLaunches : false,
+    canReportContributors: false,
+    canReportSummary: false,
+    canDeleteSummary: false
   })
 
   useEffect(() => {
@@ -116,7 +121,12 @@ export default function Profiles() {
       canApproveAccountant: false,
       canApproveDirector: false,
       canDeleteLaunch : false,
-      canImportLaunch : false
+      canImportLaunch : false,
+      canReportLaunches : false,
+      canReportContributors: false,
+      canReportMonthlySummary: false,
+      canReportSummary: false,
+      canDeleteSummary: false
     })
   }
 
@@ -339,7 +349,7 @@ export default function Profiles() {
                           </div>
                           <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canExclude} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canExclude: v as boolean }))} />
-                            <Label>Cancelar Registros</Label>
+                            <Label>Deletar Registros</Label>
                           </div>
                         </div>
                       </div>
@@ -370,6 +380,10 @@ export default function Profiles() {
                             <Label>Listar Resumo</Label>
                           </div>
                           <div className="flex items-center space-x-2">
+                            <Checkbox checked={profileForm.canDeleteSummary} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canDeleteSummary: v as boolean }))} />
+                            <Label>Deletar Resumo</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canApproveTreasury} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveTreasury: v as boolean }))} />
                             <Label>Aprovar como Tesoureiro</Label>
                           </div>
@@ -388,9 +402,21 @@ export default function Profiles() {
                         <h4 className="font-medium mb-2">Relatórios</h4>
                         <div className="space-y-2">
                           <div className="flex items-center space-x-2">
-                            <Checkbox checked={profileForm.canGenerateReport} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canGenerateReport: v as boolean }))} />
-                            <Label>Imprimir Relatórios</Label>
+                            <Checkbox checked={profileForm.canReportLaunches} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canReportLaunches: v as boolean }))} />
+                            <Label>Relatório de Lançamentos</Label>
                           </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox checked={profileForm.canReportContributors} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canReportContributors: v as boolean }))} />
+                            <Label>Relatório de Contribuintes</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox checked={profileForm.canReportSummary} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canReportSummary: v as boolean }))} />
+                            <Label>Relatório de Resumo Diário</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox checked={profileForm.canReportMonthlySummary} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canReportMonthlySummary: v as boolean }))} />
+                            <Label>Relatório de Resumo Mensal</Label>
+                          </div>                          
                         </div>
                       </div>
                     </div>

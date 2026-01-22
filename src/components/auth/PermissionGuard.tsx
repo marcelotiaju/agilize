@@ -25,7 +25,10 @@ interface PermissionGuardProps {
     canListSummary?: boolean,
     canGenerateSummary?: boolean,
     canManageUsers?: boolean,
-    canGenerateReport?: boolean,
+    canApproveDirector?: boolean,
+    canReportLaunches?: boolean,
+    canReportContributors?: boolean,
+    canReportSummary?: boolean,
     canDeleteLaunch ?: boolean
     
   }

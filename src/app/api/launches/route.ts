@@ -30,6 +30,38 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit
 
     let where: any = {}
+
+    // 1. Definir os tipos permitidos com base nas permissões da sessão
+    const allowedTypes: string[] = [];
+    if (session.user.canLaunchTithe) allowedTypes.push('DIZIMO');
+    if (session.user.canLaunchCarneReviver) allowedTypes.push('CARNE_REVIVER');
+    if (session.user.canLaunchVote) allowedTypes.push('VOTO');
+    if (session.user.canLaunchEbd) allowedTypes.push('EBD');
+    if (session.user.canLaunchCampaign) allowedTypes.push('CAMPANHA');
+    if (session.user.canLaunchMission) allowedTypes.push('MISSAO');
+    if (session.user.canLaunchCircle) allowedTypes.push('CIRCULO');
+    if (session.user.canLaunchOffering) allowedTypes.push('OFERTA_CULTO');
+    if (session.user.canLaunchExpense) allowedTypes.push('SAIDA');
+
+    // 2. Aplicar o filtro de segurança
+    // Se o usuário já filtrou por um tipo específico via UI, verificamos se ele tem acesso a esse tipo
+    const typeFilter = searchParams.get('type');
+    if (typeFilter) {
+      if (allowedTypes.includes(typeFilter)) {
+        where.type = typeFilter;
+      // } else {
+      //   // Se ele tentou filtrar por algo que não tem acesso, forçamos um filtro que resultará em vazio
+      //   where.type = 'NONE'; 
+      }
+    } else {
+      // Se ele não filtrou nada, mostramos todos os tipos que ele tem permissão
+      where.type = { in: allowedTypes };
+    }
+
+    // Se o usuário não tem nenhuma permissão de lançamento, retorna lista vazia
+    if (allowedTypes.length === 0) {
+      return NextResponse.json({ launches: [], totalCount: 0, totalPages: 0 });
+    }
     
     const userCongregations = await prisma.userCongregation.findMany({
       where: {

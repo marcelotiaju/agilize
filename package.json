@@ -36,6 +36,7 @@
     "exceljs": "^4.4.0",
     "jsonwebtoken": "^9.0.3",
     "jspdf": "^4.0.0",
+    "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.562.0",
     "mysql2": "^3.16.0",
     "next": "^16.1.1",

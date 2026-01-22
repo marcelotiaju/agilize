@@ -31,7 +31,7 @@ export function Pagination({
         </span>
       </div>
       
-      <div className="flex items-center gap-2">
+      {/* <div className="flex items-center gap-2">
         <Select
           value={itemsPerPage.toString()}
           onValueChange={(value) => onItemsPerPageChange(Number(value))}
@@ -46,9 +46,9 @@ export function Pagination({
             <SelectItem value="50">50 por página</SelectItem>
           </SelectContent>
         </Select>
-      </div>
+      </div> */}
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 mr-0 md:mr-32">
         <Button
           variant="outline"
           size="sm"
