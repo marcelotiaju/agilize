@@ -16,7 +16,7 @@ const base64String = Buffer.from(imageFile).toString('base64');
 
 // Função auxiliar para formatar moeda
 const formatCurrency = (val: number, showValues: boolean) => {
-  if (!showValues) return val > 0 ? 'xxx' : '-'
+  if (!showValues) return val > 0 ? 'X' : '-'
   if (val === 0) return '-'
   return val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }

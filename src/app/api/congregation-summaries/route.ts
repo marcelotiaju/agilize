@@ -145,12 +145,12 @@ export async function POST(request: NextRequest) {
       // case 'MISSAO':
       //   allowedTypes = ['MISSAO']
       //   break
-      case 'CARNE_REVIVER':
-        allowedTypes = ['CARNE_REVIVER','SAIDA']
-        break
-      case 'CIRCULO':
-        allowedTypes = ['CIRCULO','SAIDA']
-        break
+      // case 'CARNE_REVIVER':
+      //   allowedTypes = ['CARNE_REVIVER','SAIDA']
+      //   break
+      // case 'CIRCULO':
+      //   allowedTypes = ['CIRCULO','SAIDA']
+      //   break
       default:
         return NextResponse.json({ error: "Tipo de resumo inválido" }, { status: 400 })
     }
@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
       where: {
         congregationId,
         date: { gte: startUtc, lte: endUtc },
-        type: { in: allowedTypes },
+        type: { in: allowedTypes as any },
         status: { in: ["NORMAL", "APPROVED", "EXPORTED"], not: "IMPORTED" },
         summaryId: null
       },
@@ -198,8 +198,9 @@ export async function POST(request: NextRequest) {
     if (launches.length === 0) {
         const typeLabel = summaryType === 'PADRAO' ? 'Padrão' : 
                         //  summaryType === 'MISSAO' ? 'Missão' :
-                         summaryType === 'CARNE_REVIVER' ? 'Carnê Reviver' :
-                         summaryType === 'CIRCULO' ? 'Círculo de Oração' : 'selecionado'
+                        //  summaryType === 'CARNE_REVIVER' ? 'Carnê Reviver' :
+                        //  summaryType === 'CIRCULO' ? 'Círculo de Oração' : 
+                         'selecionado'
         return NextResponse.json({ error: `Não há lançamentos do tipo ${typeLabel} no período para criar um resumo.` }, { status: 400 });
     }
 
@@ -221,10 +222,10 @@ export async function POST(request: NextRequest) {
         entradaSummary.dizimo += launch.value || 0
       } else if (launch.type === "MISSAO") {
         entradaSummary.mission += launch.value || 0
-      } else if (launch.type === "CIRCULO") {
-        entradaSummary.circle += launch.value || 0
-      } else if (launch.type === "CARNE_REVIVER") {
-        entradaSummary.carneReviver += launch.value || 0
+      // } else if (launch.type === "CIRCULO") {
+      //   entradaSummary.circle += launch.value || 0
+      // } else if (launch.type === "CARNE_REVIVER") {
+      //   entradaSummary.carneReviver += launch.value || 0
       } else if (launch.type === "SAIDA") {
         saidaSummary.saida += launch.value || 0
         saidaSummary.total += launch.value || 0
@@ -250,10 +251,10 @@ export async function POST(request: NextRequest) {
       totalEntradas = entradaSummary.dizimo + entradaSummary.oferta + entradaSummary.votos + entradaSummary.ebd + entradaSummary.campanha + entradaSummary.mission
     // } else if (summaryType === 'MISSAO') {
     //   totalEntradas = entradaSummary.mission
-    } else if (summaryType === 'CARNE_REVIVER') {
-      totalEntradas = entradaSummary.carneReviver
-    } else if (summaryType === 'CIRCULO') {
-      totalEntradas = entradaSummary.circle
+    // } else if (summaryType === 'CARNE_REVIVER') {
+    //   totalEntradas = entradaSummary.carneReviver
+    // } else if (summaryType === 'CIRCULO') {
+    //   totalEntradas = entradaSummary.circle
     }
 
     const summary = await prisma.congregationSummary.create({
@@ -289,6 +290,7 @@ export async function POST(request: NextRequest) {
         where: {
             congregationId: summary.congregationId,
             date: { gte: startUtc, lte: endUtc },
+            type: { in: allowedTypes as any },
             summaryId: null,
             status:  { in: ["NORMAL", "APPROVED", "EXPORTED"] },
         },

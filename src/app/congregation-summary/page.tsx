@@ -159,7 +159,7 @@ export default function CongregationSummary() {
         user?.canLaunchEbd || 
         user?.canLaunchCampaign ||
         user?.canLaunchMission) {
-      types.push({ value: 'PADRAO', label: 'Padrão (Dízimos, Oferta do Culto, Votos, EBD, Campanha, Missão)' })
+      types.push({ value: 'PADRAO', label: 'Padrão (Dízimo, Oferta do Culto, EBD,  Missão, Campanha, Voto)' })
     }
     
     // Missão
@@ -168,14 +168,14 @@ export default function CongregationSummary() {
     // }
     
     // Carnê Reviver
-    if (user?.canLaunchCarneReviver) {
-      types.push({ value: 'CARNE_REVIVER', label: 'Carnê Reviver' })
-    }
+    // if (user?.canLaunchCarneReviver) {
+    //   types.push({ value: 'CARNE_REVIVER', label: 'Carnê Reviver' })
+    // }
     
     // Círculo de Oração
-    if (user?.canLaunchCircle) {
-      types.push({ value: 'CIRCULO', label: 'Círculo de Oração' })
-    }
+    // if (user?.canLaunchCircle) {
+    //   types.push({ value: 'CIRCULO', label: 'Círculo de Oração' })
+    // }
     
     return types
   }, [session])
@@ -240,7 +240,18 @@ export default function CongregationSummary() {
     if (response.ok) {
       const blob = await response.blob()
       const url = URL.createObjectURL(blob)
-      window.open(url, '_blank')
+
+      // LOGICA PARA DOWNLOAD
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `Relatorio_Resumo.pdf` // Nome do arquivo
+        document.body.appendChild(link)
+        link.click()
+        
+        // Limpeza
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+      //window.open(url, '_blank')
     }
   }
 
@@ -545,10 +556,10 @@ export default function CongregationSummary() {
           </div>
 
           {/* Seleção de Congregações - Sempre Visível */}
-          <Card className="mb-6">
-            <CardHeader>
+          <Card className="mb-2">
+            {/* <CardHeader>
               <CardTitle>Seleção de Congregação(ões)</CardTitle>
-            </CardHeader>
+            </CardHeader> */}
             <CardContent>
               <Label htmlFor="congregation">Congregação(ões)</Label>
               <div className="space-y-2 mt-2 border p-3 rounded-md max-h-40 overflow-y-auto">
@@ -593,11 +604,11 @@ export default function CongregationSummary() {
             {session?.user?.canGenerateSummary && (
             <TabsContent value="gerar">
               <Card>
-                <CardHeader>
+                {/* <CardHeader>
                   <CardTitle>Gerar Novo Resumo</CardTitle>
-                </CardHeader>
+                </CardHeader> */}
                 <CardContent>
-                  <div className="space-y-4">
+                  <div className="space-y-1">
                     <div className="w-full">
                       <Label htmlFor="summaryType">Tipo de Resumo</Label>
                       <Select
@@ -689,7 +700,7 @@ export default function CongregationSummary() {
             <TabsContent value="listar">
               <Card>
             <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-start gap-3">
-              <CardTitle>Filtrar Resumos</CardTitle>
+              {/* <CardTitle>Filtrar Resumos</CardTitle> */}
               <CardDescription>
                 {summaries.length > 0 
                   ? `Mostrando ${summaries.length} resumo(s)` 
@@ -822,13 +833,6 @@ export default function CongregationSummary() {
                             </TableCell>
                             <TableCell>
                               <div className="flex space-x-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleEditSummary(summary)}
-                                >
-                                  Editar
-                                </Button>
                                 {session.user?.canDeleteSummary && (
                                 <Button
                                   variant="destructive"
@@ -839,6 +843,13 @@ export default function CongregationSummary() {
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                                 )}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEditSummary(summary)}
+                                  >
+                                  Editar
+                                  </Button>
                                 {session.user?.canGenerateReport && (
                                 <Button variant="outline" size="sm" onClick={() => handlePrintSummary(summary)}>
                                   <Printer className="h-4 w-4" />
@@ -874,7 +885,7 @@ export default function CongregationSummary() {
                         </CardHeader>
                         <CardContent className="space-y-2 text-sm">
                             <div className="flex justify-between">
-                                <span>Dízimos:</span>
+                                <span>Dízimo:</span>
                                 <span className="font-medium text-blue-600">
                                     R$ {(summary.titheTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
@@ -944,14 +955,6 @@ export default function CongregationSummary() {
                             </div>
 
                             <div className="flex justify-between space-x-2 pt-3 border-t">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleEditSummary(summary)}
-                                // className="w-full"
-                              >
-                              <Edit className="h-4 w-4 mr-1" /> Editar
-                              </Button>
                               {session.user?.canDeleteSummary && (
                               <Button
                                 variant="destructive"
@@ -963,6 +966,14 @@ export default function CongregationSummary() {
                                 <Trash2 className="h-4 w-4 mr-2" /> Excluir
                               </Button>
                               )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditSummary(summary)}
+                                // className="w-full"
+                              >
+                              <Edit className="h-4 w-4 mr-1" /> Editar
+                              </Button>
                             </div>
                         </CardContent>
                       </Card>
@@ -977,7 +988,7 @@ export default function CongregationSummary() {
           </Tabs>
           {/* Diálogo de Edição */}
           <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-            <DialogContent className="max-h-[85vh] overflow-y-auto h-[90vh]">
+            <DialogContent className="max-h-[90vh] overflow-y-auto h-[90vh]">
             <DialogHeader>
               <DialogTitle>Editar Resumo</DialogTitle>
               <DialogDescription className="sr-only">
@@ -992,11 +1003,11 @@ export default function CongregationSummary() {
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="summaries" className="flex items-center">
                     <FileText className="mr-2 h-4 w-4" />
-                    Resumos
+                    Resumo
                   </TabsTrigger>
                   <TabsTrigger value="launches" className="flex items-center" disabled={!selectedSummary}>
                     <List className="mr-2 h-4 w-4" />
-                    Lançamentos
+                    Lancam.
                   </TabsTrigger>
                   <TabsTrigger value="logs" className="flex items-center" disabled={!selectedSummary}>
                     <List className="mr-2 h-4 w-4" />
@@ -1011,16 +1022,16 @@ export default function CongregationSummary() {
                       {/* Totais */}
                       {editFormData && (
                         <div className="pt-0 mt-0">
-                          <h4 className="font-medium mb-0">Totais</h4>
+                          {/* <h4 className="font-medium mb-0">Totais</h4> */}
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="flex flex-col gap-1 justify-between">
+                              <div className="flex flex-col gap-0 justify-between">
                                   {/* Mostrar cards baseado no tipo de resumo */}
-                                  <div className="flex flex-col gap-1">
+                                  <div className="flex flex-col gap-0">
                                   {editFormData.summaryType === 'PADRAO' && (
                                     <>
                                       {/* CARD DE DÍZIMOS */}
                                       <div className="bg-blue-50 p-1 rounded-lg flex justify-between items-center">
-                                          <h5 className="font-medium text-blue-700">Dízimos</h5>
+                                          <h5 className="font-medium text-blue-700">Dízimo</h5>
                                           <div className="text-sm font-semibold flex justify-end">
                                               R$ {Number(editFormData.titheTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                           </div>
@@ -1028,19 +1039,11 @@ export default function CongregationSummary() {
 
                                       {/* CARD DE OFFERTA DE CULTO*/}
                                       <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
-                                          <h5 className="font-medium text-green-700">Oferta de Culto</h5>
+                                          <h5 className="font-medium text-green-700">Oferta do Culto</h5>
                                           <div className="text-sm font-semibold flex justify-end">
                                               R$ {Number(editFormData.offerTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                           </div>
                                       </div>       
-
-                                      {/* CARD DE VOTOS*/}
-                                      <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
-                                          <h5 className="font-medium text-green-700">Votos</h5>
-                                          <div className="text-sm font-semibold flex justify-end">
-                                              R$ {Number(editFormData.votesTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                          </div>
-                                      </div>     
 
                                       {/* CARD DE EBD*/}
                                       <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
@@ -1050,13 +1053,6 @@ export default function CongregationSummary() {
                                           </div>
                                       </div>     
 
-                                      {/* CARD DE CAMPANHA*/}
-                                      <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
-                                          <h5 className="font-medium text-green-700">Campanha</h5>
-                                          <div className="text-sm font-semibold flex justify-end">
-                                              R$ {Number(editFormData.campaignTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                          </div>
-                                      </div>
 
                                       {/* CARD DE MISSAO */}
                                       <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
@@ -1065,6 +1061,22 @@ export default function CongregationSummary() {
                                               R$ {Number(editFormData.missionTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                           </div>
                                       </div>
+
+                                      {/* CARD DE CAMPANHA*/}
+                                      <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
+                                          <h5 className="font-medium text-green-700">Campanha</h5>
+                                          <div className="text-sm font-semibold flex justify-end">
+                                              R$ {Number(editFormData.campaignTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </div>
+                                      </div>
+
+                                      {/* CARD DE VOTOS*/}
+                                      <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
+                                          <h5 className="font-medium text-green-700">Voto</h5>
+                                          <div className="text-sm font-semibold flex justify-end">
+                                              R$ {Number(editFormData.votesTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </div>
+                                      </div>     
 
                                     </>
                                   )}
@@ -1097,21 +1109,15 @@ export default function CongregationSummary() {
                                   {!editFormData.summaryType && (
                                     <>
                                       <div className="bg-blue-50 p-1 rounded-lg flex justify-between items-center">
-                                          <h5 className="font-medium text-blue-700">Dízimos</h5>
+                                          <h5 className="font-medium text-blue-700">Dízimo</h5>
                                           <div className="text-sm font-semibold flex justify-end">
                                               R$ {Number(editFormData.titheTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                           </div>
                                       </div>
                                       <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
-                                          <h5 className="font-medium text-green-700">Oferta de Culto</h5>
+                                          <h5 className="font-medium text-green-700">Oferta do Culto</h5>
                                           <div className="text-sm font-semibold flex justify-end">
                                               R$ {Number(editFormData.offerTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                          </div>
-                                      </div>
-                                      <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
-                                          <h5 className="font-medium text-green-700">Votos</h5>
-                                          <div className="text-sm font-semibold flex justify-end">
-                                              R$ {Number(editFormData.votesTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                           </div>
                                       </div>
                                       <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
@@ -1120,16 +1126,22 @@ export default function CongregationSummary() {
                                               R$ {Number(editFormData.ebdTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                           </div>
                                       </div>
+                                      <div className="bg-orange-50 p-1 rounded-lg flex justify-between items-center">
+                                          <h5 className="font-medium text-orange-700">Missão</h5>
+                                          <div className="text-sm font-semibold flex justify-end">
+                                              R$ {Number(editFormData.missionTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </div>
+                                      </div>
                                       <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
                                           <h5 className="font-medium text-green-700">Campanha</h5>
                                           <div className="text-sm font-semibold flex justify-end">
                                               R$ {Number(editFormData.campaignTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                           </div>
                                       </div>
-                                      <div className="bg-orange-50 p-1 rounded-lg flex justify-between items-center">
-                                          <h5 className="font-medium text-orange-700">Missão</h5>
+                                      <div className="bg-green-50 p-1 rounded-lg flex justify-between items-center">
+                                          <h5 className="font-medium text-green-700">Voto</h5>
                                           <div className="text-sm font-semibold flex justify-end">
-                                              R$ {Number(editFormData.missionTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                              R$ {Number(editFormData.votesTotal ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                           </div>
                                       </div>
                                       <div className="bg-yellow-50 p-1 rounded-lg flex justify-between items-center">
@@ -1150,7 +1162,7 @@ export default function CongregationSummary() {
                                               {(() => {
                                                 let totalEntradas = 0
                                                 if (editFormData.summaryType === 'PADRAO') {
-                                                  totalEntradas = Number(editFormData.titheTotal ?? 0) + Number(editFormData.offerTotal ?? 0) + Number(editFormData.votesTotal ?? 0) + Number(editFormData.ebdTotal ?? 0) + Number(editFormData.campaignTotal ?? 0 + Number(editFormData.missionTotal ?? 0))
+                                                  totalEntradas = Number(editFormData.titheTotal ?? 0) + Number(editFormData.offerTotal ?? 0) + Number(editFormData.votesTotal ?? 0) + Number(editFormData.ebdTotal ?? 0) + Number(editFormData.campaignTotal ?? 0) + Number(editFormData.missionTotal ?? 0)
                                                 // } else if (editFormData.summaryType === 'MISSAO') {
                                                 //   totalEntradas = Number(editFormData.missionTotal ?? 0)
                                                 } else if (editFormData.summaryType === 'CARNE_REVIVER') {
@@ -1169,10 +1181,10 @@ export default function CongregationSummary() {
                               </div>
                               
                               {/* ⭐️ COLUNA DIREITA: SAÍDAS E TOTAIS FINAIS ⭐️ */}
-                              <div className="flex flex-col gap-4 justify-between">
-                                  <div className="flex flex-col gap-4">
+                              <div className="flex flex-col gap-1 justify-between">
+                                  <div className="flex flex-col gap-1">
                                   {/* 3. CARD TOTAL DE SAÍDAS */}
-                                  <div className="bg-red-50 p-1 *:rounded-lg flex justify-between items-center md:mb-33">
+                                  <div className="bg-red-50 p-1 rounded-lg flex justify-between items-center md:mb-33">
                                       <h5 className="font-medium text-red-700">Saídas</h5>
                                       <div className="text-sm font-semibold ">
                                           R$ {Number(editFormData.exitTotal).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -1189,7 +1201,7 @@ export default function CongregationSummary() {
                                               R$ {(() => {
                                                 let totalEntradas = 0
                                                 if (editFormData.summaryType === 'PADRAO') {
-                                                  totalEntradas = Number(editFormData.titheTotal ?? 0) + Number(editFormData.offerTotal ?? 0) + Number(editFormData.votesTotal ?? 0) + Number(editFormData.ebdTotal ?? 0) + Number(editFormData.campaignTotal ?? 0 + Number(editFormData.missionTotal ?? 0))
+                                                  totalEntradas = Number(editFormData.titheTotal ?? 0) + Number(editFormData.offerTotal ?? 0) + Number(editFormData.votesTotal ?? 0) + Number(editFormData.ebdTotal ?? 0) + Number(editFormData.campaignTotal ?? 0) + Number(editFormData.missionTotal ?? 0)
                                                 // } else if (editFormData.summaryType === 'MISSAO') {
                                                 //   totalEntradas = Number(editFormData.missionTotal ?? 0)
                                                 } else if (editFormData.summaryType === 'CARNE_REVIVER') {
@@ -1278,9 +1290,9 @@ export default function CongregationSummary() {
                      
                       <div className="space-y-2">
                         {/* <h4 className="font-medium">Aprovações</h4> */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 mt-1">
                           {/* Botão Tesoureiro */}
-                          <div className="flex flex-col gap-2">
+                          <div className="flex flex-col gap-0">
                             {/* <Label>Tesoureiro</Label> */}
                             <Button
                               type="button"
@@ -1326,7 +1338,7 @@ export default function CongregationSummary() {
                           </div>
 
                           {/* Botão Contador */}
-                          <div className="flex flex-col gap-2">
+                          <div className="flex flex-col gap-0">
                             {/* <Label>Contador</Label> */}
                             <Button
                               type="button"
@@ -1371,7 +1383,7 @@ export default function CongregationSummary() {
                           </div>
 
                           {/* Botão Dirigente */}
-                          <div className="flex flex-col gap-2">
+                          <div className="flex flex-col gap-0">
                             {/*<Label>Dirigente</Label>*/}
                             <Button
                               type="button"
@@ -1532,9 +1544,9 @@ export default function CongregationSummary() {
                 </div>
               </Tabs>
               
-              <DialogFooter className="mt-auto">
+              <DialogFooter className="mt-auto mt-[-8]">
                 {session.user?.canReportSummary && editFormData.summaryId && (
-                  <Button variant="outline" size="sm" onClick={() => handlePrintSummary(editFormData.summaryId)}>
+                  <Button className="mb-2" variant="outline" size="sm" onClick={() => handlePrintSummary(editFormData.summaryId)}>
                     <Printer className="h-4 w-4" />
                   </Button>
                 )}    

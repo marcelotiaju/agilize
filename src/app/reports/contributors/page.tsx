@@ -51,11 +51,29 @@ export default function ReportsPage() {
     const [selectedLaunchTypes, setSelectedLaunchTypes] = useState<string[]>([])
     const [previewData, setPreviewData] = useState<PreviewData | null>(null)
 
-    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString())
+    const [availableYears, setAvailableYears] = useState<string[]>([])
+    const [selectedYear, setSelectedYear] = useState("")
     const [showValues, setShowValues] = useState(true)
     const [contributionFilter, setContributionFilter] = useState('BOTH') // BOTH, WITH_LAUNCH, WITHOUT_LAUNCH
 
-    const years = Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString())
+    //const years = Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString())
+
+    const fetchAvailableYears = async () => {
+        try {
+            const response = await fetch('/api/reports/available-years')
+            if (response.ok) {
+                const years: string[] = await response.json()
+                setAvailableYears(years)
+                
+                // Define o ano mais recente (primeiro do array) como default
+                if (years.length > 0 && !selectedYear) {
+                    setSelectedYear(years[0])
+                }
+            }
+        } catch (error) {
+            console.error('Erro ao buscar anos disponíveis:', error)
+        }
+    }
 
     const availableTypes = useMemo(() => {
         const types: { value: string; label: string }[] = []
@@ -83,6 +101,7 @@ export default function ReportsPage() {
     }, [availableLaunchTypes, selectedLaunchTypes.length])
 
     useEffect(() => {
+        fetchAvailableYears()
         fetchCongregations()
     }, [])
 
@@ -255,9 +274,17 @@ export default function ReportsPage() {
                                 <div className="space-y-2">
                                     <Label>Ano de Referência</Label>
                                     <Select value={selectedYear} onValueChange={setSelectedYear}>
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Selecione o ano" />
+                                        </SelectTrigger>
                                         <SelectContent>
-                                            {years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+                                            {availableYears.length > 0 ? (
+                                                availableYears.map(year => (
+                                                    <SelectItem key={year} value={year}>{year}</SelectItem>
+                                                ))
+                                            ) : (
+                                                <SelectItem value="none" disabled>Carregando anos...</SelectItem>
+                                            )}
                                         </SelectContent>
                                     </Select>
                                 </div>

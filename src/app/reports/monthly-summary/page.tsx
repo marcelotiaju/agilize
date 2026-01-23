@@ -51,17 +51,41 @@ export default function ReportsPage() {
     const [selectedLaunchTypes, setSelectedLaunchTypes] = useState<string[]>([])
     const [previewData, setPreviewData] = useState<PreviewData | null>(null)
 
+    const [availableYears, setAvailableYears] = useState<string[]>([])
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString())
     //const [showValues, setShowValues] = useState(true)
     //const [contributionFilter, setContributionFilter] = useState('BOTH') // BOTH, WITH_LAUNCH, WITHOUT_LAUNCH
 
-    const years = Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString())
+    //const years = Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString())
+
+    const fetchAvailableYears = async () => {
+        try {
+            const response = await fetch('/api/reports/available-years')
+            if (response.ok) {
+                const years: string[] = await response.json()
+                setAvailableYears(years)
+                
+                // Define o ano mais recente (primeiro do array) como default
+                if (years.length > 0 && !selectedYear) {
+                    setSelectedYear(years[0])
+                }
+            }
+        } catch (error) {
+            console.error('Erro ao buscar anos disponíveis:', error)
+        }
+    }
 
     const availableLaunchTypes = useMemo(() => {
     return [
-            (session?.user as any)?.canLaunchTithe ? {value: 'DIZIMO', label: 'Dízimo' } : null,
+        (session?.user as any)?.canLaunchTithe ? {value: 'DIZIMO', label: 'Dízimo' } : null,
+        (session?.user as any)?.canLaunchServiceOffer ? {value: 'OFERTA_CULTO', label: 'Oferta do Culto' } : null,
+        (session?.user as any)?.canLaunchEbd ? {value: 'EBD', label: 'Ebd' } : null,
+        (session?.user as any)?.canLaunchMission ? {value: 'MISSAO', label: 'Missão' } : null,
+        (session?.user as any)?.canLaunchCampaign ? {value: 'CAMPANHA', label: 'Campanha' } : null,
+        (session?.user as any)?.canLaunchVoto ? {value: 'VOTO', label: 'Voto' } : null,
+        (session?.user as any)?.canLaunchCircle ? {value: 'CIRCULO', label: 'Círculo' } : null,
         (session?.user as any)?.canLaunchCarneReviver ? {value: 'CARNE_REVIVER', label: 'Carnê Reviver' } : null,
-        {value: 'SAIDA', label: 'Saída' },
+        (session?.user as any)?.canLaunchExpense ? {value: 'SAIDA', label: 'Saída' } : null,
     ]   
     }, [session] ).filter(Boolean) as {value: string, label: string}[]
 
@@ -72,6 +96,7 @@ export default function ReportsPage() {
     }, [availableLaunchTypes, selectedLaunchTypes.length])
 
     useEffect(() => {
+        fetchAvailableYears()
         fetchCongregations()
     }, [])
 
@@ -239,9 +264,17 @@ export default function ReportsPage() {
                                 <div className="space-y-2">
                                     <Label>Ano de Referência</Label>
                                     <Select value={selectedYear} onValueChange={setSelectedYear}>
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Selecione o ano" />
+                                        </SelectTrigger>
                                         <SelectContent>
-                                            {years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+                                            {availableYears.length > 0 ? (
+                                                availableYears.map(year => (
+                                                    <SelectItem key={year} value={year}>{year}</SelectItem>
+                                                ))
+                                            ) : (
+                                                <SelectItem value="none" disabled>Carregando anos...</SelectItem>
+                                            )}
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -419,6 +452,24 @@ export default function ReportsPage() {
                                                     </TableRow>
                                                 ))}
                                             </TableBody>
+                                            {/* Rodapé com os Totais */}
+                                            <tfoot className="bg-gray-50 font-bold">
+                                                <TableRow>
+                                                    <TableCell>TOTAIS</TableCell>
+                                                    <TableCell className="text-right text-green-600">
+                                                        {formatCurrency(previewData?.monthlyData.reduce((acc, d) => acc + d.income, 0) || 0)}
+                                                    </TableCell>
+                                                    <TableCell className="text-right text-red-600">
+                                                        {formatCurrency(previewData?.monthlyData.reduce((acc, d) => acc + d.expense, 0) || 0)}
+                                                    </TableCell>
+                                                    <TableCell className="text-right" style={{ color: (previewData?.monthlyData.reduce((acc, d) => acc + d.income, 0) || 0) - (previewData?.monthlyData.reduce((acc, d) => acc + d.expense, 0) || 0) >= 0 ? '#16a34a' : '#dc2626' }}>
+                                                        {formatCurrency(
+                                                            (previewData?.monthlyData.reduce((acc, d) => acc + d.income, 0) || 0) - 
+                                                            (previewData?.monthlyData.reduce((acc, d) => acc + d.expense, 0) || 0)
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+                                            </tfoot>
                                         </Table>
                                     </CardContent>
                                 </Card>

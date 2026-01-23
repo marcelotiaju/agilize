@@ -7,6 +7,7 @@ import autoTable from "jspdf-autotable"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { zonedTimeToUtc, utcToZonedTime } from 'date-fns-tz'
+import { Footer } from "react-day-picker"
 const fs = require('fs');
 //const imagePath = path.join(process.cwd(), '../Logo.png');
 
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest) {
       expense: 0,
       total: 0
     }));
-console.log(launches);
+    // 2. Preencher a estrutura iterando sobre os lançamentos 
     launches.forEach(l => {
       const month = new Date(l.date).getUTCMonth();
       const value = Number(l.value);
@@ -123,7 +124,7 @@ console.log(launches);
     //doc.text('RELAÇÃO ANUAL DE CONTRIBUINTES', 148, 15, { align: 'center' })
     doc.setFontSize(10).text(`ANO: ${year}`, margin, y)
     y += 4
-    doc.setFontSize(10).text(`TIPOS DE LANÇAMENTO: ${launchTypes.join(', ')}`, margin, y)
+    doc.setFontSize(8).text(`TIPOS DE LANÇAMENTO: ${launchTypes.join(', ')}`, margin, y)
 
     // Direita: Usuário e Data (posicionando no yPos original do bloco)
     const rightAlignX = pageWidth - margin
@@ -138,13 +139,21 @@ console.log(launches);
 
     const tableData = monthsNames.map((name, i) => [
       name,
-      monthlyData[i].income.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', align: 'right'  }),
+      monthlyData[i].income.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', align: 'right' }),
       monthlyData[i].expense.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', align: 'right' }),
       monthlyData[i].total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', align: 'right' }),
     ])
 
     const total = monthlyData.reduce((acc, month) => acc + month.total, 0)
-    tableData.push([{ content: 'TOTAL GERAL', styles: { fontStyle: 'bold' } }, total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', align: 'right' })])
+    const totalIncome = monthlyData.reduce((a, b) => a + b.income, 0);
+    const totalExpense = monthlyData.reduce((a, b) => a + b.expense, 0);
+
+    tableData.push([
+      { content: 'TOTAL GERAL', styles: { fontStyle: 'bold' } }, 
+      { content: totalIncome.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } },
+      { content: totalExpense.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } },
+      { content: (totalIncome - totalExpense).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } }
+    ])
 
     autoTable(doc, {
     startY: 45,
@@ -158,9 +167,29 @@ console.log(launches);
         monthlyData[i].expense.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
         monthlyData[i].total.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
     ]),
-      theme: 'grid',
-      headStyles: { fillColor: [0, 51, 102] }
-    })
+    theme: 'grid',
+    headStyles: { fillColor: [0, 51, 102] },
+
+    foot: [[
+          { content: 'TOTAL GERAL' }, 
+          { content: totalIncome.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) },
+          { content: totalExpense.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) },
+          { content: (totalIncome - totalExpense).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }
+          ]],
+        footStyles: { 
+        fillColor: [0, 51, 102], // Cinza claro
+        textColor: [240, 240, 240],       // Preto
+        fontStyle: 'bold',
+        halign: 'right'             // Alinhamento à direita (opcional)
+        },
+        columnStyles: {
+            0: { halign: 'left' },      // Mês à esquerda
+            1: { halign: 'right' },     // Entradas à direita
+            2: { halign: 'right' },     // Saídas à direita
+            3: { halign: 'right' }      // Saldo à direita
+        },
+      })
+    
 
     // Adicionar número da página em todas as páginas
     const totalPages = doc.getNumberOfPages()

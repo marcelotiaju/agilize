@@ -54,6 +54,11 @@ export async function GET(request: NextRequest) {
               select: {
                 name: true
               }
+            },
+            supplier: {
+              select: {
+                razaoSocial: true
+              }
             }
           },
           orderBy: [
@@ -138,12 +143,13 @@ export async function GET(request: NextRequest) {
     const processedLaunches = summary.Launch.map((launch: any) => {
       const launchDateZoned = utcToZonedTime(launch.date, timezone)
       const launchDate = format(launchDateZoned, 'dd/MM/yyyy', { locale: ptBR })
-      const contributorName = launch.contributor?.name || launch.contributorName || 'Não identificado'
+      const contributorName = launch.contributorId ? launch.contributor?.name || launch.contributorName  : 'Não identificado'
+      const supplierName = launch.supplierId ? launch.supplier?.razaoSocial || launch.supplierName || '' : ''
       const typeLabel = typeLabels[launch.type] || launch.type
       const value = Number(launch.value)
       const valueFormatted = formatCurrency(value)
-      
-      return { launchDate, contributorName, typeLabel, value, valueFormatted, type: launch.type }
+
+      return { launchDate, contributorName, supplierName, typeLabel, value, valueFormatted, type: launch.type }
     })
 
     // Calcular totais por tipo
@@ -151,8 +157,8 @@ export async function GET(request: NextRequest) {
     let totalGeral = 0
 
     processedLaunches.forEach((processed) => {
-      totaisPorTipo[processed.type] = (totaisPorTipo[processed.type] || 0) + processed.value
-      totalGeral += processed.value
+      totaisPorTipo[processed.type] = (totaisPorTipo[processed.type] || 0) + (processed.type === 'SAIDA' ? processed.value*-1 : processed.value)
+      totalGeral += processed.type === 'SAIDA' ? processed.value*-1 : processed.value
     })
 
     // Pré-formatar totais por tipo
@@ -183,7 +189,7 @@ export async function GET(request: NextRequest) {
       doc.setFontSize(8)
 
       doc.text(processed.launchDate, cols.data + 2, y + 4)
-      doc.text(processed.contributorName.substring(0, 45), cols.contribuinte, y + 4)
+      {processed.type === 'SAIDA' ? doc.text(processed.supplierName.substring(0, 45), cols.contribuinte , y + 4) : doc.text(processed.contributorName.substring(0, 45), cols.contribuinte, y + 4)}
       doc.text(processed.typeLabel, cols.tipo, y + 4)
       doc.text(processed.valueFormatted, cols.valor, y + 4, { align: 'right' })
 
@@ -234,8 +240,9 @@ export async function GET(request: NextRequest) {
       doc.text(`Página ${i} de ${totalPages}`, pageWidth - margin, pageHeight - 10, { align: 'right' })
     }
 
-    const pdfBlob = doc.output('blob')
-    return new NextResponse(pdfBlob, {
+    //const pdfBlob = doc.output('blob')
+    const pdfOutput = doc.output('arraybuffer');
+    return new NextResponse(pdfOutput, {
       headers: { 
         'Content-Type': 'application/pdf',
         'Content-Disposition': `inline; filename="resumo-${summaryId}.pdf"`

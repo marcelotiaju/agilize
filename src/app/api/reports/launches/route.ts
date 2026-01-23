@@ -51,13 +51,13 @@ export async function GET(request: NextRequest) {
     const launches = await prisma.launch.findMany({
       where: {
         congregationId: { in: congregationIds },
-        type: { in: types },
+        type: { in: types as any },
         date: {
           gte: startOfDay(new Date(startDate)),
           lte: endOfDay(new Date(endDate)),
         }
       },
-      include: { congregation: true },
+      include: { congregation: true, contributor: true, supplier: true},
       orderBy: [{ date: 'asc' }]
     })
 
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
         const cLaunches = launchesByCongregation[cong.id] || []
         const entrada = cLaunches.filter((l: any) => l.type !== 'SAIDA').reduce((sum: number, l: any) => sum + (Number(l.value) || 0), 0)
         const saida = cLaunches.filter((l: any) => l.type === 'SAIDA').reduce((sum: number, l: any) => sum + (Number(l.value) || 0), 0)
-        
+        console.log(cLaunches)
         return {
           name: cong.name,
           launches: cLaunches.map((l: any) => ({
@@ -94,8 +94,8 @@ export async function GET(request: NextRequest) {
             type: l.type,
             date: l.date ? new Date(l.date).toISOString() : null,
             description: l.description,
-            contributorName: l.contributorName,
-            supplierName: l.supplierName,
+            contributorName: l.contributorId ? l.contributor.name : l.contributorName || null,
+            supplierName: l.supplierId ? l.supplier.name : l.supplierName || null,
             value: Number(l.value) || 0,
             isEntry: l.type !== 'SAIDA'
           })),

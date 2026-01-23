@@ -411,7 +411,8 @@ export default function Reports() {
                                   <TableRow key={idx}>
                                     <TableCell className="whitespace-nowrap">{formatDate(new Date(launch.date), 'dd/MM/yyyy', { locale: ptBR })}</TableCell>
                                     <TableCell className="font-medium whitespace-nowrap">{getTypeLabel(launch.type)}</TableCell>
-                                    <TableCell className="max-w-[150px] truncate">{launch.contributorName || launch.supplierName || '-'}</TableCell>
+                                    {(launch.type === 'DIZIMO'  || launch.type === 'CARNE_REVIVER') && <TableCell className="max-w-[150px] truncate">{launch.contributorName}</TableCell>}
+                                    {launch.type === 'SAIDA' &&  <TableCell className="max-w-[150px] truncate">{launch.supplierName}</TableCell>}
                                     <TableCell className="max-w-[200px] truncate">{launch.description || '-'}</TableCell>
                                     <TableCell className="text-right text-green-600 whitespace-nowrap font-medium">
                                       {launch.isEntry ? `R$ ${formatCurrency(launch.value)}` : '-'}

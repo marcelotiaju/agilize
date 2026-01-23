@@ -135,15 +135,15 @@ export default function Launches() {
       // Adicione esse useMemo para calcular os tipos permitidos
 const allowedLaunchTypes = useMemo(() => {
   const types: { value: string; label: string }[] = [];
-  if (canLaunchTithe) types.push({ value: 'DIZIMO', label: 'Dízimos' });
+  if (canLaunchTithe) types.push({ value: 'DIZIMO', label: 'Dízimo' });
   if (canLaunchServiceOffer) types.push({ value: 'OFERTA_CULTO', label: 'Oferta do Culto' });
-  if (canLaunchCarneReviver) types.push({ value: 'CARNE_REVIVER', label: 'Carnê Reviver' });
-  if (canLaunchVote) types.push({ value: 'VOTO', label: 'Voto' });
   if (canLaunchEbd) types.push({ value: 'EBD', label: 'EBD' });
-  if (canLaunchCampaign) types.push({ value: 'CAMPANHA', label: 'Campanha' });
   if (canLaunchMission) types.push({ value: 'MISSAO', label: 'Missão' });
+  if (canLaunchCampaign) types.push({ value: 'CAMPANHA', label: 'Campanha' });
+  if (canLaunchVote) types.push({ value: 'VOTO', label: 'Voto' });
   if (canLaunchCircle) types.push({ value: 'CIRCULO', label: 'Círculo de Oração' });
-  if (canLaunchExpense) types.push({ value: 'SAIDA', label: 'Saídas' });
+  if (canLaunchCarneReviver) types.push({ value: 'CARNE_REVIVER', label: 'Carnê Reviver' });
+  if (canLaunchExpense) types.push({ value: 'SAIDA', label: 'Saída' });
   return types;
 }, [canLaunchTithe, canLaunchServiceOffer, canLaunchCarneReviver, canLaunchVote, canLaunchEbd, canLaunchCampaign, canLaunchMission, canLaunchCircle, canLaunchExpense]);
 
@@ -986,15 +986,15 @@ useEffect(() => {
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    {canLaunchTithe && <SelectItem value="DIZIMO">Dízimos</SelectItem>}
+                                    {canLaunchTithe && <SelectItem value="DIZIMO">Dízimo</SelectItem>}
                                     {canLaunchServiceOffer && <SelectItem value="OFERTA_CULTO">Oferta do Culto</SelectItem>}
-                                    {canLaunchCarneReviver && <SelectItem value="CARNE_REVIVER">Carnê Reviver</SelectItem>}
-                                    {canLaunchVote && <SelectItem value="VOTO">Voto</SelectItem>}
                                     {canLaunchEbd && <SelectItem value="EBD">EBD</SelectItem>}
-                                    {canLaunchCampaign && <SelectItem value="CAMPANHA">Campanha</SelectItem>}
                                     {canLaunchMission && <SelectItem value="MISSAO">Missão</SelectItem>}
+                                    {canLaunchCampaign && <SelectItem value="CAMPANHA">Campanha</SelectItem>}
+                                    {canLaunchVote && <SelectItem value="VOTO">Voto</SelectItem>}
                                     {canLaunchCircle && <SelectItem value="CIRCULO">Círculo de Oração</SelectItem>}
-                                    {canLaunchExpense && <SelectItem value="SAIDA">Saídas</SelectItem>}
+                                    {canLaunchCarneReviver && <SelectItem value="CARNE_REVIVER">Carnê Reviver</SelectItem>}
+                                    {canLaunchExpense && <SelectItem value="SAIDA">Saída</SelectItem>}
                                   </SelectContent>
                                 </Select>
                               </div>
@@ -1395,7 +1395,7 @@ useEffect(() => {
                 {canImportLaunch && (
                   <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
                     <DialogTrigger asChild>
-                      <Button variant="outline" onClick={resetImportForm}>
+                      <Button className="hidden lg:flex" variant="outline" onClick={resetImportForm}>
                         <Upload className="mr-2 h-4 w-4" />
                         Importar CSV
                       </Button>
