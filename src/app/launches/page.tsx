@@ -70,7 +70,7 @@ export default function Launches() {
   const [pageYPosition, setPageYPosition] = useState(0);
   const router = useRouter()
   // Dentro do componente principal no page.tsx
-  const [importFilter, setImportFilter] = useState<'ALL' | 'IMPORTED' | 'MANUAL'>('ALL');
+  const [importFilter, setImportFilter] = useState<'ALL' | 'IMPORTED' | 'MANUAL'>('MANUAL');
 
   // Tipos
   type Congregation = { id: string; name: string }
@@ -800,14 +800,24 @@ useEffect(() => {
         )}
 
         <div className="flex justify-end space-x-2 pt-0">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="sm" onClick={() => handleEdit(launch)}>
-                <Edit className="h-4 w-4 mr-1" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent><p>Editar</p></TooltipContent>
-          </Tooltip>
+
+          {launch.status === 'CANCELED' && launch.summaryId == null && canDeleteLaunch && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="destructive" size="sm" onClick={() => handleDelete(launch.id)}><Trash2 className="h-4 w-4" /></Button>
+              </TooltipTrigger>
+              <TooltipContent><p>Excluir</p></TooltipContent>
+            </Tooltip>
+          )}
+
+          {launch.status == 'NORMAL' && launch.summaryId == null && (canLaunchVote || canLaunchEbd || canLaunchCampaign || canLaunchExpense || canLaunchTithe || canLaunchMission || canLaunchCircle || canLaunchServiceOffer || canApproveCarneReviver) ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="sm" onClick={() => handleCancel(launch.id)}><Trash2 className="h-4 w-4 mr-1" /></Button>
+              </TooltipTrigger>
+              <TooltipContent><p>Cancelar</p></TooltipContent>
+            </Tooltip>
+          ) : null}
 
           {launch.status === 'NORMAL' && launch.summaryId == null && (
             <>
@@ -851,23 +861,14 @@ useEffect(() => {
             </>
           )}
 
-          {launch.status == 'NORMAL' && launch.summaryId == null && (canLaunchVote || canLaunchEbd || canLaunchCampaign || canLaunchExpense || canLaunchTithe || canLaunchMission || canLaunchCircle || canLaunchServiceOffer || canApproveCarneReviver) ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="sm" onClick={() => handleCancel(launch.id)}><Trash2 className="h-4 w-4 mr-1" /></Button>
-              </TooltipTrigger>
-              <TooltipContent><p>Cancelar</p></TooltipContent>
-            </Tooltip>
-          ) : null}
-
-          {launch.status === 'CANCELED' && launch.summaryId == null && canDeleteLaunch && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="destructive" size="sm" onClick={() => handleDelete(launch.id)}><Trash2 className="h-4 w-4" /></Button>
-              </TooltipTrigger>
-              <TooltipContent><p>Excluir</p></TooltipContent>
-            </Tooltip>
-          )}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="sm" onClick={() => handleEdit(launch)}>
+                <Edit className="h-4 w-4 mr-1" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent><p>Editar</p></TooltipContent>
+          </Tooltip>
 
         </div>
       </CardContent>
@@ -1639,23 +1640,25 @@ useEffect(() => {
                             </TableCell>
                             <TableCell>
                               <div className="flex space-x-2">
-                                {(launch.type === 'VOTO' && canLaunchVote) ||
-                                  (launch.type === 'EBD' && canLaunchEbd) ||
-                                  (launch.type === 'CAMPANHA' && canLaunchCampaign) ||
-                                  (launch.type === 'OFERTA_CULTO' && canLaunchServiceOffer) ||
-                                  (launch.type === 'CARNE_REVIVER' && canLaunchCarneReviver) ||
-                                  (launch.type === 'DIZIMO' && canLaunchTithe) ||
-                                  (launch.type === 'SAIDA' && canLaunchExpense) ||
-                                  (launch.type === 'MISSAO' && canLaunchMission) ||
-                                  (launch.type === 'CIRCULO' && canLaunchCircle) ? (
+
+                                {(launch.status === 'CANCELED' || launch.status === 'IMPORTED') && launch.summaryId == null && canDeleteLaunch && (
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <Button variant="outline" size="sm" onClick={() => handleEdit(launch)}><Edit className="h-4 w-4" /></Button>
+                                      <Button variant="destructive" size="sm" onClick={() => handleDelete(launch.id)}><Trash2 className="h-4 w-4" /></Button>
                                     </TooltipTrigger>
-                                    <TooltipContent><p>Editar</p></TooltipContent>
+                                    <TooltipContent><p>Excluir</p></TooltipContent>
+                                  </Tooltip>
+                                )}
+                                
+                                {launch.status == 'NORMAL' && launch.summaryId == null && (canLaunchVote || canLaunchEbd || canLaunchCampaign || canLaunchExpense || canLaunchTithe || canLaunchMission || canLaunchCircle || canLaunchServiceOffer) ? (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button variant="outline" size="sm" onClick={() => handleCancel(launch.id)}><Trash2 className="h-4 w-4" /></Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent><p>Cancelar</p></TooltipContent>
                                   </Tooltip>
                                 ) : null}
-
+ 
                                 {launch.status === 'NORMAL' && launch.summaryId == null && (
                                   <>
                                     {(launch.type === 'VOTO' && canApproveVote) ||
@@ -1698,23 +1701,22 @@ useEffect(() => {
                                   </>
                                 )}
 
-                                {launch.status == 'NORMAL' && launch.summaryId == null && (canLaunchVote || canLaunchEbd || canLaunchCampaign || canLaunchExpense || canLaunchTithe || canLaunchMission || canLaunchCircle || canLaunchServiceOffer) ? (
+                                {(launch.type === 'VOTO' && canLaunchVote) ||
+                                  (launch.type === 'EBD' && canLaunchEbd) ||
+                                  (launch.type === 'CAMPANHA' && canLaunchCampaign) ||
+                                  (launch.type === 'OFERTA_CULTO' && canLaunchServiceOffer) ||
+                                  (launch.type === 'CARNE_REVIVER' && canLaunchCarneReviver) ||
+                                  (launch.type === 'DIZIMO' && canLaunchTithe) ||
+                                  (launch.type === 'SAIDA' && canLaunchExpense) ||
+                                  (launch.type === 'MISSAO' && canLaunchMission) ||
+                                  (launch.type === 'CIRCULO' && canLaunchCircle) ? (
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <Button variant="outline" size="sm" onClick={() => handleCancel(launch.id)}><Trash2 className="h-4 w-4" /></Button>
+                                      <Button variant="outline" size="sm" onClick={() => handleEdit(launch)}><Edit className="h-4 w-4" /></Button>
                                     </TooltipTrigger>
-                                    <TooltipContent><p>Cancelar</p></TooltipContent>
+                                    <TooltipContent><p>Editar</p></TooltipContent>
                                   </Tooltip>
                                 ) : null}
-
-                                {launch.status === 'CANCELED' && launch.summaryId == null && canDeleteLaunch && (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button variant="destructive" size="sm" onClick={() => handleDelete(launch.id)}><Trash2 className="h-4 w-4" /></Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent><p>Excluir</p></TooltipContent>
-                                  </Tooltip>
-                                )}
 
                               </div>
                             </TableCell>

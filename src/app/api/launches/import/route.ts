@@ -101,6 +101,7 @@ export async function POST(request: NextRequest) {
       let dateStr = ''
       let talonNumber = ''
       let valueStr = ''
+      let temCadastro = ''
       let cpfContributor = ''
       let description = ''
 
@@ -110,6 +111,7 @@ export async function POST(request: NextRequest) {
         const typeIdx = headers.findIndex(h => h.includes('tipo'))
         const dateIdx = headers.findIndex(h => h.includes('data'))
         const valueIdx = headers.findIndex(h => h.includes('valor'))
+        const temCadastroIdx = headers.findIndex(h => h.includes('temcadastro'))
         const contributorIdx = headers.findIndex(h => h.includes('cpfcontribuinte') || h.includes('nome'))
         const descIdx = headers.findIndex(h => h.includes('descrição') || h.includes('descricao'))
         const talonIdx = headers.findIndex(h => h.includes('recibo') || h.includes('talão') || h.includes('talao') || h.includes('numero'))
@@ -119,8 +121,9 @@ export async function POST(request: NextRequest) {
         dateStr = dateIdx >= 0 && columns[dateIdx] ? columns[dateIdx] : columns[2]
         talonNumber = talonIdx >= 0 && columns[talonIdx] ? columns[talonIdx] : (columns[3] || '')
         valueStr = valueIdx >= 0 && columns[valueIdx] ? columns[valueIdx] : columns[4]
-        cpfContributor = contributorIdx >= 0 && columns[contributorIdx] ? columns[contributorIdx] : columns[5]
-        description = descIdx >= 0 && columns[descIdx] ? columns[descIdx] : (columns[6] || '')
+        temCadastro = temCadastroIdx >= 0 && columns[temCadastroIdx] ? columns[temCadastroIdx] : (columns[5] || '')
+        cpfContributor = contributorIdx >= 0 && columns[contributorIdx] ? columns[contributorIdx] : columns[6]
+        description = descIdx >= 0 && columns[descIdx] ? columns[descIdx] : (columns[7] || '')
       } else {
         // Sem cabeçalho, usar posição fixa
         congregationCode = columns[0] || ''
@@ -128,8 +131,9 @@ export async function POST(request: NextRequest) {
         dateStr = columns[2] || ''
         talonNumber = columns[3] || ''
         valueStr = columns[4] || ''
-        cpfContributor = columns[5] || ''
-        description = columns[6] || ''
+        temCadastro = columns[5] || ''
+        cpfContributor = columns[6] || ''
+        description = columns[7] || ''
       }
       if (!congregationCode || !dateStr || !valueStr || !cpfContributor) {
         errors.push(`Linha ${i + 2}: Congregacao, Data, Valor e Contribuinte são obrigatórios`)
@@ -236,6 +240,7 @@ export async function POST(request: NextRequest) {
           skipped++ // Se encontrou, pula para a próxima linha
           continue
         }
+
         // 2. CRIAÇÃO DO LANÇAMENTO 
         await prisma.launch.create({
           data: {
@@ -243,7 +248,7 @@ export async function POST(request: NextRequest) {
             type: launchType,
             date: launchDate,
             value,
-            //contributorName: contributorId ? null : contributorName,
+            contributorName: temCadastro.toLowerCase() === 'n' ? cpfContributor: '',
             contributorId: contributor?.id || null,
             description: description || null,
             talonNumber: talonNumber || null,
