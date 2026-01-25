@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
       let dateStr = ''
       let talonNumber = ''
       let valueStr = ''
-      let contributorCode = ''
+      let cpfContributor = ''
       let description = ''
 
       // Se tiver cabeçalho, tentar identificar por nome
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
         const typeIdx = headers.findIndex(h => h.includes('tipo'))
         const dateIdx = headers.findIndex(h => h.includes('data'))
         const valueIdx = headers.findIndex(h => h.includes('valor'))
-        const contributorIdx = headers.findIndex(h => h.includes('contribuinte') || h.includes('nome'))
+        const contributorIdx = headers.findIndex(h => h.includes('cpfcontribuinte') || h.includes('nome'))
         const descIdx = headers.findIndex(h => h.includes('descrição') || h.includes('descricao'))
         const talonIdx = headers.findIndex(h => h.includes('recibo') || h.includes('talão') || h.includes('talao') || h.includes('numero'))
 
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
         dateStr = dateIdx >= 0 && columns[dateIdx] ? columns[dateIdx] : columns[2]
         talonNumber = talonIdx >= 0 && columns[talonIdx] ? columns[talonIdx] : (columns[3] || '')
         valueStr = valueIdx >= 0 && columns[valueIdx] ? columns[valueIdx] : columns[4]
-        contributorCode = contributorIdx >= 0 && columns[contributorIdx] ? columns[contributorIdx] : columns[5]
+        cpfContributor = contributorIdx >= 0 && columns[contributorIdx] ? columns[contributorIdx] : columns[5]
         description = descIdx >= 0 && columns[descIdx] ? columns[descIdx] : (columns[6] || '')
       } else {
         // Sem cabeçalho, usar posição fixa
@@ -128,11 +128,10 @@ export async function POST(request: NextRequest) {
         dateStr = columns[2] || ''
         talonNumber = columns[3] || ''
         valueStr = columns[4] || ''
-        contributorCode = columns[5] || ''
+        cpfContributor = columns[5] || ''
         description = columns[6] || ''
       }
-
-      if (!congregationCode || !dateStr || !valueStr || !contributorCode) {
+      if (!congregationCode || !dateStr || !valueStr || !cpfContributor) {
         errors.push(`Linha ${i + 2}: Congregacao, Data, Valor e Contribuinte são obrigatórios`)
         continue
       }
@@ -196,10 +195,14 @@ export async function POST(request: NextRequest) {
         where: { code: congregationCode },select: { id: true }
       })
 
-      const contributor = await prisma.contributor.findUnique({
-        where: { code: contributorCode },select: { id: true }
+      const contributor = await prisma.contributor.findFirst({
+        where: { cpf: cpfContributor || null },select: { id: true }
       })
 
+      if (!congregation) {
+        errors.push(`Linha ${i + 2}: Congregação com código '${congregationCode}' não encontrada`)
+        continue
+      }
       // Tentar encontrar contribuinte cadastrado pelo nome
       // let contributorId: string | null = null
       // const contributor = await prisma.contributor.findFirst({

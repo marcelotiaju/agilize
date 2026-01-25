@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
     const timezone = searchParams.get('timezone') || 'America/Sao_Paulo'
+    const importFilter = searchParams.get('importFilter') // 'IMPORTED', 'MANUAL' ou null
 
     const skip = (page - 1) * limit
 
@@ -78,6 +79,15 @@ export async function GET(request: NextRequest) {
     if (congregationId && congregationId !== 'all') {
       where.congregationId = congregationId
     }
+
+    if (importFilter === 'IMPORTED') {
+      where.status = 'IMPORTED'
+    }
+
+    if (importFilter === 'MANUAL') {
+      where.status = { not: 'IMPORTED' }
+    }
+
 
     // Handle date filtering with proper timezone awareness
 //     if (startDate && endDate) {

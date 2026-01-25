@@ -113,7 +113,9 @@ export async function GET(request: NextRequest) {
     const startDate = format(utcToZonedTime(summary.startDate, timezone), 'dd/MM/yyyy', { locale: ptBR })
     const endDate = format(utcToZonedTime(summary.endDate, timezone), 'dd/MM/yyyy', { locale: ptBR })
     doc.text(`Período: ${startDate} a ${endDate}`, margin, y)
-    y += 10
+    y += 7
+    doc.text('LANÇAMENTOS', margin, y)
+    y += 2
 
     // Colunas da tabela
     const cols = {
@@ -143,7 +145,7 @@ export async function GET(request: NextRequest) {
     const processedLaunches = summary.Launch.map((launch: any) => {
       const launchDateZoned = utcToZonedTime(launch.date, timezone)
       const launchDate = format(launchDateZoned, 'dd/MM/yyyy', { locale: ptBR })
-      const contributorName = launch.contributorId ? launch.contributor?.name || launch.contributorName  : 'Não identificado'
+      const contributorName = launch.contributorId ? launch.contributor?.name || launch.contributorName  : '---'
       const supplierName = launch.supplierId ? launch.supplier?.razaoSocial || launch.supplierName || '' : ''
       const typeLabel = typeLabels[launch.type] || launch.type
       const value = Number(launch.value)

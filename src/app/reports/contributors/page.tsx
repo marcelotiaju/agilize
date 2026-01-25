@@ -54,7 +54,8 @@ export default function ReportsPage() {
     const [availableYears, setAvailableYears] = useState<string[]>([])
     const [selectedYear, setSelectedYear] = useState("")
     const [showValues, setShowValues] = useState(true)
-    const [contributionFilter, setContributionFilter] = useState('BOTH') // BOTH, WITH_LAUNCH, WITHOUT_LAUNCH
+    const [contributionFilter, setContributionFilter] = useState('WITH_LAUNCH') // BOTH, WITH_LAUNCH, WITHOUT_LAUNCH
+    const [importFilter, setImportFilter] = useState<'ALL' | 'IMPORTED' | 'MANUAL'>('MANUAL');
 
     //const years = Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString())
 
@@ -111,7 +112,7 @@ export default function ReportsPage() {
         } else {
             setPreviewData(null)
         }
-    }, [selectedCongregations, selectedTypes, selectedYear, selectedLaunchTypes, contributionFilter])
+    }, [selectedCongregations, selectedTypes, selectedYear, selectedLaunchTypes, contributionFilter,importFilter])
 
     const fetchCongregations = async () => {
         try {
@@ -139,7 +140,8 @@ export default function ReportsPage() {
                 showValues: showValues.toString(),
                 congregationIds: selectedCongregations.join(','),
                 timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                preview: 'true'
+                preview: 'true',
+                importFilter: importFilter
             })
 
             const response = await fetch(`/api/reports/contributors?${params.toString()}`)
@@ -214,7 +216,8 @@ export default function ReportsPage() {
                 contributionFilter: contributionFilter, // Adicionado
                 showValues: showValues.toString(),
                 congregationIds: selectedCongregations.join(','),
-                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                importFilter: importFilter
             })
 
             const response = await fetch(`/api/reports/contributors?${params.toString()}`)
@@ -289,11 +292,24 @@ export default function ReportsPage() {
                                     </Select>
                                 </div>
 
-                                <div className="flex flex-col justify-end space-y-4">
+                                <div className="flex flex-col justify-end space-y-2">
                                     <div className="flex items-center justify-between p-2 border rounded-md">
                                         <Label htmlFor="show-vals" className="cursor-pointer">Exibir Valores (R$)</Label>
                                         <Switch id="show-vals" checked={showValues} onCheckedChange={setShowValues} />
                                     </div>
+                                </div>
+
+                                <div className="flex flex-col justify-end space-y-2">
+                                    <Select value={importFilter} onValueChange={(v: any) => setImportFilter(v)}>
+                                        <SelectTrigger>
+                                        <SelectValue placeholder="Todos" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                        <SelectItem value="ALL">Todos os Lançamentos</SelectItem>
+                                        <SelectItem value="IMPORTED">Apenas Importados</SelectItem>
+                                        <SelectItem value="MANUAL">Apenas Digitados</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             </div>
 

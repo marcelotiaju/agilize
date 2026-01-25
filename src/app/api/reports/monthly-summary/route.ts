@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
     const launchTypes = searchParams.get('launchTypes')?.split(',') || []
     const isPreview = searchParams.get('preview') === 'true'
     const timezone = searchParams.get('timezone') || 'America/Sao_Paulo'
+    const importFilter = searchParams.get('importFilter') || 'ALL';
 
     const where: any = {
       date: {
@@ -34,7 +35,9 @@ export async function GET(request: NextRequest) {
         lte: new Date(`${year}-12-31T23:59:59Z`),
       },
       // Verifique se no seu banco é CANCELLED (com dois 'L') como nos códigos anteriores
-      status: { not: 'CANCELED' }
+      status: {
+        ...importFilter === 'IMPORTED' ? { equals: 'IMPORTED' } : importFilter === 'MANUAL' ? { not: { in: ['IMPORTED', 'CANCELED'] } } : { not: 'CANCELED' }
+      }
     };
 
     // Só filtra se o usuário selecionou congregações específicas
@@ -125,14 +128,16 @@ export async function GET(request: NextRequest) {
     doc.setFontSize(10).text(`ANO: ${year}`, margin, y)
     y += 4
     doc.setFontSize(8).text(`TIPOS DE LANÇAMENTO: ${launchTypes.join(', ')}`, margin, y)
-
     // Direita: Usuário e Data (posicionando no yPos original do bloco)
     const rightAlignX = pageWidth - margin
     doc.text(`Usuário: ${session.user?.name || 'N/A'}`, rightAlignX, y - 5, { align: 'right' })
     const now = new Date()
     doc.text(` ${format(utcToZonedTime(now, timezone), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`, rightAlignX, y, { align: 'right' })
-
-    y += lineHeight * 1.5
+    
+    y += 4
+    doc.text(`Origem dos Lançamentos: ${importFilter === 'ALL' ? 'Todos' : importFilter === 'IMPORTED' ? 'Importados' : 'Apenas Digitados'}`, margin, y)
+    y += 8
+    //y += lineHeight * 1.5
 
     //doc.setFontSize(16).text("Relatório de Resumo Mensal", 105, 20, { align: 'center' })
     //doc.setFontSize(10).text(`Ano: ${year} | Filtros: ${launchTypes.join(', ')}`, 105, 27, { align: 'center' })
@@ -156,7 +161,7 @@ export async function GET(request: NextRequest) {
     ])
 
     autoTable(doc, {
-    startY: 45,
+    startY: 50,
     head: [
         [{ content: 'Mês', rowSpan: 2 }, { content: 'Valores', colSpan: 3, styles: { halign: 'center' } }],
         ['Entrada', 'Saída', 'Total']

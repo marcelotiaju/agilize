@@ -65,6 +65,7 @@ export async function GET(request: NextRequest) {
         validFrom: user.validFrom,
         validTo: user.validTo,
         historyDays: user.historyDays,
+        maxRetroactiveDays: user.maxRetroactiveDays,
         defaultPage: user.defaultPage ?? '/dashboard',
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
   try {
     const payload = await request.json()
     const {
-      login, name, email, phone, password, validFrom, validTo, historyDays,
+      login, name, email, phone, password, validFrom, validTo, historyDays,maxRetroactiveDays,
       profileId, defaultPage
     } = payload
 
@@ -113,6 +114,7 @@ export async function POST(request: NextRequest) {
         validFrom: new Date(validFrom),
         validTo: new Date(validTo),
         historyDays: parseInt(historyDays || '30'),
+        maxRetroactiveDays: parseInt(maxRetroactiveDays || '30'),
         profile: profileId ? { connect: { id: profileId } } : undefined,
         defaultPage: defaultPage || '/dashboard'
       }
@@ -129,7 +131,7 @@ export async function PUT(request: NextRequest) {
   try {
     const payload = await request.json()
     const {
-      id, login, name, email, cpf, phone, password, validFrom, validTo, historyDays,
+      id, login, name, email, phone, password, validFrom, validTo, historyDays,maxRetroactiveDays,
       profileId, defaultPage
     } = payload
 
@@ -160,6 +162,7 @@ export async function PUT(request: NextRequest) {
         validFrom: new Date(validFrom),
         validTo: new Date(validTo),
         historyDays: parseInt(historyDays || `${existingUser.historyDays}`),
+        maxRetroactiveDays: parseInt(maxRetroactiveDays || `${existingUser.maxRetroactiveDays}`),
         profile: typeof profileId === 'string' && profileId.trim() !== '' ? { connect: { id: profileId } } : { disconnect: true },
         defaultPage: defaultPage || '/dashboard'
       }

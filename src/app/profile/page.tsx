@@ -126,10 +126,6 @@ export default function ProfilePage() {
                     <p className="font-medium">{session?.user?.name}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">CPF</p>
-                    <p className="font-medium">{session?.user?.cpf}</p>
-                  </div>
-                  <div>
                     <p className="text-sm text-gray-500">E-mail</p>
                     <p className="font-medium">{session?.user?.email || 'Não informado'}</p>
                   </div>
@@ -170,9 +166,9 @@ export default function ProfilePage() {
                           onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                         >
                           {showCurrentPassword ? (
-                            <EyeOff className="h-4 w-4 text-gray-400" />
-                          ) : (
                             <Eye className="h-4 w-4 text-gray-400" />
+                          ) : (
+                            <EyeOff className="h-4 w-4 text-gray-400" />
                           )}
                         </button>
                       </div>
@@ -195,9 +191,9 @@ export default function ProfilePage() {
                           onClick={() => setShowNewPassword(!showNewPassword)}
                         >
                           {showNewPassword ? (
-                            <EyeOff className="h-4 w-4 text-gray-400" />
-                          ) : (
                             <Eye className="h-4 w-4 text-gray-400" />
+                          ) : (
+                            <EyeOff className="h-4 w-4 text-gray-400" />
                           )}
                         </button>
                       </div>
@@ -220,9 +216,9 @@ export default function ProfilePage() {
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                         >
                           {showConfirmPassword ? (
-                            <EyeOff className="h-4 w-4 text-gray-400" />
-                          ) : (
                             <Eye className="h-4 w-4 text-gray-400" />
+                          ) : (
+                            <EyeOff className="h-4 w-4 text-gray-400" />
                           )}
                         </button>
                       </div>

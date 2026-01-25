@@ -14,6 +14,7 @@ import { Calendar } from '@/components/ui/calendar'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
 import { format as formatDate } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 interface Congregation {
   id: string
@@ -56,6 +57,7 @@ export default function Reports() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [loadingPreview, setLoadingPreview] = useState(false)
   const [previewData, setPreviewData] = useState<PreviewData | null>(null)
+  const [importFilter, setImportFilter] = useState<'ALL' | 'IMPORTED' | 'MANUAL'>('MANUAL');
   
   // Estados de Filtro (assumindo que já existem no seu código)
   const [selectedCongregations, setSelectedCongregations] = useState<string[]>([])
@@ -85,7 +87,7 @@ export default function Reports() {
         if (availableTypes.length === 1 && selectedTypes.length === 0) {
             setSelectedTypes([availableTypes[0].value])
         }
-    }, [availableTypes, selectedTypes.length])
+    }, [availableTypes, selectedTypes.length, importFilter])
 
     useEffect(() => {
       fetchCongregations()
@@ -132,7 +134,8 @@ export default function Reports() {
         types: selectedTypes.join(','),
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
-        preview: 'true'
+        preview: 'true',
+        importFilter: importFilter
       })
       const res = await fetch(`/api/reports/launches?${params}`)
       if (res.ok) {
@@ -150,7 +153,7 @@ export default function Reports() {
   useEffect(() => {
     const delayDebounce = setTimeout(() => loadPreview(), 500)
     return () => clearTimeout(delayDebounce)
-  }, [selectedCongregations, selectedTypes, startDate, endDate])
+  }, [selectedCongregations, selectedTypes, startDate, endDate, importFilter])
 
   const handleGenerateReport = async () => {
     if (selectedCongregations.length === 0) return alert("Selecione ao menos uma congregação")
@@ -162,7 +165,8 @@ export default function Reports() {
         congregationIds: selectedCongregations.join(','),
         types: selectedTypes.join(','),
         startDate: startDate.toISOString(),
-        endDate: endDate.toISOString()
+        endDate: endDate.toISOString(),
+        importFilter: importFilter
       })
 
       const response = await fetch(`/api/reports/launches?${params.toString()}`)
@@ -240,7 +244,7 @@ export default function Reports() {
             </CardHeader>
             <CardContent className="space-y-6">
                 {/* Período */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <Label>Data Início</Label>
                     <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
@@ -290,8 +294,20 @@ export default function Reports() {
                       </PopoverContent>
                     </Popover>
                   </div>
-                </div>
 
+                  <div className="flex flex-col justify-end space-y-2">
+                          <Select value={importFilter} onValueChange={(v: any) => setImportFilter(v)}>
+                              <SelectTrigger>
+                              <SelectValue placeholder="Todos" />
+                              </SelectTrigger>
+                              <SelectContent>
+                              <SelectItem value="ALL">Todos os Lançamentos</SelectItem>
+                              <SelectItem value="IMPORTED">Apenas Importados</SelectItem>
+                              <SelectItem value="MANUAL">Apenas Digitados</SelectItem>
+                              </SelectContent>
+                          </Select>
+                  </div>
+                </div>
 
                   {/* Seleção de Congregações e Tipos lado a lado */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

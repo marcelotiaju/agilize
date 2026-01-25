@@ -75,7 +75,8 @@ export const authOptions : NextAuthOptions = {
           canReportSummary: !!p?.canReportSummary,
           canDeleteLaunch : !!p?.canDeleteLaunch,
           canImportLaunch : !!p?.canImportLaunch,
-          canDeleteSummary : !!p?.canDeleteSummary
+          canDeleteSummary : !!p?.canDeleteSummary,
+          defaultLaunchType: p?.defaultLaunchType ?? 'DIZIMO'
         }
 
         return {
@@ -157,7 +158,8 @@ export const authOptions : NextAuthOptions = {
           canReportSummary: (user as any).canReportSummary,
           canDeleteLaunch : (user as any).canDeleteLaunch,
           canImportLaunch : (user as any).canImportLaunch,
-          canDeleteSummary : (user as any).canDeleteSummary
+          canDeleteSummary : (user as any).canDeleteSummary,
+          defaultLaunchType: (user as any).defaultLaunchType ?? 'DIZIMO'
         }
       }
       return token
@@ -212,7 +214,8 @@ export const authOptions : NextAuthOptions = {
         canReportSummary: typeof token.canReportSummary === "boolean" ? token.canReportSummary : undefined,
         canDeleteLaunch : typeof token.canDeleteLaunch === "boolean" ? token.canDeleteLaunch : undefined,
         canImportLaunch : typeof token.canImportLaunch === "boolean" ? token.canImportLaunch : undefined,
-        canDeleteSummary : typeof token.canDeleteSummary === "boolean" ? token.canDeleteSummary : undefined
+        canDeleteSummary : typeof token.canDeleteSummary === "boolean" ? token.canDeleteSummary : undefined,
+        defaultLaunchType: typeof token.defaultLaunchType === "string" ? token.defaultLaunchType : 'DIZIMO',
       }
       // Definir expiração da sessão baseada no token exp
       if (typeof token.exp === 'number') {

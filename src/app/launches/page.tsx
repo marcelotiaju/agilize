@@ -69,6 +69,8 @@ export default function Launches() {
   const [endDateOpen, setEndDateOpen] = useState(false);
   const [pageYPosition, setPageYPosition] = useState(0);
   const router = useRouter()
+  // Dentro do componente principal no page.tsx
+  const [importFilter, setImportFilter] = useState<'ALL' | 'IMPORTED' | 'MANUAL'>('ALL');
 
   // Tipos
   type Congregation = { id: string; name: string }
@@ -131,6 +133,7 @@ export default function Launches() {
   const canImportLaunch = session?.user?.canImportLaunch
   const canGenerateSummary = session?.user?.canGenerateSummary
   const canListSummary = session?.user?.canListSummary
+  const defaultLaunchType = session?.user?.defaultLaunchType
 
       // Adicione esse useMemo para calcular os tipos permitidos
 const allowedLaunchTypes = useMemo(() => {
@@ -185,7 +188,7 @@ useEffect(() => {
     fetchContributors()
     fetchSuppliers()
     fetchClassifications()
-  }, [currentPage, itemsPerPage, searchTerm, selectedCongregation, startDate, endDate])
+  }, [currentPage, itemsPerPage, searchTerm, selectedCongregation, startDate, endDate,importFilter])
 
   useEffect(() => {
     // Se houver apenas uma congregação, definir como default
@@ -330,6 +333,10 @@ useEffect(() => {
         e.setHours(23, 59, 59, 999)
         const endUtc = zonedTimeToUtc(e, USER_TIMEZONE)
         params.append('endDate', endUtc.toISOString())
+      }
+
+      if (importFilter !== 'ALL') {
+        params.append('importFilter', importFilter)
       }
 
       const response = await fetch(`/api/launches?${params.toString()}`)
@@ -668,7 +675,7 @@ useEffect(() => {
     setEditingLaunch(null)
     setFormData({
       congregationId: congregations.length === 1 ? congregations[0].id : '',
-      type: allowedLaunchTypes.length === 1 ? allowedLaunchTypes[0].value : 'DIZIMO',
+      type: allowedLaunchTypes.length === 1 ? allowedLaunchTypes[0].value : (allowedLaunchTypes.find(t => t.value === session?.user?.defaultLaunchType)?.value || 'DIZIMO'),
       date: format(new Date(), 'yyyy-MM-dd'),
       talonNumber: '',
       value: '',
@@ -700,7 +707,7 @@ useEffect(() => {
   const filteredContributors = contributors.filter(c =>
     !formData.congregationId || c.congregationId === formData.congregationId
   )
-
+  // Mobile
   const LaunchCard = ({ launch }) => (
     <Card key={launch.id} className="mb-2 shadow-sm hover:shadow-md transition-shadow">
       <CardContent className="p-4 pt-0.5 pb-1">
@@ -792,7 +799,7 @@ useEffect(() => {
           </div>
         )}
 
-        <div className="flex space-x-2 pt-0">
+        <div className="flex justify-end space-x-2 pt-0">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="outline" size="sm" onClick={() => handleEdit(launch)}>
@@ -1517,6 +1524,20 @@ useEffect(() => {
                     </PopoverContent>
                   </Popover>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                {/* <Label>Origem do Lançamento</Label> */}
+                <Select value={importFilter} onValueChange={(v: any) => setImportFilter(v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">Todos os Lançamentos</SelectItem>
+                    <SelectItem value="IMPORTED">Apenas Importados</SelectItem>
+                    <SelectItem value="MANUAL">Apenas Digitados</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="w-full sm:w-64">

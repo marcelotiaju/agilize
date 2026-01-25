@@ -28,6 +28,7 @@ interface UserData {
   validFrom: string
   validTo: string
   historyDays: number
+  maxRetroactiveDays?: number
   defaultPage: string
   createdAt: string
   updatedAt: string
@@ -89,6 +90,7 @@ export default function Users() {
     validFrom: format(new Date(), 'yyyy-MM-dd'),
     validTo: format(new Date(new Date().setFullYear(new Date().getFullYear() + 1)), 'yyyy-MM-dd'),
     historyDays: 30,
+    maxRetroactiveDays: 30,
     profileId: '',
     defaultPage: '/dashboard'
   })
@@ -224,6 +226,7 @@ export default function Users() {
       validFrom: format(new Date(user.validFrom), 'yyyy-MM-dd'),
       validTo: format(new Date(user.validTo), 'yyyy-MM-dd'),
       historyDays: user.historyDays || 30,
+      maxRetroactiveDays: user.maxRetroactiveDays || 30,
       profileId: user.profile?.id || '',
       defaultPage: user.defaultPage || '/dashboard'
     })
@@ -300,6 +303,7 @@ export default function Users() {
       validFrom: format(new Date(), 'yyyy-MM-dd'),
       validTo: format(new Date(new Date().setFullYear(new Date().getFullYear() + 1)), 'yyyy-MM-dd'),
       historyDays: 30,
+      maxRetroactiveDays: 30,
       profileId: '',
       defaultPage: '/dashboard'
     })
@@ -498,14 +502,24 @@ export default function Users() {
                         </div>
                         <div>
                           <Label htmlFor="email">Email</Label>
-                          <Input id="email" name="email" type="email" value={formData.email ?? ''} onChange={handleInputChange} required />
+                          <Input id="email" name="email" type="email" value={formData.email ?? ''} onChange={handleInputChange}/>
                         </div>
                         <div>
                           <Label htmlFor="phone">Telefone</Label>
                           <Input id="phone" name="phone" value={formData.phone ?? ''} onChange={handleInputChange} />
                         </div>
                       </div>
-                      <div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="validFrom">Válido de</Label>
+                          <Input id="validFrom" name="validFrom" type="date" value={formData.validFrom ?? ''} onChange={handleInputChange} required />
+                        </div>
+                        <div>
+                          <Label htmlFor="validTo">Válido até</Label>
+                          <Input id="validTo" name="validTo" type="date" value={formData.validTo ?? ''} onChange={handleInputChange} required />
+                        </div>
+                                              <div>
                         <Label htmlFor="password">Senha</Label>
                         <div className="relative flex items-center">
                           <Input 
@@ -527,22 +541,22 @@ export default function Users() {
                           </button>
                         </div>
                       </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="validFrom">Válido de</Label>
-                          <Input id="validFrom" name="validFrom" type="date" value={formData.validFrom ?? ''} onChange={handleInputChange} required />
-                        </div>
-                        <div>
-                          <Label htmlFor="validTo">Válido até</Label>
-                          <Input id="validTo" name="validTo" type="date" value={formData.validTo ?? ''} onChange={handleInputChange} required />
-                        </div>
                       </div>
 
                       <div className="grid grid-cols-4 gap-4">
                         <div>
                           <Label htmlFor="historyDays">Dias de Histórico</Label>
-                          <Input id="historyDays" name="historyDays" type="number" value={(formData as any).historyDays ?? ''} onChange={handleInputChange} min="1" max="365" required />
+                          <Input id="historyDays" name="historyDays" type="number" value={(formData as any).historyDays ?? ''} onChange={handleInputChange} min="1" required />
+                        </div>
+
+                        <div>
+                          <Label htmlFor="limit">Limite de dias retroativos</Label>
+                          <Input 
+                            id="limit" 
+                            type="number" 
+                            value={(formData as any).maxRetroactiveDays} 
+                            onChange={handleInputChange}
+                          />
                         </div>
 
                         <div>

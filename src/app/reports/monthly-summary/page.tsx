@@ -50,6 +50,7 @@ export default function ReportsPage() {
     const [selectedTypes, setSelectedTypes] = useState<string[]>([])
     const [selectedLaunchTypes, setSelectedLaunchTypes] = useState<string[]>([])
     const [previewData, setPreviewData] = useState<PreviewData | null>(null)
+    const [importFilter, setImportFilter] = useState<'ALL' | 'IMPORTED' | 'MANUAL'>('MANUAL');
 
     const [availableYears, setAvailableYears] = useState<string[]>([])
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString())
@@ -64,7 +65,7 @@ export default function ReportsPage() {
             if (response.ok) {
                 const years: string[] = await response.json()
                 setAvailableYears(years)
-                
+
                 // Define o ano mais recente (primeiro do array) como default
                 if (years.length > 0 && !selectedYear) {
                     setSelectedYear(years[0])
@@ -76,24 +77,24 @@ export default function ReportsPage() {
     }
 
     const availableLaunchTypes = useMemo(() => {
-    return [
-        (session?.user as any)?.canLaunchTithe ? {value: 'DIZIMO', label: 'Dízimo' } : null,
-        (session?.user as any)?.canLaunchServiceOffer ? {value: 'OFERTA_CULTO', label: 'Oferta do Culto' } : null,
-        (session?.user as any)?.canLaunchEbd ? {value: 'EBD', label: 'Ebd' } : null,
-        (session?.user as any)?.canLaunchMission ? {value: 'MISSAO', label: 'Missão' } : null,
-        (session?.user as any)?.canLaunchCampaign ? {value: 'CAMPANHA', label: 'Campanha' } : null,
-        (session?.user as any)?.canLaunchVoto ? {value: 'VOTO', label: 'Voto' } : null,
-        (session?.user as any)?.canLaunchCircle ? {value: 'CIRCULO', label: 'Círculo' } : null,
-        (session?.user as any)?.canLaunchCarneReviver ? {value: 'CARNE_REVIVER', label: 'Carnê Reviver' } : null,
-        (session?.user as any)?.canLaunchExpense ? {value: 'SAIDA', label: 'Saída' } : null,
-    ]   
-    }, [session] ).filter(Boolean) as {value: string, label: string}[]
+        return [
+            (session?.user as any)?.canLaunchTithe ? { value: 'DIZIMO', label: 'Dízimo' } : null,
+            (session?.user as any)?.canLaunchServiceOffer ? { value: 'OFERTA_CULTO', label: 'Oferta do Culto' } : null,
+            (session?.user as any)?.canLaunchEbd ? { value: 'EBD', label: 'EBD' } : null,
+            (session?.user as any)?.canLaunchMission ? { value: 'MISSAO', label: 'Missão' } : null,
+            (session?.user as any)?.canLaunchCampaign ? { value: 'CAMPANHA', label: 'Campanha' } : null,
+            (session?.user as any)?.canLaunchVoto ? { value: 'VOTO', label: 'Voto' } : null,
+            (session?.user as any)?.canLaunchCircle ? { value: 'CIRCULO', label: 'Círculo' } : null,
+            (session?.user as any)?.canLaunchCarneReviver ? { value: 'CARNE_REVIVER', label: 'Carnê Reviver' } : null,
+            (session?.user as any)?.canLaunchExpense ? { value: 'SAIDA', label: 'Saída' } : null,
+        ]
+    }, [session]).filter(Boolean) as { value: string, label: string }[]
 
     useEffect(() => {
         if (availableLaunchTypes.length === 1 && selectedLaunchTypes.length === 0) {
             setSelectedLaunchTypes([availableLaunchTypes[0].value])
         }
-    }, [availableLaunchTypes, selectedLaunchTypes.length])
+    }, [availableLaunchTypes, selectedLaunchTypes.length, importFilter])
 
     useEffect(() => {
         fetchAvailableYears()
@@ -106,7 +107,7 @@ export default function ReportsPage() {
         } else {
             setPreviewData(null)
         }
-    }, [selectedCongregations, selectedYear, selectedLaunchTypes])
+    }, [selectedCongregations, selectedYear, selectedLaunchTypes, importFilter])
 
     const fetchCongregations = async () => {
         try {
@@ -134,7 +135,8 @@ export default function ReportsPage() {
                 //showValues: showValues.toString(),
                 congregationIds: selectedCongregations.join(','),
                 timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                preview: 'true'
+                preview: 'true',
+                importFilter: importFilter
             })
 
             const response = await fetch(`/api/reports/monthly-summary?${params.toString()}`)
@@ -202,7 +204,8 @@ export default function ReportsPage() {
                 //contributionFilter: contributionFilter, // Adicionado
                 // showValues: showValues.toString(),
                 congregationIds: selectedCongregations.join(','),
-                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                importFilter: importFilter
             })
 
             const response = await fetch(`/api/reports/monthly-summary?${params.toString()}`)
@@ -253,7 +256,7 @@ export default function ReportsPage() {
                         <h1 className="text-2xl font-bold text-gray-900">Resumo Mensal</h1>
                         <p className="text-gray-600">Gere Resumo Mensal em PDF</p>
                     </div>
-                    
+
                     {/* Filtros */}
                     <Card className="mb-6">
                         <CardHeader>
@@ -275,6 +278,19 @@ export default function ReportsPage() {
                                             ) : (
                                                 <SelectItem value="none" disabled>Carregando anos...</SelectItem>
                                             )}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="flex flex-col justify-end space-y-2">
+                                    <Select value={importFilter} onValueChange={(v: any) => setImportFilter(v)}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Todos" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="ALL">Todos os Lançamentos</SelectItem>
+                                            <SelectItem value="IMPORTED">Apenas Importados</SelectItem>
+                                            <SelectItem value="MANUAL">Apenas Digitados</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -319,88 +335,38 @@ export default function ReportsPage() {
                                     </div>
                                 </div>
 
-                                {/* Seleção de Tipos */}
-                                {/* <div>
-                                    <Label>Cargos</Label>
-                                    <div className="space-y-2 mt-2 border p-3 rounded-md max-h-40 overflow-y-auto">
-                                        <div className="flex items-center space-x-2 pb-1 border-b">
-                                            <Checkbox
-                                                id="selectAllTypes"
-                                                checked={selectedTypes.length === availableTypes.length && availableTypes.length > 0}
-                                                onCheckedChange={(checked) => handleSelectAllTypes(checked as boolean)}
-                                                disabled={availableTypes.length === 1}
-                                            />
-                                            <Label htmlFor="selectAllTypes" className="font-semibold">
-                                                Marcar/Desmarcar Todos
-                                            </Label>
-                                        </div>
-                                        {availableTypes.map((type) => (
-                                            <div key={type.value} className="flex items-center space-x-2">
+                                {/* Seleção de Tipo de Lançamento */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <Label>Tipos de Lançamento</Label>
+                                        <div className="space-y-2 mt-2 border p-3 rounded-md max-h-40 overflow-y-auto">
+                                            <div className="flex items-center space-x-2 pb-1 border-b">
                                                 <Checkbox
-                                                    id={`type-${type.value}`}
-                                                    checked={selectedTypes.includes(type.value)}
-                                                    onCheckedChange={(checked) => handleTypeSelection(type.value, checked as boolean)}
-                                                    disabled={availableTypes.length === 1}
+                                                    id="selectAllLaunchTypes"
+                                                    checked={selectedLaunchTypes.length === availableLaunchTypes.length && availableLaunchTypes.length > 0}
+                                                    onCheckedChange={(checked) => handleSelectAllLaunchTypes(checked as boolean)}
+                                                    disabled={availableLaunchTypes.length === 1}
                                                 />
-                                                <Label htmlFor={`type-${type.value}`}>
-                                                    {type.label}
+                                                <Label htmlFor="selectAllLaunchTypes" className="font-semibold">
+                                                    Marcar/Desmarcar Todos
                                                 </Label>
                                             </div>
-                                        ))}
-                                    </div>
-                                </div> */}
-                            </div>
-
-                            {/* Seleção de Tipo de Lançamento */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                             <div>
-                                <Label>Tipos de Lançamento</Label>
-                                <div className="space-y-2 mt-2 border p-3 rounded-md max-h-40 overflow-y-auto">
-                                    <div className="flex items-center space-x-2 pb-1 border-b">
-                                        <Checkbox
-                                            id="selectAllLaunchTypes"
-                                            checked={selectedLaunchTypes.length === availableLaunchTypes.length && availableLaunchTypes.length > 0}
-                                            onCheckedChange={(checked) => handleSelectAllLaunchTypes(checked as boolean)}
-                                            disabled={availableLaunchTypes.length === 1}
-                                        />
-                                        <Label htmlFor="selectAllLaunchTypes" className="font-semibold">
-                                            Marcar/Desmarcar Todos
-                                        </Label>
-                                    </div>
-                                    {availableLaunchTypes.map((type) => (
-                                        <div key={type.value} className="flex items-center space-x-2">
-                                            <Checkbox
-                                                id={`launchType-${type.value}`}
-                                                checked={selectedLaunchTypes.includes(type.value)}
-                                                onCheckedChange={(checked) => handleLaunchTypeSelection(type.value, checked as boolean)}
-                                                disabled={availableLaunchTypes.length === 1}
-                                            />
-                                            <Label htmlFor={`launchType-${type.value}`}>
-                                                {type.label}
-                                            </Label>
+                                            {availableLaunchTypes.map((type) => (
+                                                <div key={type.value} className="flex items-center space-x-2">
+                                                    <Checkbox
+                                                        id={`launchType-${type.value}`}
+                                                        checked={selectedLaunchTypes.includes(type.value)}
+                                                        onCheckedChange={(checked) => handleLaunchTypeSelection(type.value, checked as boolean)}
+                                                        disabled={availableLaunchTypes.length === 1}
+                                                    />
+                                                    <Label htmlFor={`launchType-${type.value}`}>
+                                                        {type.label}
+                                                    </Label>
+                                                </div>
+                                            ))}
                                         </div>
-                                    ))}
+                                    </div>
                                 </div>
-                            </div>
-
-                            {/* Novo Filtro de Contribuição */}
-                            {/* <div className="space-y-2">
-                                <Label>Filtro de Contribuição</Label>
-                                <Select value={contributionFilter} onValueChange={setContributionFilter}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Selecione o tipo de visualização" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="BOTH">Ambos (Mostrar todos)</SelectItem>
-                                        <SelectItem value="WITH_LAUNCH">Com Lançamento (Apenas quem contribuiu)</SelectItem>
-                                        <SelectItem value="WITHOUT_LAUNCH">Sem Lançamento (Apenas quem não contribuiu)</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <p className="text-[12px] text-gray-500 mt-2 italic">
-                                    {contributionFilter === 'WITH_LAUNCH' && "* Filtrando apenas registros com valor maior que zero em algum mês."}
-                                    {contributionFilter === 'WITHOUT_LAUNCH' && "* Filtrando apenas registros sem nenhuma contribuição no período."}
-                                </p>
-                            </div> */}
                             </div>
                         </CardContent>
                     </Card>
@@ -416,7 +382,7 @@ export default function ReportsPage() {
                     ) : previewData && (
                         <Card className="mb-6">
                             <CardContent>
-                            {/* Preview da Tabela */}
+                                {/* Preview da Tabela */}
                                 <Card>
                                     <CardHeader className="bg-gray-50/50">
                                         <CardTitle className="text-sm font-medium">Preview dos Lançamentos - {selectedYear}</CardTitle>
@@ -464,7 +430,7 @@ export default function ReportsPage() {
                                                     </TableCell>
                                                     <TableCell className="text-right" style={{ color: (previewData?.monthlyData.reduce((acc, d) => acc + d.income, 0) || 0) - (previewData?.monthlyData.reduce((acc, d) => acc + d.expense, 0) || 0) >= 0 ? '#16a34a' : '#dc2626' }}>
                                                         {formatCurrency(
-                                                            (previewData?.monthlyData.reduce((acc, d) => acc + d.income, 0) || 0) - 
+                                                            (previewData?.monthlyData.reduce((acc, d) => acc + d.income, 0) || 0) -
                                                             (previewData?.monthlyData.reduce((acc, d) => acc + d.expense, 0) || 0)
                                                         )}
                                                     </TableCell>

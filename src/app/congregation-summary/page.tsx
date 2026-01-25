@@ -159,7 +159,7 @@ export default function CongregationSummary() {
         user?.canLaunchEbd || 
         user?.canLaunchCampaign ||
         user?.canLaunchMission) {
-      types.push({ value: 'PADRAO', label: 'Padrão (Dízimo, Oferta do Culto, EBD,  Missão, Campanha, Voto)' })
+      types.push({ value: 'PADRAO', label: 'Padrão' })
     }
     
     // Missão

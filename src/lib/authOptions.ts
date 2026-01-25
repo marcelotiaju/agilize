@@ -64,7 +64,8 @@ export const authOptions : NextAuthOptions = {
           canReportContributors: !!p?.canReportContributors,
           canReportMonthlySummary: !!p?.canReportMonthlySummary,
           canReportSummary: !!p?.canReportSummary,
-          canDeleteSummary: !!p?.canDeleteSummary
+          canDeleteSummary: !!p?.canDeleteSummary,
+          defaultLaunchType: p?.defaultLaunchType ?? 'DIZIMO'
         }
 
         return {
@@ -146,7 +147,8 @@ export const authOptions : NextAuthOptions = {
           canReportContributors : (user as any).canReportContributors,
           canReportMonthlySummary : (user as any).canReportMonthlySummary,
           canReportSummary : (user as any).canReportSummary,
-          canDeleteSummary : (user as any).canDeleteSummary
+          canDeleteSummary : (user as any).canDeleteSummary,
+          defaultLaunchType: (user as any).defaultLaunchType ?? 'DIZIMO'
         }
       }
       return token
@@ -198,7 +200,8 @@ export const authOptions : NextAuthOptions = {
         canReportContributors : typeof token.canReportContributors === "boolean" ? token.canReportContributors : undefined,
         canReportMonthlySummary : typeof token.canReportMonthlySummary === "boolean" ? token.canReportMonthlySummary : undefined,
         canReportSummary : typeof token.canReportSummary === "boolean" ? token.canReportSummary : undefined,
-        canDeleteSummary : typeof token.canDeleteSummary === "boolean" ? token.canDeleteSummary : undefined
+        canDeleteSummary : typeof token.canDeleteSummary === "boolean" ? token.canDeleteSummary : undefined,
+        defaultLaunchType: typeof token.defaultLaunchType === "string" ? token.defaultLaunchType : 'DIZIMO',
       }
       if (typeof token.exp === 'number') {
         session.expires = new Date(token.exp * 1000).toISOString()

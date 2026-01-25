@@ -46,18 +46,19 @@ model VerificationToken {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  login         String?   @unique
-  name          String?
-  email         String    @unique
-  emailVerified DateTime? @db.DateTime(0)
-  image         String?   @db.Text
-  phone         String?
-  password      String
-  validFrom     DateTime  @db.DateTime(0)
-  validTo       DateTime  @db.DateTime(0)
-  historyDays   Int       @default(30)
-  defaultPage   String    @default("/dashboard")
+  id                 String    @id @default(cuid())
+  login              String?   @unique
+  name               String?
+  email              String    @unique
+  emailVerified      DateTime? @db.DateTime(0)
+  image              String?   @db.Text
+  phone              String?
+  password           String
+  validFrom          DateTime  @db.DateTime(0)
+  validTo            DateTime  @db.DateTime(0)
+  historyDays        Int       @default(30)
+  maxRetroactiveDays Int       @default(30)
+  defaultPage        String    @default("/dashboard")
 
   // relacionamento com Profile (permissões agora centralizadas em Profile)
   profileId String?
@@ -112,6 +113,7 @@ model Profile {
   canDeleteLaunch         Boolean @default(false)
   canImportLaunch         Boolean @default(false)
   canDeleteSummary        Boolean @default(false)
+  defaultLaunchType       String? @default("DIZIMO")
 
   users     User[]
   createdAt DateTime @default(now()) @db.DateTime(0)

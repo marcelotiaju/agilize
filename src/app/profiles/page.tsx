@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Plus, Edit, Trash2, Copy } from 'lucide-react'
 import { PermissionGuard } from '@/components/auth/PermissionGuard'
 import { ca } from 'date-fns/locale'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 interface Profile {
   id: string
@@ -32,6 +33,7 @@ export default function Profiles() {
   const [profileForm, setProfileForm] = useState<any>({
     name: '',
     description: '',
+    defaultLaunchType: 'DIZIMO',
     canExport: false,
     canDelete: false,
     canLaunchVote: false,
@@ -92,6 +94,7 @@ export default function Profiles() {
     setProfileForm({
       name: '',
       description: '',
+      defaultLaunchType: 'DIZIMO',
       canExport: false,
       canDelete: false,
       canLaunchVote: false,
@@ -239,6 +242,29 @@ export default function Profiles() {
                     <div>
                       <Label>Descrição</Label>
                       <Input value={profileForm.description ?? ''} onChange={(e) => setProfileForm(prev => ({ ...prev, description: e.target.value }))} />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="defaultLaunchType">Tipo de Lançamento Padrão</Label>
+                      <Select 
+                        value={profileForm.defaultLaunchType} 
+                        onValueChange={(value) => setProfileForm({...profileForm, defaultLaunchType: value})}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o padrão" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="DIZIMO">Dízimo</SelectItem>
+                          <SelectItem value="OFERTA_CULTO">Oferta de Culto</SelectItem>
+                          <SelectItem value="MISSAO">Missão</SelectItem>
+                          <SelectItem value="CIRCULO">Círculo</SelectItem>
+                          <SelectItem value="VOTO">Voto</SelectItem>
+                          <SelectItem value="EBD">EBD</SelectItem>
+                          <SelectItem value="CAMPANHA">Campanha</SelectItem>
+                          <SelectItem value="CARNE_REVIVER">Carnê Reviver</SelectItem>
+                          <SelectItem value="SAIDA">Saída</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">

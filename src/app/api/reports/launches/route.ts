@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
   const onlyData = searchParams.get('onlyData') === 'true'
   const preview = searchParams.get('preview') === 'true'
   const timezone = 'America/Maceio'
+  const importFilter = searchParams.get('importFilter') || 'ALL'
 
   try {
     const congregations = await prisma.congregation.findMany({
@@ -55,6 +56,9 @@ export async function GET(request: NextRequest) {
         date: {
           gte: startOfDay(new Date(startDate)),
           lte: endOfDay(new Date(endDate)),
+        },
+        status: {
+          ...importFilter === 'IMPORTED' ? { equals: 'IMPORTED' } : importFilter === 'MANUAL' ? { not: { in: ['IMPORTED', 'CANCELED'] } } : { not: 'CANCELED' }
         }
       },
       include: { congregation: true, contributor: true, supplier: true},
@@ -86,7 +90,7 @@ export async function GET(request: NextRequest) {
         const cLaunches = launchesByCongregation[cong.id] || []
         const entrada = cLaunches.filter((l: any) => l.type !== 'SAIDA').reduce((sum: number, l: any) => sum + (Number(l.value) || 0), 0)
         const saida = cLaunches.filter((l: any) => l.type === 'SAIDA').reduce((sum: number, l: any) => sum + (Number(l.value) || 0), 0)
-        console.log(cLaunches)
+
         return {
           name: cong.name,
           launches: cLaunches.map((l: any) => ({
@@ -155,7 +159,8 @@ export async function GET(request: NextRequest) {
     yPos += 5
     const typeLabels = types.map(t => formatLaunchType(t))
     doc.text(`TIPOS: ${typeLabels.join(', ')}`, margin, yPos)
-    //yPos += 5
+    yPos += 5
+    doc.text(`Origem dos Lançamentos: ${importFilter === 'ALL' ? 'Todos' : importFilter === 'IMPORTED' ? 'Importados' : 'Apenas Digitados'}`, margin, yPos)
     
     // Direita: Usuário e Data (posicionando no yPos original do bloco)
     const rightAlignX = pageWidth - margin

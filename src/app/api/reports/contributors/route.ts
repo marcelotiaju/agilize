@@ -34,7 +34,8 @@ export async function GET(request: NextRequest) {
     const congregationIds = searchParams.get('congregationIds')?.split(',') || []
     const timezone = searchParams.get('timezone') || 'America/Sao_Paulo'
     const contributionFilter = searchParams.get('contributionFilter') || 'BOTH';
-
+    const importFilter = searchParams.get('importFilter') || 'ALL';
+console.log('Import Filter:', importFilter);
     // 1. Buscamos todas as congregações selecionadas para garantir que todas apareçam
     const selectedCongs = await prisma.congregation.findMany({
       where: { id: { in: congregationIds } },
@@ -55,7 +56,9 @@ export async function GET(request: NextRequest) {
               lte: new Date(`${year}-12-31T23:59:59Z`)
             },
             type: { in: launchTypes as any },
-            status: { not: 'CANCELED' }
+            status: {
+              ...importFilter === 'IMPORTED' ? { equals: 'IMPORTED' } : importFilter === 'MANUAL' ? { not: { in: ['IMPORTED', 'CANCELED'] } } : { not: 'CANCELED' }
+            }
           }
         }
       },
@@ -138,7 +141,9 @@ export async function GET(request: NextRequest) {
                             where: {
                                 date: { gte: startDate, lte: endDate },
                                 type: { in: launchTypes as any },
-                                status: { not: 'CANCELED' }
+                                status: {
+                                  ...importFilter === 'IMPORTED' ? { equals: 'IMPORTED' } : importFilter === 'MANUAL' ? { not: { in: ['IMPORTED', 'CANCELED'] } } : { not: 'CANCELED' }
+                                }
                             }
                         }
                     },
@@ -183,7 +188,7 @@ export async function GET(request: NextRequest) {
             } else if (contributionFilter === 'WITHOUT_LAUNCH') {
               contributors = contributors.filter(c => c.total === 0)
             }
-            
+
             // Calcula totais da congregação após filtro
             contributors.forEach(c => {
               c.months.forEach((val, idx) => monthTotals[idx] += val)
@@ -244,6 +249,8 @@ export async function GET(request: NextRequest) {
     doc.setFontSize(10).text(`ANO: ${year} | FILTRO: ${position}`, margin, y)
     y += 4
     doc.setFontSize(10).text(`TIPOS DE LANÇAMENTO: ${launchTypes.join(', ')}`, margin, y)
+    y += 4
+    doc.text(`Origem dos Lançamentos: ${importFilter === 'ALL' ? 'Todos' : importFilter === 'IMPORTED' ? 'Importados' : 'Apenas Digitados'}`, margin, y)
 
     // Direita: Usuário e Data (posicionando no yPos original do bloco)
     const rightAlignX = pageWidth - margin
