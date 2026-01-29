@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, Search, Check, X, AlertCircle, CalendarIcon, User, Users, Ghost, List, ArrowUp, Upload } from 'lucide-react'
+import { Plus, Edit, Trash2, Search, Check, X, AlertCircle, CalendarIcon, User, Users, Ghost, List, ArrowUp, Upload, FileText, Building } from 'lucide-react'
 import { format, startOfDay } from 'date-fns'
 import { zonedTimeToUtc } from 'date-fns-tz'
 import { ptBR } from 'date-fns/locale'
@@ -178,8 +178,14 @@ useEffect(() => {
     summaryId: '',
   })
 
-  function truncateString(str: string, num: number) {
-    return str.length > num ? str.slice(0, num) + '...' : str;
+  function truncateString(str: string | null | undefined, num: number) {
+    return str && str.length > num ? str.slice(0, num) + '...' : str || '-';
+  }
+
+  function extractAfterColon(str: string | undefined | null): string {
+    if (!str) return '-';
+    const index = str.indexOf(':');
+    return index !== -1 ? str.substring(index + 1).trim() : str;
   }
 
   useEffect(() => {
@@ -761,6 +767,11 @@ useEffect(() => {
 
         <div className="space-y-1 mb-1">
           <div className="flex items-center text-sm font-normal">
+            <Building className="h-4 w-4 mr-1 shrink-0 text-gray-500" />
+            <span className="truncate">{extractAfterColon(launch.congregation?.name)}</span>
+          </div>
+
+          <div className="flex items-center text-sm font-normal">
             <CalendarIcon className="h-4 w-4 mr-1" />
             {format(new Date(launch.date), 'dd/MM/yyyy', { locale: ptBR })}
           </div>
@@ -781,14 +792,15 @@ useEffect(() => {
 
         {launch.talonNumber && (
           <div className="flex justify-start">
-            <span className="text-sm font-normal">Talão:</span>
+            <span className="text-sm font-normal">{formData.type === 'SAIDA' ? 'Nr. Doc:' : formData.type === 'DIZIMO' ? 'Nr. Recibo:' : formData.type === 'CARNE_REVIVER' || formData.type === 'MISSAO' ? '' : 'Nr. Talão:'}</span>
             <span className="text-sm font-medium">{launch.talonNumber}</span>
           </div>
         )}
         {launch.description && (
           <div className="flex justify-start">
-            <span className="text-sm font-normal">Descrição:</span>
-            <span className="text-sm font-medium">{launch.description}</span>
+            <FileText className="h-4 w-4 md:hidden"/>
+            {/* <span className="text-sm font-normal">Descrição:</span> */}
+            <span className="text-sm font-medium ml-1">{launch.description}</span>
           </div>
         )}
         {launch.classification && (
@@ -1066,7 +1078,12 @@ useEffect(() => {
                                   id="value"
                                   name="value"
                                   inputMode="decimal"
-                                  className="col-span-3 h-10 w-full rounded-md border border-input bg-background px-3 py-2"
+                                  className={cn(
+                                    "col-span-3 h-10 w-full rounded-md border border-input bg-background px-3 py-2",
+                                    editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null) 
+                                      ? "text-gray-500 cursor-not-allowed opacity-50" 
+                                      : ""
+                                  )}
                                   value={formData.value ?? ''}
                                   onValueChange={(values) => {
                                     const { floatValue, value } = values;
@@ -1321,7 +1338,10 @@ useEffect(() => {
                             )}
 
                             <div>
-                              <Label htmlFor="description">Descrição</Label>
+                              <Label htmlFor="description" className="flex items-center gap-2">
+                                <FileText className="h-4 w-4 md:hidden" />
+                                <span className="hidden md:inline">Descrição</span>
+                              </Label>
                               <Textarea
                                 id="description"
                                 name="description"
@@ -1570,6 +1590,7 @@ useEffect(() => {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Tipo</TableHead>
+                          <TableHead>Congregação</TableHead>
                           <TableHead>Data</TableHead>
                           <TableHead>Valores</TableHead>
                           <TableHead>Contribuinte/Fornecedor</TableHead>
@@ -1604,9 +1625,10 @@ useEffect(() => {
                                                 launch.type === 'CIRCULO' ? 'Círculo de Oração' : ''}
                               </div>
                             </TableCell>
+                            <TableCell>{extractAfterColon(launch.congregation?.name)}</TableCell>
                             <TableCell>{format(new Date(launch.date), 'dd/MM/yyyy')}</TableCell>
                             <TableCell>{formatCurrency(launch.value)}</TableCell>
-                            <TableCell>{launch.contributor?.name || launch.supplier?.razaoSocial || launch.contributorName || launch.supplierName || '-'}</TableCell>
+                            <TableCell>{truncateString(launch.contributor?.name,30) || truncateString(launch.supplier?.razaoSocial,30) || truncateString(launch.contributorName,30) || truncateString(launch.supplierName,30) || '-'}</TableCell>
                             <TableCell>{launch.talonNumber}</TableCell>
                             <TableCell>
                               <div className="flex items-center space-x-2">

@@ -63,6 +63,8 @@ export const authOptions : NextAuthOptions = {
           canReportLaunches: !!p?.canReportLaunches,
           canReportContributors: !!p?.canReportContributors,
           canReportMonthlySummary: !!p?.canReportMonthlySummary,
+          canReportHistoryContribSynthetic: !!p?.canReportHistoryContribSynthetic,
+          canReportHistoryContribAnalytic: !!p?.canReportHistoryContribAnalytic,
           canReportSummary: !!p?.canReportSummary,
           canDeleteSummary: !!p?.canDeleteSummary,
           defaultLaunchType: p?.defaultLaunchType ?? 'DIZIMO'
@@ -146,6 +148,8 @@ export const authOptions : NextAuthOptions = {
           canReportLaunches : (user as any).canReportLaunches,
           canReportContributors : (user as any).canReportContributors,
           canReportMonthlySummary : (user as any).canReportMonthlySummary,
+          canReportHistoryContribSynthetic: (user as any).canReportHistoryContribSynthetic,
+          canReportHistoryContribAnalytic: (user as any).canReportHistoryContribAnalytic,
           canReportSummary : (user as any).canReportSummary,
           canDeleteSummary : (user as any).canDeleteSummary,
           defaultLaunchType: (user as any).defaultLaunchType ?? 'DIZIMO'
@@ -199,6 +203,8 @@ export const authOptions : NextAuthOptions = {
         canReportLaunches : typeof token.canReportLaunches === "boolean" ? token.canReportLaunches : undefined,
         canReportContributors : typeof token.canReportContributors === "boolean" ? token.canReportContributors : undefined,
         canReportMonthlySummary : typeof token.canReportMonthlySummary === "boolean" ? token.canReportMonthlySummary : undefined,
+        canReportHistoryContribSynthetic: typeof token.canReportHistoryContribSynthetic === "boolean" ? token.canReportHistoryContribSynthetic : undefined,
+        canReportHistoryContribAnalytic: typeof token.canReportHistoryContribAnalytic === "boolean" ? token.canReportHistoryContribAnalytic : undefined,
         canReportSummary : typeof token.canReportSummary === "boolean" ? token.canReportSummary : undefined,
         canDeleteSummary : typeof token.canDeleteSummary === "boolean" ? token.canDeleteSummary : undefined,
         defaultLaunchType: typeof token.defaultLaunchType === "string" ? token.defaultLaunchType : 'DIZIMO',

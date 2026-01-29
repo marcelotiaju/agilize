@@ -11,8 +11,15 @@ import { Footer } from "react-day-picker"
 const fs = require('fs');
 //const imagePath = path.join(process.cwd(), '../Logo.png');
 
-const imageFile = fs.readFileSync('../agilize/public/images/Logo.png');
-const base64String = Buffer.from(imageFile).toString('base64');
+// Cache de imagem para evitar leitura repetida
+let cachedBase64String: string | null = null;
+function getBase64Logo(): string {
+  if (!cachedBase64String) {
+    const imageFile = fs.readFileSync('../agilize/public/images/Logo.png');
+    cachedBase64String = Buffer.from(imageFile).toString('base64');
+  }
+  return cachedBase64String;
+}
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -23,8 +30,8 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const year = parseInt(searchParams.get('year') || new Date().getFullYear().toString())
-    const congregationIds = searchParams.get('congregations')?.split(',').filter(Boolean) || []
-    const launchTypes = searchParams.get('launchTypes')?.split(',') || []
+    const congregationIds = searchParams.get('congregationIds')?.split(',').filter(Boolean) || []
+    const launchTypes = searchParams.get('launchTypes')?.split(',').filter(Boolean) || []
     const isPreview = searchParams.get('preview') === 'true'
     const timezone = searchParams.get('timezone') || 'America/Sao_Paulo'
     const importFilter = searchParams.get('importFilter') || 'ALL';
@@ -34,7 +41,6 @@ export async function GET(request: NextRequest) {
         gte: new Date(`${year}-01-01T00:00:00Z`),
         lte: new Date(`${year}-12-31T23:59:59Z`),
       },
-      // Verifique se no seu banco é CANCELLED (com dois 'L') como nos códigos anteriores
       status: {
         ...importFilter === 'IMPORTED' ? { equals: 'IMPORTED' } : importFilter === 'MANUAL' ? { not: { in: ['IMPORTED', 'CANCELED'] } } : { not: 'CANCELED' }
       }
@@ -50,9 +56,13 @@ export async function GET(request: NextRequest) {
       where.type = { in: launchTypes as any };
     }
 
-    const launches = await prisma.launch.findMany({
+    // Otimização: usar groupBy do Prisma para agregação
+    const launchGroups = await prisma.launch.groupBy({
+      by: ['type'],
       where,
-      select: { value: true, date: true, type: true }
+      _sum: {
+        value: true
+      }
     });
 
     // 1. Criar uma estrutura para armazenar os três valores por mês
@@ -61,10 +71,18 @@ export async function GET(request: NextRequest) {
       expense: 0,
       total: 0
     }));
+
+    // Buscar apenas os lançamentos necessários (com select mínimo)
+    const launches = await prisma.launch.findMany({
+      where,
+      select: { value: true, date: true, type: true },
+      orderBy: { date: 'asc' }
+    });
+
     // 2. Preencher a estrutura iterando sobre os lançamentos 
     launches.forEach(l => {
       const month = new Date(l.date).getUTCMonth();
-      const value = Number(l.value);
+      const value = Number(l.value) || 0;
       const type = l.type;
 
       // Lógica para definir se é Entrada ou Saída
@@ -108,7 +126,7 @@ export async function GET(request: NextRequest) {
     // Substitua o retângulo abaixo por: doc.addImage(base64String, 'PNG', margin, yPos, 20, 20)
     doc.setFillColor(200, 200, 200)
     //doc.rect(margin, yPos, 20, 20, 'F') 
-    doc.addImage(base64String, 'PNG', margin, y, 20, 20)
+    doc.addImage(getBase64Logo(), 'PNG', margin, y, 20, 20)
 
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')

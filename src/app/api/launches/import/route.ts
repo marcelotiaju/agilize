@@ -7,7 +7,7 @@ import { startOfDay } from "date-fns"
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions)
-  
+
   if (!session) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     const text = decoder.decode(buffer)
 
     const lines = text.split('\n').filter(line => line.trim())
-    
+
     if (lines.length < 2) {
       return NextResponse.json({ error: "Arquivo CSV deve ter pelo menos um cabeçalho e uma linha de dados" }, { status: 400 })
     }
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     // Data,Valor,Contribuinte,Descrição
     const headers = lines[0].split(',').map(h => h.trim().toLowerCase())
     const dataLines = lines.slice(1)
-    
+
     let imported = 0
     let skipped = 0
     let errors: string[] = []
@@ -103,6 +103,7 @@ export async function POST(request: NextRequest) {
       let valueStr = ''
       let temCadastro = ''
       let cpfContributor = ''
+      // let cpfNaoLocalizado = ''
       let description = ''
 
       // Se tiver cabeçalho, tentar identificar por nome
@@ -113,6 +114,7 @@ export async function POST(request: NextRequest) {
         const valueIdx = headers.findIndex(h => h.includes('valor'))
         const temCadastroIdx = headers.findIndex(h => h.includes('temcadastro'))
         const contributorIdx = headers.findIndex(h => h.includes('cpfcontribuinte') || h.includes('nome'))
+        // const cpfNaoLocalizadoIdx = headers.findIndex(h => h.includes('cpfnlocalizado') || h.includes('cpfnãolocalizado'))
         const descIdx = headers.findIndex(h => h.includes('descrição') || h.includes('descricao'))
         const talonIdx = headers.findIndex(h => h.includes('recibo') || h.includes('talão') || h.includes('talao') || h.includes('numero'))
 
@@ -123,6 +125,7 @@ export async function POST(request: NextRequest) {
         valueStr = valueIdx >= 0 && columns[valueIdx] ? columns[valueIdx] : columns[4]
         temCadastro = temCadastroIdx >= 0 && columns[temCadastroIdx] ? columns[temCadastroIdx] : (columns[5] || '')
         cpfContributor = contributorIdx >= 0 && columns[contributorIdx] ? columns[contributorIdx] : columns[6]
+        // cpfNaoLocalizado = cpfNaoLocalizadoIdx >= 0 && columns[cpfNaoLocalizadoIdx] ? columns[cpfNaoLocalizadoIdx] : (columns[7] || '')
         description = descIdx >= 0 && columns[descIdx] ? columns[descIdx] : (columns[7] || '')
       } else {
         // Sem cabeçalho, usar posição fixa
@@ -133,6 +136,7 @@ export async function POST(request: NextRequest) {
         valueStr = columns[4] || ''
         temCadastro = columns[5] || ''
         cpfContributor = columns[6] || ''
+        // cpfNaoLocalizado = columns[7] || ''
         description = columns[7] || ''
       }
       if (!congregationCode || !dateStr || !valueStr || !cpfContributor) {
@@ -196,11 +200,11 @@ export async function POST(request: NextRequest) {
       // }
 
       const congregation = await prisma.congregation.findUnique({
-        where: { code: congregationCode },select: { id: true }
+        where: { code: congregationCode }, select: { id: true }
       })
 
       const contributor = await prisma.contributor.findFirst({
-        where: { cpf: cpfContributor || null },select: { id: true }
+        where: { cpf: cpfContributor || null }, select: { id: true }
       })
 
       if (!congregation) {
@@ -232,7 +236,7 @@ export async function POST(request: NextRequest) {
             value: value,
             contributorId: contributor?.id || null,
             // Opcional: remover o status se quiser evitar duplicados mesmo que não sejam 'IMPORTED'
-            status: 'IMPORTED' 
+            status: 'IMPORTED'
           }
         })
 
@@ -248,7 +252,7 @@ export async function POST(request: NextRequest) {
             type: launchType,
             date: launchDate,
             value,
-            contributorName: temCadastro.toLowerCase() === 'n' ? cpfContributor: '',
+            contributorName: temCadastro.toLowerCase() === 'n' ? cpfContributor : '',
             contributorId: contributor?.id || null,
             description: description || null,
             talonNumber: talonNumber || null,
@@ -263,14 +267,14 @@ export async function POST(request: NextRequest) {
     }
 
     if (errors.length > 0 && imported === 0) {
-      return NextResponse.json({ 
-        error: "Erro na importação", 
+      return NextResponse.json({
+        error: "Erro na importação",
         details: errors,
         imported: 0
       }, { status: 400 })
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: imported > 0 ? "Importação concluída com sucesso" : "Nenhum lançamento importado",
       imported,
       errors: errors.length > 0 ? errors : undefined

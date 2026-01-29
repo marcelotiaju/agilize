@@ -44,7 +44,6 @@ export function SearchableSelect({
   placeholder,
   value,
   disabled,
-  required,
   onChange,
   name,
   data,
@@ -120,7 +119,6 @@ export function SearchableSelect({
         <Button
           variant="outline"
           disabled={disabled}
-          required={required}
           className={cn("w-full justify-start overflow-hidden", !value && "text-muted-foreground")}
         >
           <span className="truncate" title={selectedItem ? selectedItem.name : undefined}>{selectedItem ? selectedItem.name : placeholder}</span>

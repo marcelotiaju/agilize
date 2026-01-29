@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import prisma from "@/lib/prisma"
-import{ authOptions }from "../auth/[...nextauth]/route";
+import { authOptions } from "../auth/[...nextauth]/route";
 import Congregations from "@/app/congregations/page";
 import path from 'path';
 import fs from 'fs';
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get('endDate')
 
     let where: any = {}
-    
+
     const userCongregations = await prisma.userCongregation.findMany({
       where: {
         userId: session.user.id
@@ -68,15 +68,15 @@ export async function GET(request: NextRequest) {
       if (!c.photoUrl) {
         return { ...c, photoExists: false };
       }
-      
+
       const fileName = c.photoUrl;
       const filePath = path.join(UPLOADS_DIR, fileName);
       const fileExists = fs.existsSync(filePath);
 
       return {
-            ...c,
-            photoExists: fileExists
-          };
+        ...c,
+        photoExists: fileExists
+      };
     });
 
     return NextResponse.json(contributorsWithPhotos)
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
       cpf,
       ecclesiasticalPosition,
       type,
-      photoUrl 
+      photoUrl
     } = body
 
     const userCongregation = await prisma.userCongregation.findFirst({
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
         cpf,
         ecclesiasticalPosition,
         tipo: type,
-        photoUrl 
+        photoUrl
       }
     })
 
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
         cpf,
         ecclesiasticalPosition,
         tipo: type,
-        photoUrl 
+        photoUrl
       }
     })
 
@@ -167,7 +167,7 @@ export async function PUT(request: NextRequest) {
   try {
     const body = await request.json()
 
-    const { id,name,cpf,ecclesiasticalPosition,tipo,photoUrl } = body
+    const { id, name, cpf, ecclesiasticalPosition, tipo, photoUrl } = body
 
     const contributor = await prisma.contributor.findUnique({
       where: { id }

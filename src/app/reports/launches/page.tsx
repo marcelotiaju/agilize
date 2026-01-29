@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useMemo} from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Button } from '@/components/ui/button'
@@ -58,14 +58,14 @@ export default function Reports() {
   const [loadingPreview, setLoadingPreview] = useState(false)
   const [previewData, setPreviewData] = useState<PreviewData | null>(null)
   const [importFilter, setImportFilter] = useState<'ALL' | 'IMPORTED' | 'MANUAL'>('MANUAL');
-  
+
   // Estados de Filtro (assumindo que já existem no seu código)
   const [selectedCongregations, setSelectedCongregations] = useState<string[]>([])
   const [selectedTypes, setSelectedTypes] = useState<string[]>([])
   const [startDate, setStartDate] = useState<Date>(new Date())
   const [endDate, setEndDate] = useState<Date>(new Date())
 
-    // Determinar tipos de lançamento disponíveis baseado nas permissões do usuário
+  // Determinar tipos de lançamento disponíveis baseado nas permissões do usuário
   const availableTypes = useMemo(() => {
     const types: { value: string; label: string }[] = []
     const user = session?.user as any
@@ -83,23 +83,23 @@ export default function Reports() {
     return types
   }, [session])
 
-    useEffect(() => {
-        if (availableTypes.length === 1 && selectedTypes.length === 0) {
-            setSelectedTypes([availableTypes[0].value])
-        }
-    }, [availableTypes, selectedTypes.length, importFilter])
+  useEffect(() => {
+    if (availableTypes.length === 1 && selectedTypes.length === 0) {
+      setSelectedTypes([availableTypes[0].value])
+    }
+  }, [availableTypes, selectedTypes.length, importFilter])
 
-    useEffect(() => {
-      fetchCongregations()
-    }, [])
+  useEffect(() => {
+    fetchCongregations()
+  }, [])
 
-    const fetchCongregations = async () => {
+  const fetchCongregations = async () => {
     try {
       const response = await fetch('/api/congregations')
       if (response.ok) {
         const data: Congregation[] = await response.json()
         setCongregations(data)
-        
+
         // Se houver apenas uma congregação, definir como default
         if (data.length === 1) {
           setSelectedCongregations([data[0].id])
@@ -142,7 +142,7 @@ export default function Reports() {
         const data = await res.json()
         setPreviewData(data)
       }
-    } catch (e) { 
+    } catch (e) {
       console.error(e)
       setPreviewData(null)
     } finally {
@@ -195,7 +195,7 @@ export default function Reports() {
     return typeObj?.label || type
   }
 
-    const handleCongregationSelection = (id: string, isChecked: boolean) => {
+  const handleCongregationSelection = (id: string, isChecked: boolean) => {
     if (isChecked) {
       setSelectedCongregations(prev => [...prev, id])
     } else {
@@ -234,145 +234,145 @@ export default function Reports() {
         <div className="p-6">
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-gray-900">Relatório de Lançamentos</h1>
-            <p className="text-gray-600">Gere relatórios de lançamentos em PDF</p>
+            {/* <p className="text-gray-600">Gere relatórios de lançamentos em PDF</p> */}
           </div>
-          
+
           {/* Filtros */}
           <Card className="mb-6">
             <CardHeader>
               <CardTitle>Filtros do Relatório</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-                {/* Período */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label>Data Início</Label>
-                    <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start text-left font-normal">
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {startDate ? formatDate(startDate, 'dd/MM/yyyy') : 'Data Início'}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={startDate}
-                          locale={ptBR}
-                          onSelect={(d) => {
-                            if (d) {
-                              setStartDate(d)
-                              setStartDateOpen(false)
-                            }
-                          }}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
+              {/* Período */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label>Data Início</Label>
+                  <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start text-left font-normal">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {startDate ? formatDate(startDate, 'dd/MM/yyyy') : 'Data Início'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={startDate}
+                        locale={ptBR}
+                        onSelect={(d) => {
+                          if (d) {
+                            setStartDate(d)
+                            setStartDateOpen(false)
+                          }
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
 
-                  <div>
-                    <Label>Data Fim</Label>
-                    <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start text-left font-normal">
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {endDate ? formatDate(endDate, 'dd/MM/yyyy') : 'Data Fim'}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={endDate}
-                          locale={ptBR}
-                          onSelect={(d) => {
-                            if (d) {
-                              setEndDate(d)
-                              setEndDateOpen(false)
-                            }
-                          }}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
+                <div>
+                  <Label>Data Fim</Label>
+                  <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start text-left font-normal">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {endDate ? formatDate(endDate, 'dd/MM/yyyy') : 'Data Fim'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={endDate}
+                        locale={ptBR}
+                        onSelect={(d) => {
+                          if (d) {
+                            setEndDate(d)
+                            setEndDateOpen(false)
+                          }
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
 
-                  <div className="flex flex-col justify-end space-y-2">
-                          <Select value={importFilter} onValueChange={(v: any) => setImportFilter(v)}>
-                              <SelectTrigger>
-                              <SelectValue placeholder="Todos" />
-                              </SelectTrigger>
-                              <SelectContent>
-                              <SelectItem value="ALL">Todos os Lançamentos</SelectItem>
-                              <SelectItem value="IMPORTED">Apenas Importados</SelectItem>
-                              <SelectItem value="MANUAL">Apenas Digitados</SelectItem>
-                              </SelectContent>
-                          </Select>
+                <div className="flex flex-col justify-end space-y-2">
+                  <Select value={importFilter} onValueChange={(v: any) => setImportFilter(v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">Todos os Lançamentos</SelectItem>
+                      <SelectItem value="IMPORTED">Apenas Importados</SelectItem>
+                      <SelectItem value="MANUAL">Apenas Digitados</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Seleção de Congregações e Tipos lado a lado */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Seleção de Congregações */}
+                <div>
+                  <Label>Congregações</Label>
+                  <div className="space-y-2 mt-2 border p-3 rounded-md max-h-40 overflow-y-auto">
+                    <div className="flex items-center space-x-2 pb-1 border-b">
+                      <Checkbox
+                        id="selectAllCongregations"
+                        checked={selectedCongregations.length === congregations.length && congregations.length > 0}
+                        onCheckedChange={(checked) => handleSelectAllCongregations(checked as boolean)}
+                        disabled={congregations.length === 1}
+                      />
+                      <Label htmlFor="selectAllCongregations" className="font-semibold">
+                        Marcar/Desmarcar Todos
+                      </Label>
+                    </div>
+                    {congregations.map((congregation) => (
+                      <div key={congregation.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`congregation-${congregation.id}`}
+                          checked={selectedCongregations.includes(congregation.id)}
+                          onCheckedChange={(checked) => handleCongregationSelection(congregation.id, checked as boolean)}
+                          disabled={congregations.length === 1}
+                        />
+                        <Label htmlFor={`congregation-${congregation.id}`}>
+                          {congregation.name}
+                        </Label>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
-                  {/* Seleção de Congregações e Tipos lado a lado */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Seleção de Congregações */}
-                    <div>
-                      <Label>Congregações</Label>
-                      <div className="space-y-2 mt-2 border p-3 rounded-md max-h-40 overflow-y-auto">
-                        <div className="flex items-center space-x-2 pb-1 border-b">
-                          <Checkbox
-                            id="selectAllCongregations"
-                            checked={selectedCongregations.length === congregations.length && congregations.length > 0}
-                            onCheckedChange={(checked) => handleSelectAllCongregations(checked as boolean)}
-                            disabled={congregations.length === 1}
-                          />
-                          <Label htmlFor="selectAllCongregations" className="font-semibold">
-                            Marcar/Desmarcar Todos
-                          </Label>
-                        </div>
-                        {congregations.map((congregation) => (
-                          <div key={congregation.id} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`congregation-${congregation.id}`}
-                              checked={selectedCongregations.includes(congregation.id)}
-                              onCheckedChange={(checked) => handleCongregationSelection(congregation.id, checked as boolean)}
-                              disabled={congregations.length === 1}
-                            />
-                            <Label htmlFor={`congregation-${congregation.id}`}>
-                              {congregation.name}
-                            </Label>
-                          </div>
-                        ))}
-                      </div>
+                {/* Seleção de Tipos */}
+                <div>
+                  <Label>Tipos de Lançamento</Label>
+                  <div className="space-y-2 mt-2 border p-3 rounded-md max-h-40 overflow-y-auto">
+                    <div className="flex items-center space-x-2 pb-1 border-b">
+                      <Checkbox
+                        id="selectAllTypes"
+                        checked={selectedTypes.length === availableTypes.length && availableTypes.length > 0}
+                        onCheckedChange={(checked) => handleSelectAllTypes(checked as boolean)}
+                        disabled={availableTypes.length === 1}
+                      />
+                      <Label htmlFor="selectAllTypes" className="font-semibold">
+                        Marcar/Desmarcar Todos
+                      </Label>
                     </div>
-
-                    {/* Seleção de Tipos */}
-                    <div>
-                      <Label>Tipos de Lançamento</Label>
-                      <div className="space-y-2 mt-2 border p-3 rounded-md max-h-40 overflow-y-auto">
-                        <div className="flex items-center space-x-2 pb-1 border-b">
-                          <Checkbox
-                            id="selectAllTypes"
-                            checked={selectedTypes.length === availableTypes.length && availableTypes.length > 0}
-                            onCheckedChange={(checked) => handleSelectAllTypes(checked as boolean)}
-                            disabled={availableTypes.length === 1}
-                          />
-                          <Label htmlFor="selectAllTypes" className="font-semibold">
-                            Marcar/Desmarcar Todos
-                          </Label>
-                        </div>
-                        {availableTypes.map((type) => (
-                          <div key={type.value} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`type-${type.value}`}
-                              checked={selectedTypes.includes(type.value)}
-                              onCheckedChange={(checked) => handleTypeSelection(type.value, checked as boolean)}
-                              disabled={availableTypes.length === 1}
-                            />
-                            <Label htmlFor={`type-${type.value}`}>
-                              {type.label}
-                            </Label>
-                          </div>
-                        ))}
+                    {availableTypes.map((type) => (
+                      <div key={type.value} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`type-${type.value}`}
+                          checked={selectedTypes.includes(type.value)}
+                          onCheckedChange={(checked) => handleTypeSelection(type.value, checked as boolean)}
+                          disabled={availableTypes.length === 1}
+                        />
+                        <Label htmlFor={`type-${type.value}`}>
+                          {type.label}
+                        </Label>
                       </div>
-                    </div>
+                    ))}
                   </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -402,23 +402,23 @@ export default function Reports() {
               </CardHeader>
               <CardContent>
                 {/* <ScrollArea className="h-96"> */}
-                  <div className="space-y-8">
-                    {previewData.congregations.map((cong, congIdx) => (
-                      <div key={congIdx}>
-                        <h3 className="font-bold text-lg mb-3 text-primary">
-                          {cong.name}
-                        </h3>
-                        <div className="border rounded-md">
-                          <ScrollArea className="w-full whitespace-nowrap">
-                            <div className="border rounded-md overflow-x-auto">
-                              <Table className='w-full'>
+                <div className="space-y-8">
+                  {previewData.congregations.map((cong, congIdx) => (
+                    <div key={congIdx}>
+                      <h3 className="font-bold text-lg mb-3 text-primary">
+                        {cong.name}
+                      </h3>
+                      <div className="border rounded-md">
+                        <ScrollArea className="w-full whitespace-nowrap">
+                          <div className="border rounded-md overflow-x-auto">
+                            <Table className='w-full'>
                               <TableHeader>
                                 <TableRow className="bg-primary/10">
-                                  <TableHead className="font-bold whitespace-nowrap">Data</TableHead>
-                                  <TableHead className="font-bold whitespace-nowrap">Tipo</TableHead>
+                                  <TableHead className="font-bold whitespace-nowrap w-[100px]">Data</TableHead>
+                                  <TableHead className="font-bold whitespace-nowrap w-[120px]">Tipo</TableHead>
                                   <TableHead className="font-bold whitespace-nowrap">Contribuinte/Fornecedor</TableHead>
-                                  <TableHead className="font-bold whitespace-nowrap">Descrição</TableHead>
-                                  <TableHead className="text-right font-bold whitespace-nowrap min-w-[100px]">Entrada</TableHead>
+                                  <TableHead className="font-bold whitespace-nowrap w-auto">Descrição</TableHead>
+                                  <TableHead className="text-right font-bold whitesspace-nowrap min-w-[100px]">Entrada</TableHead>
                                   <TableHead className="text-right font-bold whitespace-nowrap min-w-[100px]">Saída</TableHead>
                                 </TableRow>
                               </TableHeader>
@@ -427,8 +427,11 @@ export default function Reports() {
                                   <TableRow key={idx}>
                                     <TableCell className="whitespace-nowrap">{formatDate(new Date(launch.date), 'dd/MM/yyyy', { locale: ptBR })}</TableCell>
                                     <TableCell className="font-medium whitespace-nowrap">{getTypeLabel(launch.type)}</TableCell>
-                                    {(launch.type === 'DIZIMO'  || launch.type === 'CARNE_REVIVER') && <TableCell className="max-w-[150px] truncate">{launch.contributorName}</TableCell>}
-                                    {launch.type === 'SAIDA' &&  <TableCell className="max-w-[150px] truncate">{launch.supplierName}</TableCell>}
+                                    <TableCell className="max-w-[150px] truncate">
+                                      {(launch.type === 'DIZIMO' || launch.type === 'CARNE_REVIVER') ? (launch.contributorName || '-') :
+                                        launch.type === 'SAIDA' ? (launch.supplierName || '-') :
+                                          '-'}
+                                    </TableCell>
                                     <TableCell className="max-w-[200px] truncate">{launch.description || '-'}</TableCell>
                                     <TableCell className="text-right text-green-600 whitespace-nowrap font-medium">
                                       {launch.isEntry ? `R$ ${formatCurrency(launch.value)}` : '-'}
@@ -464,46 +467,46 @@ export default function Reports() {
                         </ScrollArea>
                       </div>
                     </div>
-                    ))}
-                    {/* Linha de total geral se houver múltiplas congregações */}
-                    {previewData.congregations.length > 1 && (
-                      <div className="mt-4">
-                        <div className="border rounded-md overflow-x-auto -mx-1">
-                          <div className="min-w-full inline-block">
-                            <Table className="min-w-[800px]">
-                              <TableHeader>
-                                <TableRow className="bg-blue-50">
-                                  <TableHead colSpan={4} className="font-bold text-lg">TOTAL GERAL</TableHead>
-                                  <TableHead className="text-right font-bold text-lg text-green-600 whitespace-nowrap min-w-[100px]">Entrada</TableHead>
-                                  <TableHead className="text-right font-bold text-lg text-red-600 whitespace-nowrap min-w-[100px]">Saída</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                <TableRow className="bg-blue-50 font-bold">
-                                  <TableCell colSpan={4} className="text-lg">TOTAL DE TODAS AS CONGREGAÇÕES</TableCell>
-                                  <TableCell className="text-right text-lg text-green-600 whitespace-nowrap font-medium">
-                                    R$ {formatCurrency(previewData.totalEntrada)}
-                                  </TableCell>
-                                  <TableCell className="text-right text-lg text-red-600 whitespace-nowrap font-medium">
-                                    R$ {formatCurrency(previewData.totalSaida)}
-                                  </TableCell>
-                                </TableRow>
-                                {/* Linha de saldo geral */}
-                                <TableRow className="bg-blue-100 font-bold">
-                                  <TableCell colSpan={4} className="text-lg">SALDO GERAL</TableCell>
-                                  <TableCell colSpan={2} className="text-right text-lg whitespace-nowrap">
-                                    <span className={previewData.totalEntrada - previewData.totalSaida >= 0 ? 'text-green-600' : 'text-red-600'}>
-                                      R$ {formatCurrency(previewData.totalEntrada - previewData.totalSaida)}
-                                    </span>
-                                  </TableCell>
-                                </TableRow>
-                              </TableBody>
-                            </Table>
-                          </div>
+                  ))}
+                  {/* Linha de total geral se houver múltiplas congregações */}
+                  {previewData.congregations.length > 1 && (
+                    <div className="mt-4">
+                      <div className="border rounded-md overflow-x-auto -mx-1">
+                        <div className="min-w-full inline-block">
+                          <Table className="min-w-[800px]">
+                            <TableHeader>
+                              <TableRow className="bg-blue-50">
+                                <TableHead colSpan={4} className="font-bold text-lg">TOTAL GERAL</TableHead>
+                                <TableHead className="text-right font-bold text-lg text-green-600 whitespace-nowrap min-w-[100px]">Entrada</TableHead>
+                                <TableHead className="text-right font-bold text-lg text-red-600 whitespace-nowrap min-w-[100px]">Saída</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              <TableRow className="bg-blue-50 font-bold">
+                                <TableCell colSpan={4} className="text-lg">TOTAL DE TODAS AS CONGREGAÇÕES</TableCell>
+                                <TableCell className="text-right text-lg text-green-600 whitespace-nowrap font-medium">
+                                  R$ {formatCurrency(previewData.totalEntrada)}
+                                </TableCell>
+                                <TableCell className="text-right text-lg text-red-600 whitespace-nowrap font-medium">
+                                  R$ {formatCurrency(previewData.totalSaida)}
+                                </TableCell>
+                              </TableRow>
+                              {/* Linha de saldo geral */}
+                              <TableRow className="bg-blue-100 font-bold">
+                                <TableCell colSpan={4} className="text-lg">SALDO GERAL</TableCell>
+                                <TableCell colSpan={2} className="text-right text-lg whitespace-nowrap">
+                                  <span className={previewData.totalEntrada - previewData.totalSaida >= 0 ? 'text-green-600' : 'text-red-600'}>
+                                    R$ {formatCurrency(previewData.totalEntrada - previewData.totalSaida)}
+                                  </span>
+                                </TableCell>
+                              </TableRow>
+                            </TableBody>
+                          </Table>
                         </div>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
+                </div>
                 {/* </ScrollArea> */}
               </CardContent>
             </Card>

@@ -215,6 +215,10 @@ export default function Users() {
     }
   }
 
+  function truncateString(str: string, num: number) {
+    return str.length > num ? str.slice(0, num) + '...' : str;
+  }
+
   const handleEdit = (user: UserData) => {
     setEditingUser(user)
     setFormData({
@@ -411,8 +415,8 @@ export default function Users() {
     return users.filter(user => {
       const normalizedName = removeAccents(user.name.toLowerCase())
       const normalizedEmail = user.email ? removeAccents(user.email.toLowerCase()) : ''
-      return normalizedName.includes(normalizedSearchTerm) || 
-             (user.email && normalizedEmail.includes(normalizedSearchTerm))
+      return normalizedName.includes(normalizedSearchTerm) ||
+        (user.email && normalizedEmail.includes(normalizedSearchTerm))
     })
   }, [users, searchTerm])
 
@@ -470,65 +474,109 @@ export default function Users() {
     <div className="min-h-screen bg-gray-50">
       <Sidebar />
       <div className="lg:pl-64">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-6">
+        <div className="p-3 sm:p-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Gerenciar Usuários</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Gerenciar Usuários</h1>
             </div>
-            <div className="flex space-x-2">
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button onClick={resetForm}>
+                  <Button onClick={resetForm} className="w-full sm:w-auto">
                     <Plus className="mr-2 h-4 w-4" />
-                    Novo Usuário
+                    <span className="hidden sm:inline">Novo Usuário</span>
+                    <span className="sm:hidden">Novo</span>
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[800px]">
+                <DialogContent className="w-[95vw] sm:w-full sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>{editingUser ? 'Editar Usuário' : 'Novo Usuário'}</DialogTitle>
-                    <DialogDescription>Preencha os dados do usuário. Permissões são definidas via Perfil.</DialogDescription>
+                    <DialogTitle className="text-lg sm:text-xl">{editingUser ? 'Editar Usuário' : 'Novo Usuário'}</DialogTitle>
+                    {/* <DialogDescription className="text-xs sm:text-sm">
+                      Preencha os dados do usuário. Permissões são definidas via Perfil.
+                    </DialogDescription> */}
                   </DialogHeader>
 
-                  <form onSubmit={handleSubmit}>
-                    <div className="grid gap-4 py-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                         <Label htmlFor="name">Nome Completo</Label>
-                         <Input id="name" name="name" value={formData.name ?? ''} onChange={handleInputChange} placeholder="Nome completo do usuário" required />
-                       </div>
-                        <div>
-                          <Label htmlFor="login">Login</Label>
-                          <Input id="login" name="login" value={(formData as any).login ?? ''} onChange={handleInputChange} placeholder="Qualquer texto para login" />
-                        </div>
-                        <div>
-                          <Label htmlFor="email">Email</Label>
-                          <Input id="email" name="email" type="email" value={formData.email ?? ''} onChange={handleInputChange}/>
-                        </div>
-                        <div>
-                          <Label htmlFor="phone">Telefone</Label>
-                          <Input id="phone" name="phone" value={formData.phone ?? ''} onChange={handleInputChange} />
-                        </div>
+                  <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+                    {/* Seção: Dados Pessoais */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 overflow-y-auto">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Nome Completo</Label>
+                        <Input
+                          id="name"
+                          name="name"
+                          value={formData.name ?? ''}
+                          onChange={handleInputChange}
+                          placeholder="Nome completo"
+                          required
+                        />
                       </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="login">Login</Label>
+                        <Input
+                          id="login"
+                          name="login"
+                          value={(formData as any).login ?? ''}
+                          onChange={handleInputChange}
+                          placeholder="Username"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input
+                          id="email"
+                          name="email"
+                          type="email"
+                          value={formData.email ?? ''}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Telefone</Label>
+                        <Input
+                          id="phone"
+                          name="phone"
+                          value={formData.phone ?? ''}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                    </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="validFrom">Válido de</Label>
-                          <Input id="validFrom" name="validFrom" type="date" value={formData.validFrom ?? ''} onChange={handleInputChange} required />
-                        </div>
-                        <div>
-                          <Label htmlFor="validTo">Válido até</Label>
-                          <Input id="validTo" name="validTo" type="date" value={formData.validTo ?? ''} onChange={handleInputChange} required />
-                        </div>
-                                              <div>
+                    <hr className="my-4" />
+
+                    {/* Seção: Validade e Senha */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="validFrom">Válido de</Label>
+                        <Input
+                          id="validFrom"
+                          name="validFrom"
+                          type="date"
+                          value={formData.validFrom ?? ''}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="validTo">Válido até</Label>
+                        <Input
+                          id="validTo"
+                          name="validTo"
+                          type="date"
+                          value={formData.validTo ?? ''}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
                         <Label htmlFor="password">Senha</Label>
                         <div className="relative flex items-center">
-                          <Input 
-                            id="password" 
-                            name="password" 
-                            type={showPassword ? 'text' : 'password'} 
-                            value={formData.password ?? ''} 
-                            onChange={handleInputChange} 
-                            placeholder={editingUser ? 'Deixe em branco para não alterar' : ''} 
+                          <Input
+                            id="password"
+                            name="password"
+                            type={showPassword ? 'text' : 'password'}
+                            value={formData.password ?? ''}
+                            onChange={handleInputChange}
+                            placeholder={editingUser ? 'Vazio para não alterar' : ''}
                             required={!editingUser}
                             className="pr-10"
                           />
@@ -541,70 +589,82 @@ export default function Users() {
                           </button>
                         </div>
                       </div>
+                    </div>
+
+                    <hr className="my-4" />
+
+                    {/* Seção: Configurações do Sistema */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+                      <div className="space-y-2 w-30">
+                        <Label htmlFor="historyDays">Dias de Histórico</Label>
+                        <Input
+                          id="historyDays"
+                          name="historyDays"
+                          type="number"
+                          value={(formData as any).historyDays ?? ''}
+                          onChange={handleInputChange}
+                          min="1"
+                          required
+                        />
                       </div>
 
-                      <div className="grid grid-cols-4 gap-4">
-                        <div>
-                          <Label htmlFor="historyDays">Dias de Histórico</Label>
-                          <Input id="historyDays" name="historyDays" type="number" value={(formData as any).historyDays ?? ''} onChange={handleInputChange} min="1" required />
-                        </div>
+                      <div className="space-y-2 w-30">
+                        <Label htmlFor="limit">Retroativo (Dias)</Label>
+                        <Input
+                          id="limit"
+                          name="maxRetroactiveDays" // Corrigido o name para bater com o estado
+                          type="number"
+                          value={(formData as any).maxRetroactiveDays}
+                          onChange={handleInputChange}
+                        />
+                      </div>
 
-                        <div>
-                          <Label htmlFor="limit">Limite de dias retroativos</Label>
-                          <Input 
-                            id="limit" 
-                            type="number" 
-                            value={(formData as any).maxRetroactiveDays} 
-                            onChange={handleInputChange}
-                          />
-                        </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="defaultPage">Página Inicial</Label>
+                        <Select
+                          value={formData.defaultPage}
+                          onValueChange={(value) => handleSelectChange('defaultPage', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="/dashboard">Dashboard</SelectItem>
+                            <SelectItem value="/launches">Lançamentos</SelectItem>
+                            <SelectItem value="/contributors">Contribuintes</SelectItem>
+                            <SelectItem value="/classifications">Classificações</SelectItem>
+                            <SelectItem value="/suppliers">Fornecedores</SelectItem>
+                            <SelectItem value="/congregations">Congregações</SelectItem>
+                            <SelectItem value="/export">Exportar Dados</SelectItem>
+                            <SelectItem value="/delete-history">Excluir Histórico</SelectItem>
+                            <SelectItem value="/congregation-summary">Resumo Diario</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                        <div>
-                          <Label htmlFor="defaultPage">Página Inicial</Label>
-                          <Select
-                            value={formData.defaultPage}
-                            onValueChange={(value) => handleSelectChange('defaultPage', value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="/dashboard">Pagina Inicial</SelectItem>
-                              <SelectItem value="/launches">Lançamentos</SelectItem>
-                              <SelectItem value="/contributors">Contribuintes</SelectItem>
-                              <SelectItem value="/classifications">Classificações</SelectItem>
-                              <SelectItem value="/suppliers">Fornecedores</SelectItem>
-                              <SelectItem value="/congregations">Congregações</SelectItem>
-                              <SelectItem value="/export">Exportar Dados</SelectItem>
-                              <SelectItem value="/delete-history">Excluir Histórico</SelectItem>
-                              <SelectItem value="/congregation-summary">Resumo Diario</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div>
-                          <Label htmlFor="profileId">Perfil</Label>
-                          <div className="flex items-center space-x-2">
-                            <Select value={(formData as any).profileId} onValueChange={(v) => handleSelectChange('profileId', v)}>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value=" ">-- Sem Perfil --</SelectItem>
-                                {profiles.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                            {/* <Button variant="ghost" onClick={() => { setIsProfileDialogOpen(true); resetProfileForm() }}><Edit className="h-4 w-4" /></Button> */}
-                          </div>
-                        </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="profileId">Perfil</Label>
+                        <Select
+                          value={(formData as any).profileId}
+                          onValueChange={(v) => handleSelectChange('profileId', v)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value=" ">-- Sem Perfil --</SelectItem>
+                            {profiles.map(p => <SelectItem key={p.id} value={p.id}>{truncateString(p.name,30)}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
 
-
-
-                    <DialogFooter className="mt-6">
-                      <Button type="submit">
-                        {editingUser ? 'Atualizar' : 'Salvar'}
+                    <DialogFooter className="sticky bottom-0 bg-white pt-4 pb-2 border-t mt-4 flex-col sm:flex-row gap-2">
+                      <Button variant="outline" type="button" onClick={() => setIsDialogOpen(false)} className="w-full sm:w-auto">
+                        Cancelar
+                      </Button>
+                      <Button type="submit" className="w-full sm:w-auto">
+                        {editingUser ? 'Atualizar Usuário' : 'Salvar Usuário'}
                       </Button>
                     </DialogFooter>
                   </form>
@@ -613,9 +673,10 @@ export default function Users() {
 
               <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" onClick={() => { setCsvFile(null); }}>
+                  <Button variant="outline" onClick={() => { setCsvFile(null); }} className="w-full sm:w-auto">
                     <Upload className="mr-2 h-4 w-4" />
-                    Importar Usuário
+                    <span className="hidden sm:inline">Importar Usuário</span>
+                    <span className="sm:hidden">Importar</span>
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[425px]">
@@ -667,7 +728,7 @@ export default function Users() {
           </div>
 
           <div className="mb-6">
-            <SearchInput placeholder="Pesquisar usuários por nome ou e-mail..." value={searchTerm} onChange={setSearchTerm} className="max-w-md" />
+            <SearchInput placeholder="Pesquisar usuários..." value={searchTerm} onChange={setSearchTerm} className="w-full sm:max-w-md" />
           </div>
 
           <Card>
@@ -681,37 +742,75 @@ export default function Users() {
                   <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome Completo</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Validade</TableHead>
-                      <TableHead>Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <>
+                  {/* Tabela para telas maiores */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nome Completo</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Validade</TableHead>
+                          <TableHead>Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredUsers.map((user) => (
+                          <TableRow key={user.id}>
+                            <TableCell className="font-medium">{user.name}</TableCell>
+                            <TableCell>{user.email}</TableCell>
+                            <TableCell>
+                              <div className="text-sm">
+                                <div>De: {format(new Date(user.validFrom), 'dd/MM/yyyy', { locale: ptBR })}</div>
+                                <div>Até: {format(new Date(user.validTo), 'dd/MM/yyyy', { locale: ptBR })}</div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex space-x-2">
+                                <Button variant="outline" size="sm" onClick={() => handleEdit(user)}><Edit className="h-4 w-4" /></Button>
+                                <Button variant="outline" size="sm" onClick={() => handleAssociation(user)}><Building className="h-4 w-4" /></Button>
+                                <Button variant="outline" size="sm" onClick={() => handleDelete(user.id)}><Trash2 className="h-4 w-4" /></Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Cards para telas pequenas */}
+                  <div className="md:hidden space-y-3">
                     {filteredUsers.map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell className="font-medium">{user.name}</TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            <div>De: {format(new Date(user.validFrom), 'dd/MM/yyyy', { locale: ptBR })}</div>
-                            <div>Até: {format(new Date(user.validTo), 'dd/MM/yyyy', { locale: ptBR })}</div>
+                      <div key={user.id} className="border rounded-lg p-4 bg-white">
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-xs text-gray-600">Nome</p>
+                            <p className="font-semibold text-gray-900">{user.name}</p>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => handleEdit(user)}><Edit className="h-4 w-4" /></Button>
-                            <Button variant="outline" size="sm" onClick={() => handleAssociation(user)}><Building className="h-4 w-4" /></Button>
-                            <Button variant="outline" size="sm" onClick={() => handleDelete(user.id)}><Trash2 className="h-4 w-4" /></Button>
+                          <div>
+                            <p className="text-xs text-gray-600">Email</p>
+                            <p className="text-sm text-gray-900 break-words">{user.email}</p>
                           </div>
-                        </TableCell>
-                      </TableRow>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-xs text-gray-600">De</p>
+                              <p className="text-sm font-medium">{format(new Date(user.validFrom), 'dd/MM/yyyy', { locale: ptBR })}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-600">Até</p>
+                              <p className="text-sm font-medium">{format(new Date(user.validTo), 'dd/MM/yyyy', { locale: ptBR })}</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2 pt-2">
+                            <Button variant="outline" size="sm" onClick={() => handleEdit(user)} className="flex-1 text-xs"><Edit className="h-3 w-3 mr-1" />Editar</Button>
+                            <Button variant="outline" size="sm" onClick={() => handleAssociation(user)} className="flex-1 text-xs"><Building className="h-3 w-3 mr-1" />Assoc.</Button>
+                            <Button variant="outline" size="sm" onClick={() => handleDelete(user.id)} className="flex-1"><Trash2 className="h-3 w-3" /></Button>
+                          </div>
+                        </div>
+                      </div>
                     ))}
-                  </TableBody>
-                </Table>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
@@ -748,8 +847,8 @@ export default function Users() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-         </div>
-       </div>
-     </div>
-   )
- }
+        </div>
+      </div>
+    </div>
+  )
+}

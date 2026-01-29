@@ -65,7 +65,7 @@ export default function ReportsPage() {
             if (response.ok) {
                 const years: string[] = await response.json()
                 setAvailableYears(years)
-                
+
                 // Define o ano mais recente (primeiro do array) como default
                 if (years.length > 0 && !selectedYear) {
                     setSelectedYear(years[0])
@@ -90,10 +90,10 @@ export default function ReportsPage() {
 
     const availableLaunchTypes = useMemo(() => {
         return [
-             (session?.user as any)?.canLaunchTithe ? {value: 'DIZIMO', label: 'Dízimo' } : null,
-            (session?.user as any)?.canLaunchCarneReviver ? {value: 'CARNE_REVIVER', label: 'Carnê Reviver' } : null
+            (session?.user as any)?.canLaunchTithe ? { value: 'DIZIMO', label: 'Dízimo' } : null,
+            (session?.user as any)?.canLaunchCarneReviver ? { value: 'CARNE_REVIVER', label: 'Carnê Reviver' } : null
         ]
-    }, [session] ).filter(Boolean) as { value: string; label: string }[]
+    }, [session]).filter(Boolean) as { value: string; label: string }[]
 
     useEffect(() => {
         if (availableLaunchTypes.length === 1 && selectedLaunchTypes.length === 0) {
@@ -112,7 +112,7 @@ export default function ReportsPage() {
         } else {
             setPreviewData(null)
         }
-    }, [selectedCongregations, selectedTypes, selectedYear, selectedLaunchTypes, contributionFilter,importFilter])
+    }, [selectedCongregations, selectedTypes, selectedYear, selectedLaunchTypes, contributionFilter, importFilter])
 
     const fetchCongregations = async () => {
         try {
@@ -264,9 +264,9 @@ export default function ReportsPage() {
                 <div className="p-6">
                     <div className="mb-6">
                         <h1 className="text-2xl font-bold text-gray-900">Relatório de Contribuintes</h1>
-                        <p className="text-gray-600">Gere relatório de Contribuintes em PDF</p>
+                        {/* <p className="text-gray-600">Gere relatório de Contribuintes em PDF</p> */}
                     </div>
-                    
+
                     {/* Filtros */}
                     <Card className="mb-6">
                         <CardHeader>
@@ -293,24 +293,25 @@ export default function ReportsPage() {
                                 </div>
 
                                 <div className="flex flex-col justify-end space-y-2">
+                                    <Select value={importFilter} onValueChange={(v: any) => setImportFilter(v)}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Todos" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="ALL">Todos os Lançamentos</SelectItem>
+                                            <SelectItem value="IMPORTED">Apenas Importados</SelectItem>
+                                            <SelectItem value="MANUAL">Apenas Digitados</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="flex flex-col justify-end space-y-2">
                                     <div className="flex items-center justify-between p-2 border rounded-md">
                                         <Label htmlFor="show-vals" className="cursor-pointer">Exibir Valores (R$)</Label>
                                         <Switch id="show-vals" checked={showValues} onCheckedChange={setShowValues} />
                                     </div>
                                 </div>
 
-                                <div className="flex flex-col justify-end space-y-2">
-                                    <Select value={importFilter} onValueChange={(v: any) => setImportFilter(v)}>
-                                        <SelectTrigger>
-                                        <SelectValue placeholder="Todos" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                        <SelectItem value="ALL">Todos os Lançamentos</SelectItem>
-                                        <SelectItem value="IMPORTED">Apenas Importados</SelectItem>
-                                        <SelectItem value="MANUAL">Apenas Digitados</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -379,54 +380,54 @@ export default function ReportsPage() {
 
                             {/* Seleção de Tipo de Lançamento */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                             <div>
-                                <Label>Tipos de Lançamento</Label>
-                                <div className="space-y-2 mt-2 border p-3 rounded-md max-h-40 overflow-y-auto">
-                                    <div className="flex items-center space-x-2 pb-1 border-b">
-                                        <Checkbox
-                                            id="selectAllLaunchTypes"
-                                            checked={selectedLaunchTypes.length === availableLaunchTypes.length && availableLaunchTypes.length > 0}
-                                            onCheckedChange={(checked) => handleSelectAllLaunchTypes(checked as boolean)}
-                                            disabled={availableLaunchTypes.length === 1}
-                                        />
-                                        <Label htmlFor="selectAllLaunchTypes" className="font-semibold">
-                                            Marcar/Desmarcar Todos
-                                        </Label>
-                                    </div>
-                                    {availableLaunchTypes.map((type) => (
-                                        <div key={type.value} className="flex items-center space-x-2">
+                                <div>
+                                    <Label>Tipos de Lançamento</Label>
+                                    <div className="space-y-2 mt-2 border p-3 rounded-md max-h-40 overflow-y-auto">
+                                        <div className="flex items-center space-x-2 pb-1 border-b">
                                             <Checkbox
-                                                id={`launchType-${type.value}`}
-                                                checked={selectedLaunchTypes.includes(type.value)}
-                                                onCheckedChange={(checked) => handleLaunchTypeSelection(type.value, checked as boolean)}
+                                                id="selectAllLaunchTypes"
+                                                checked={selectedLaunchTypes.length === availableLaunchTypes.length && availableLaunchTypes.length > 0}
+                                                onCheckedChange={(checked) => handleSelectAllLaunchTypes(checked as boolean)}
                                                 disabled={availableLaunchTypes.length === 1}
                                             />
-                                            <Label htmlFor={`launchType-${type.value}`}>
-                                                {type.label}
+                                            <Label htmlFor="selectAllLaunchTypes" className="font-semibold">
+                                                Marcar/Desmarcar Todos
                                             </Label>
                                         </div>
-                                    ))}
+                                        {availableLaunchTypes.map((type) => (
+                                            <div key={type.value} className="flex items-center space-x-2">
+                                                <Checkbox
+                                                    id={`launchType-${type.value}`}
+                                                    checked={selectedLaunchTypes.includes(type.value)}
+                                                    onCheckedChange={(checked) => handleLaunchTypeSelection(type.value, checked as boolean)}
+                                                    disabled={availableLaunchTypes.length === 1}
+                                                />
+                                                <Label htmlFor={`launchType-${type.value}`}>
+                                                    {type.label}
+                                                </Label>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
 
-                            {/* Novo Filtro de Contribuição */}
-                            <div className="space-y-2">
-                                <Label>Filtro de Contribuição</Label>
-                                <Select value={contributionFilter} onValueChange={setContributionFilter}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Selecione o tipo de visualização" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="BOTH">Ambos (Mostrar todos)</SelectItem>
-                                        <SelectItem value="WITH_LAUNCH">Com Lançamento (Apenas quem contribuiu)</SelectItem>
-                                        <SelectItem value="WITHOUT_LAUNCH">Sem Lançamento (Apenas quem não contribuiu)</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <p className="text-[12px] text-gray-500 mt-2 italic">
-                                    {contributionFilter === 'WITH_LAUNCH' && "* Filtrando apenas registros com valor maior que zero em algum mês."}
-                                    {contributionFilter === 'WITHOUT_LAUNCH' && "* Filtrando apenas registros sem nenhuma contribuição no período."}
-                                </p>
-                            </div>
+                                {/* Novo Filtro de Contribuição */}
+                                <div className="space-y-2">
+                                    <Label>Filtro de Contribuição</Label>
+                                    <Select value={contributionFilter} onValueChange={setContributionFilter}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Selecione o tipo de visualização" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="BOTH">Ambos (Mostrar todos)</SelectItem>
+                                            <SelectItem value="WITH_LAUNCH">Com Lançamento (Apenas quem contribuiu)</SelectItem>
+                                            <SelectItem value="WITHOUT_LAUNCH">Sem Lançamento (Apenas quem não contribuiu)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <p className="text-[12px] text-gray-500 mt-2 italic">
+                                        {contributionFilter === 'WITH_LAUNCH' && "* Filtrando apenas registros com valor maior que zero em algum mês."}
+                                        {contributionFilter === 'WITHOUT_LAUNCH' && "* Filtrando apenas registros sem nenhuma contribuição no período."}
+                                    </p>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
@@ -459,60 +460,60 @@ export default function ReportsPage() {
                             </CardHeader>
                             <CardContent>
                                 {/* <ScrollArea className="h-[500px]"> */}
-                                    {previewData.congregations.map((cong, congIdx) => (
-                                        <div key={congIdx} className="mb-8">
-                                            <h3 className="font-bold text-lg mb-3 text-primary">
-                                                {cong.name}
-                                            </h3>
-                                            <div className="overflow-x-auto">
-                                                <Table>
-                                                    <TableHeader>
-                                                        <TableRow className="bg-primary/10">
-                                                            <TableHead className="font-bold min-w-[200px]">Nome</TableHead>
-                                                            <TableHead className="font-bold min-w-[100px]">Cargo</TableHead>
-                                                            {MONTHS.map(month => (
-                                                                <TableHead key={month} className="text-center font-bold min-w-[60px]">
-                                                                    {month}
-                                                                </TableHead>
-                                                            ))}
-                                                            <TableHead className="text-center font-bold min-w-[80px]">TOTAL</TableHead>
-                                                        </TableRow>
-                                                    </TableHeader>
-                                                    <TableBody>
-                                                        {cong.contributors.map((contrib, idx) => (
-                                                            <TableRow key={idx}>
-                                                                <TableCell className="font-medium">{contrib.name}</TableCell>
-                                                                <TableCell>{contrib.position}</TableCell>
-                                                                {contrib.months.map((val, monthIdx) => (
-                                                                    <TableCell 
-                                                                        key={monthIdx} 
-                                                                        className={`text-center ${val === 0 && monthIdx < new Date().getMonth() ? 'bg-yellow-100' : ''}`}
-                                                                    >
-                                                                        {showValues ? (val > 0 ? formatCurrency(val) : '-') : (val > 0 ? '✓' : '-')}
-                                                                    </TableCell>
-                                                                ))}
-                                                                <TableCell className="text-center font-bold">
-                                                                    {showValues ? formatCurrency(contrib.total) : (contrib.total > 0 ? '✓' : '-')}
-                                                                </TableCell>
-                                                            </TableRow>
+                                {previewData.congregations.map((cong, congIdx) => (
+                                    <div key={congIdx} className="mb-8">
+                                        <h3 className="font-bold text-lg mb-3 text-primary">
+                                            {cong.name}
+                                        </h3>
+                                        <div className="overflow-x-auto">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow className="bg-primary/10">
+                                                        <TableHead className="font-bold min-w-[200px]">Nome</TableHead>
+                                                        <TableHead className="font-bold min-w-[100px]">Cargo</TableHead>
+                                                        {MONTHS.map(month => (
+                                                            <TableHead key={month} className="text-center font-bold min-w-[60px]">
+                                                                {month}
+                                                            </TableHead>
                                                         ))}
-                                                        {/* Linha de totais da congregação */}
-                                                        <TableRow className="bg-gray-100 font-bold">
-                                                            <TableCell colSpan={2}>TOTAL {cong.name}</TableCell>
-                                                            {cong.monthTotals.map((val, monthIdx) => (
-                                                                <TableCell key={monthIdx} className="text-center">
-                                                                    {showValues ? formatCurrency(val) : '-'}
+                                                        <TableHead className="text-center font-bold min-w-[80px]">TOTAL</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {cong.contributors.map((contrib, idx) => (
+                                                        <TableRow key={idx}>
+                                                            <TableCell className="font-medium">{contrib.name}</TableCell>
+                                                            <TableCell>{contrib.position}</TableCell>
+                                                            {contrib.months.map((val, monthIdx) => (
+                                                                <TableCell
+                                                                    key={monthIdx}
+                                                                    className={`text-center ${val === 0 && monthIdx < new Date().getMonth() ? 'bg-yellow-100' : ''}`}
+                                                                >
+                                                                    {showValues ? (val > 0 ? formatCurrency(val) : '-') : (val > 0 ? '✓' : '-')}
                                                                 </TableCell>
                                                             ))}
-                                                            <TableCell className="text-center">
-                                                                {showValues ? formatCurrency(cong.grandTotal) : '-'}
+                                                            <TableCell className="text-center font-bold">
+                                                                {showValues ? formatCurrency(contrib.total) : (contrib.total > 0 ? '✓' : '-')}
                                                             </TableCell>
                                                         </TableRow>
-                                                    </TableBody>
-                                                </Table>
-                                            </div>
+                                                    ))}
+                                                    {/* Linha de totais da congregação */}
+                                                    <TableRow className="bg-gray-100 font-bold">
+                                                        <TableCell colSpan={2}>TOTAL {cong.name}</TableCell>
+                                                        {cong.monthTotals.map((val, monthIdx) => (
+                                                            <TableCell key={monthIdx} className="text-center">
+                                                                {showValues ? formatCurrency(val) : '-'}
+                                                            </TableCell>
+                                                        ))}
+                                                        <TableCell className="text-center">
+                                                            {showValues ? formatCurrency(cong.grandTotal) : '-'}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                </TableBody>
+                                            </Table>
                                         </div>
-                                    ))}
+                                    </div>
+                                ))}
                                 {/* </ScrollArea> */}
                             </CardContent>
                         </Card>

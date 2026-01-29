@@ -67,6 +67,8 @@ export default function Profiles() {
     canReportLaunches : false,
     canReportContributors: false,
     canReportSummary: false,
+    canReportHistoryContribSynthetic: false,
+    canReportHistoryContribAnalytic: false,
     canDeleteSummary: false
   })
 
@@ -129,6 +131,8 @@ export default function Profiles() {
       canReportContributors: false,
       canReportMonthlySummary: false,
       canReportSummary: false,
+      canReportHistoryContribSynthetic: false,
+      canReportHistoryContribAnalytic: false,
       canDeleteSummary: false
     })
   }
@@ -285,7 +289,7 @@ export default function Profiles() {
                           </div>
                           <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canLaunchCircle} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchCircle: v as boolean }))} />
-                            <Label>Lançar Círculo</Label>
+                            <Label>Lançar Círculo de Oração</Label>
                           </div>
                           <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canLaunchVote} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchVote: v as boolean }))} />
@@ -335,7 +339,7 @@ export default function Profiles() {
                           </div>
                           <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canApproveCircle} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveCircle: v as boolean }))} />
-                            <Label>Aprovar Círculo</Label>
+                            <Label>Aprovar Círculo de Oração</Label>
                           </div>
                           <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canApproveVote} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveVote: v as boolean }))} />
@@ -442,7 +446,15 @@ export default function Profiles() {
                           <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canReportMonthlySummary} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canReportMonthlySummary: v as boolean }))} />
                             <Label>Relatório de Resumo Mensal</Label>
-                          </div>                          
+                          </div>     
+                          <div className="flex items-center space-x-2">
+                            <Checkbox checked={profileForm.canReportHistoryContribSynthetic} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canReportHistoryContribSynthetic: v as boolean }))} />
+                            <Label>Histórico de Contribuições Sintético</Label>
+                          </div>          
+                          <div className="flex items-center space-x-2">
+                            <Checkbox checked={profileForm.canReportHistoryContribAnalytic} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canReportHistoryContribAnalytic: v as boolean }))} />
+                            <Label>Histórico de Contribuições Analítico</Label>
+                          </div>                                           
                         </div>
                       </div>
                     </div>

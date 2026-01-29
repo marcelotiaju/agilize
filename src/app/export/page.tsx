@@ -27,10 +27,10 @@ export default function Export() {
   const [formData, setFormData] = useState({
     startDate: format(new Date(new Date().setDate(new Date().getDate() - 1)), 'yyyy-MM-dd'),
     endDate: format(new Date(new Date().setDate(new Date().getDate() - 1)), 'yyyy-MM-dd'),
-    type: ['DIZIMO','OFERTA_CULTO','MISSAO','CIRCULO','VOTO','EBD','CAMPANHA','SAIDA'], 
+    type: ['DIZIMO', 'OFERTA_CULTO', 'MISSAO', 'CIRCULO', 'VOTO', 'EBD', 'CAMPANHA', 'SAIDA'],
     congregationIds: [] as string[],
     status: ['APPROVED'] // Apenas lançamentos aprovados
-})
+  })
   const [isExporting, setIsExporting] = useState(false)
 
   useEffect(() => {
@@ -43,7 +43,7 @@ export default function Export() {
       if (response.ok) {
         const data = await response.json()
         setCongregations(data)
-        
+
         // Selecionar todas as congregações por padrão
         setFormData(prev => ({
           ...prev,
@@ -69,7 +69,7 @@ export default function Export() {
       const congregationIds = checked
         ? [...prev.congregationIds, congregationId]
         : prev.congregationIds.filter(id => id !== congregationId)
-      
+
       return { ...prev, congregationIds }
     })
   }
@@ -110,9 +110,9 @@ export default function Export() {
       const types = checked
         ? [...prev.type, type]
         : prev.type.filter(t => t !== type)
-      
+
       return { ...prev, type: types }
-     })
+    })
   }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -122,19 +122,19 @@ export default function Export() {
       alert('Selecione pelo menos um tipo de lançamento')
       return
     }
-    
+
     if (formData.congregationIds.length === 0) {
       alert('Selecione pelo menos uma congregação')
       return
     }
 
     if (formData.status.length === 0) {
-    alert('Selecione pelo menos um status de lançamento');
-    return;
+      alert('Selecione pelo menos um status de lançamento');
+      return;
     }
 
     setIsExporting(true)
-    
+
     try {
       const response = await fetch('/api/export', {
         method: 'POST',
@@ -167,232 +167,232 @@ export default function Export() {
     }
   }
 
-  const allFilteredSelected = filteredCongregations.length > 0 && 
+  const allFilteredSelected = filteredCongregations.length > 0 &&
     filteredCongregations.every(c => formData.congregationIds.includes(c.id))
-  
-  const handleStatusChange = (status: string, checked: boolean) => {
-  setFormData(prev => {
-    const statuses = checked
-      ? [...prev.status, status]
-      : prev.status.filter(s => s !== status);
 
-    return { ...prev, status: statuses };
-  });
+  const handleStatusChange = (status: string, checked: boolean) => {
+    setFormData(prev => {
+      const statuses = checked
+        ? [...prev.status, status]
+        : prev.status.filter(s => s !== status);
+
+      return { ...prev, status: statuses };
+    });
   };
 
   return (
-    <PermissionGuard 
+    <PermissionGuard
       requiredPermissions={{
         canExport: true
       }}
     >
-    <div className="min-h-screen bg-gray-50">
-      <Sidebar />
-      
-      <div className="lg:pl-64">
-        <div className="p-6">
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">Exportar Dados</h1>
-            <p className="text-gray-600">Exporte lançamentos para o Excel</p>
-          </div>
+      <div className="min-h-screen bg-gray-50">
+        <Sidebar />
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <FileSpreadsheet className="mr-2 h-5 w-5" />
-                    Configurar Exportação
-                  </CardTitle>
-                  <CardDescription>
-                    Selecione o período e os dados que deseja exportar
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="startDate">Data Inicial</Label>
-                        <Input
-                          id="startDate"
-                          name="startDate"
-                          type="date"
-                          value={formData.startDate}
-                          onChange={handleInputChange}
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="endDate">Data Final</Label>
-                        <Input
-                          id="endDate"
-                          name="endDate"
-                          type="date"
-                          value={formData.endDate}
-                          onChange={handleInputChange}
-                          required
-                        />
-                      </div>
-                    </div>
+        <div className="lg:pl-64">
+          <div className="p-6">
+            <div className="mb-6">
+              <h1 className="text-2xl font-bold text-gray-900">Exportar Dados</h1>
+              {/* <p className="text-gray-600">Exporte lançamentos para o Excel</p> */}
+            </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label className='mb-2 block'>Tipo de Dados</Label>
-                        <div className="grid grid-cols-2 gap-2">
-                              <div className="flex items-center space-x-2">
-                                <Checkbox
-                                  id="type-dizimo"
-                                  checked={formData.type.includes('DIZIMO')}
-                                  onCheckedChange={(checked) => handleTypeChange('DIZIMO', checked as boolean)}
-                                />
-                                <Label htmlFor="type-dizimo" className="text-sm">Dízimos</Label>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <Checkbox
-                                  id="type-oferta"
-                                  checked={formData.type.includes('OFERTA_CULTO')}
-                                  onCheckedChange={(checked) => handleTypeChange('OFERTA_CULTO', checked as boolean)}
-                                />
-                                <Label htmlFor="type-oferta" className="text-sm">Oferta Culto</Label>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <Checkbox
-                                  id="type-missao"
-                                  checked={formData.type.includes('MISSAO')}
-                                  onCheckedChange={(checked) => handleTypeChange('MISSAO', checked as boolean)}
-                                />
-                                <Label htmlFor="type-missao" className="text-sm">Missão</Label>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <Checkbox
-                                  id="type-circulo"
-                                  checked={formData.type.includes('CIRCULO')}
-                                  onCheckedChange={(checked) => handleTypeChange('CIRCULO', checked as boolean)}
-                                />
-                                <Label htmlFor="type-circulo" className="text-sm">Círculo Oração</Label>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <Checkbox
-                                  id="type-voto"
-                                  checked={formData.type.includes('VOTO')}
-                                  onCheckedChange={(checked) => handleTypeChange('VOTO', checked as boolean)}
-                                />
-                                <Label htmlFor="type-votos" className="text-sm">Voto</Label>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <Checkbox
-                                  id="type-ebd"
-                                  checked={formData.type.includes('EBD')}
-                                  onCheckedChange={(checked) => handleTypeChange('EBD', checked as boolean)}
-                                />
-                                <Label htmlFor="type-ebd" className="text-sm">EBD</Label>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <Checkbox
-                                  id="type-campanha"
-                                  checked={formData.type.includes('CAMPANHA')}
-                                  onCheckedChange={(checked) => handleTypeChange('CAMPANHA', checked as boolean)}
-                                />
-                                <Label htmlFor="type-campanha" className="text-sm">Campanha</Label>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <Checkbox
-                                  id="type-saida"
-                                  checked={formData.type.includes('SAIDA')}
-                                  onCheckedChange={(checked) => handleTypeChange('SAIDA', checked as boolean)}
-                                />
-                                <Label htmlFor="type-saida" className="text-sm">Saídas</Label>
-                              </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <FileSpreadsheet className="mr-2 h-5 w-5" />
+                      Configurar Exportação
+                    </CardTitle>
+                    <CardDescription>
+                      Selecione o período e os dados que deseja exportar
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="startDate">Data Inicial</Label>
+                          <Input
+                            id="startDate"
+                            name="startDate"
+                            type="date"
+                            value={formData.startDate}
+                            onChange={handleInputChange}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="endDate">Data Final</Label>
+                          <Input
+                            id="endDate"
+                            name="endDate"
+                            type="date"
+                            value={formData.endDate}
+                            onChange={handleInputChange}
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label className='mb-2 block'>Tipo de Dados</Label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="type-dizimo"
+                                checked={formData.type.includes('DIZIMO')}
+                                onCheckedChange={(checked) => handleTypeChange('DIZIMO', checked as boolean)}
+                              />
+                              <Label htmlFor="type-dizimo" className="text-sm">Dízimos</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="type-oferta"
+                                checked={formData.type.includes('OFERTA_CULTO')}
+                                onCheckedChange={(checked) => handleTypeChange('OFERTA_CULTO', checked as boolean)}
+                              />
+                              <Label htmlFor="type-oferta" className="text-sm">Oferta Culto</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="type-missao"
+                                checked={formData.type.includes('MISSAO')}
+                                onCheckedChange={(checked) => handleTypeChange('MISSAO', checked as boolean)}
+                              />
+                              <Label htmlFor="type-missao" className="text-sm">Missão</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="type-circulo"
+                                checked={formData.type.includes('CIRCULO')}
+                                onCheckedChange={(checked) => handleTypeChange('CIRCULO', checked as boolean)}
+                              />
+                              <Label htmlFor="type-circulo" className="text-sm">Círculo Oração</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="type-voto"
+                                checked={formData.type.includes('VOTO')}
+                                onCheckedChange={(checked) => handleTypeChange('VOTO', checked as boolean)}
+                              />
+                              <Label htmlFor="type-votos" className="text-sm">Voto</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="type-ebd"
+                                checked={formData.type.includes('EBD')}
+                                onCheckedChange={(checked) => handleTypeChange('EBD', checked as boolean)}
+                              />
+                              <Label htmlFor="type-ebd" className="text-sm">EBD</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="type-campanha"
+                                checked={formData.type.includes('CAMPANHA')}
+                                onCheckedChange={(checked) => handleTypeChange('CAMPANHA', checked as boolean)}
+                              />
+                              <Label htmlFor="type-campanha" className="text-sm">Campanha</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="type-saida"
+                                checked={formData.type.includes('SAIDA')}
+                                onCheckedChange={(checked) => handleTypeChange('SAIDA', checked as boolean)}
+                              />
+                              <Label htmlFor="type-saida" className="text-sm">Saídas</Label>
                             </div>
                           </div>
+                        </div>
 
-                          <div>
-                        <Label className='mb-2 block'>Status dos Lançamentos</Label>
-                        <div className="space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id="status-approved"
-                              checked={formData.status.includes('APPROVED')}
-                              onCheckedChange={(checked) => handleStatusChange('APPROVED', checked as boolean)}
-                            />
-                            <Label htmlFor="status-approved" className="text-sm">Não Exportados</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id="status-exported"
-                              checked={formData.status.includes('EXPORTED')}
-                              onCheckedChange={(checked) => handleStatusChange('EXPORTED', checked as boolean)}
-                            />
-                            <Label htmlFor="status-exported" className="text-sm">Exportados</Label>
+                        <div>
+                          <Label className='mb-2 block'>Status dos Lançamentos</Label>
+                          <div className="space-y-2">
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="status-approved"
+                                checked={formData.status.includes('APPROVED')}
+                                onCheckedChange={(checked) => handleStatusChange('APPROVED', checked as boolean)}
+                              />
+                              <Label htmlFor="status-approved" className="text-sm">Não Exportados</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="status-exported"
+                                checked={formData.status.includes('EXPORTED')}
+                                onCheckedChange={(checked) => handleStatusChange('EXPORTED', checked as boolean)}
+                              />
+                              <Label htmlFor="status-exported" className="text-sm">Exportados</Label>
+                            </div>
                           </div>
                         </div>
                       </div>
-                     </div>
 
-                    <div>
-                      <div className="mb-2">
-                        <Label htmlFor="congregationFilter" className="mb-2 block">Filtrar por nome</Label>
-                        <Input
-                          id="congregationFilter"
-                          type="text"
-                          placeholder="Ex: SETOR 1"
-                          value={congregationFilter}
-                          onChange={(e) => setCongregationFilter(e.target.value)}
-                        />
-                      </div>
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Checkbox
-                          id="selectAll"
-                          checked={allFilteredSelected}
-                          onCheckedChange={handleSelectAll}
-                        />
-                        <Label htmlFor="selectAll">
-                          {congregationFilter 
-                            ? `Selecionar todas as congregações filtradas (${filteredCongregations.length})`
-                            : 'Selecionar todas as congregações'}
-                        </Label>
-                      </div>
-                      <div className="space-y-2 max-h-60 overflow-y-auto p-2 border rounded-md">
-                        {filteredCongregations.length > 0 ? (
-                          filteredCongregations.map((congregation) => (
-                            <div key={congregation.id} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`congregation-${congregation.id}`}
-                                checked={formData.congregationIds.includes(congregation.id)}
-                                onCheckedChange={(checked) => handleCongregationChange(congregation.id, checked as boolean)}
-                              />
-                              <Label htmlFor={`congregation-${congregation.id}`}>
-                                {congregation.name}
-                              </Label>
+                      <div>
+                        <div className="mb-2">
+                          <Label htmlFor="congregationFilter" className="mb-2 block">Filtrar por nome</Label>
+                          <Input
+                            id="congregationFilter"
+                            type="text"
+                            placeholder="Ex: SETOR 1"
+                            value={congregationFilter}
+                            onChange={(e) => setCongregationFilter(e.target.value)}
+                          />
+                        </div>
+                        <div className="flex items-center space-x-2 mb-2">
+                          <Checkbox
+                            id="selectAll"
+                            checked={allFilteredSelected}
+                            onCheckedChange={handleSelectAll}
+                          />
+                          <Label htmlFor="selectAll">
+                            {congregationFilter
+                              ? `Selecionar todas as congregações filtradas (${filteredCongregations.length})`
+                              : 'Selecionar todas as congregações'}
+                          </Label>
+                        </div>
+                        <div className="space-y-2 max-h-60 overflow-y-auto p-2 border rounded-md">
+                          {filteredCongregations.length > 0 ? (
+                            filteredCongregations.map((congregation) => (
+                              <div key={congregation.id} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`congregation-${congregation.id}`}
+                                  checked={formData.congregationIds.includes(congregation.id)}
+                                  onCheckedChange={(checked) => handleCongregationChange(congregation.id, checked as boolean)}
+                                />
+                                <Label htmlFor={`congregation-${congregation.id}`}>
+                                  {congregation.name}
+                                </Label>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-sm text-gray-500 text-center py-4">
+                              Nenhuma congregação encontrada
                             </div>
-                          ))
-                        ) : (
-                          <div className="text-sm text-gray-500 text-center py-4">
-                            Nenhuma congregação encontrada
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
-                    </div>
 
-                    <Button type="submit" className="w-full" disabled={isExporting}>
-                      {isExporting ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Exportando...
-                        </>
-                      ) : (
-                        <>
-                          <Download className="mr-2 h-4 w-4" />
-                          Exportar Dados
-                        </>
-                      )}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </div>
+                      <Button type="submit" className="w-full" disabled={isExporting}>
+                        {isExporting ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            Exportando...
+                          </>
+                        ) : (
+                          <>
+                            <Download className="mr-2 h-4 w-4" />
+                            Exportar Dados
+                          </>
+                        )}
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+              </div>
 
-            {/* <div>
+              {/* <div>
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center text-yellow-600">
@@ -424,10 +424,10 @@ export default function Export() {
                 </CardContent>
               </Card>
             </div> */}
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  </PermissionGuard>
+    </PermissionGuard>
   )
 }
