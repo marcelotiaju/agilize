@@ -84,7 +84,7 @@ export default function ReportsPage() {
             (session?.user as any)?.canLaunchMission ? { value: 'MISSAO', label: 'Missão' } : null,
             (session?.user as any)?.canLaunchCampaign ? { value: 'CAMPANHA', label: 'Campanha' } : null,
             (session?.user as any)?.canLaunchVoto ? { value: 'VOTO', label: 'Voto' } : null,
-            (session?.user as any)?.canLaunchCircle ? { value: 'CIRCULO', label: 'Círculo' } : null,
+            (session?.user as any)?.canLaunchCircle ? { value: 'CIRCULO', label: 'Círculo de Oração' } : null,
             (session?.user as any)?.canLaunchCarneReviver ? { value: 'CARNE_REVIVER', label: 'Carnê Reviver' } : null,
             (session?.user as any)?.canLaunchExpense ? { value: 'SAIDA', label: 'Saída' } : null,
         ]

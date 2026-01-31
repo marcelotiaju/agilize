@@ -749,6 +749,7 @@ export default function Users() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Nome Completo</TableHead>
+                          <TableHead>Dias Histórico</TableHead>
                           <TableHead>Email</TableHead>
                           <TableHead>Validade</TableHead>
                           <TableHead>Ações</TableHead>
@@ -758,6 +759,7 @@ export default function Users() {
                         {filteredUsers.map((user) => (
                           <TableRow key={user.id}>
                             <TableCell className="font-medium">{user.name}</TableCell>
+                            <TableHead>{user.historyDays}</TableHead>
                             <TableCell>{user.email}</TableCell>
                             <TableCell>
                               <div className="text-sm">
@@ -787,6 +789,10 @@ export default function Users() {
                             <p className="text-xs text-gray-600">Nome</p>
                             <p className="font-semibold text-gray-900">{user.name}</p>
                           </div>
+                          <div>
+                            <p className="text-xs text-gray-600">Dias Histórico</p>
+                            <p className="font-semibold text-gray-900">{user.historyDays}</p>
+                          </div>                          
                           <div>
                             <p className="text-xs text-gray-600">Email</p>
                             <p className="text-sm text-gray-900 break-words">{user.email}</p>

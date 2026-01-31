@@ -685,7 +685,7 @@ export default function CongregationSummary() {
 
                       <div className="flex items-end pt-2">
                         <Button onClick={handleCreateSummary} disabled={isLoading || !summaryType} className="w-full bg-amber-700 text-white">
-                          {isLoading ? 'Gerando...' : 'Gerar Resumo'}
+                          {isLoading ? 'Gerando...' : 'Criar Resumo'}
                         </Button>
                       </div>
                     </div>

@@ -279,7 +279,7 @@ async function handleRequest(request: NextRequest) {
     return new NextResponse(doc.output('arraybuffer'), {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="historico_contribuicoes_${year}.pdf"`
+        'Content-Disposition': `attachment; filename="historico_contribuicoes_sintetico_${year}.pdf"`
       }
     })
 

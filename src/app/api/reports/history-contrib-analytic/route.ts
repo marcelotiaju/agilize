@@ -202,7 +202,7 @@ async function handleRequest(request: NextRequest) {
         doc.text('IGREJA ASSEMBLEIA DE DEUS NO ESTADO DE SERGIPE', margin + 25, y + 7);
 
         doc.setFontSize(11);
-        doc.text('HISTÓRICO DE CONTRIBUIÇÕES SINTÉTICO', margin + 25, y + 14);
+        doc.text('HISTÓRICO DE CONTRIBUIÇÕES ANALÍTICO', margin + 25, y + 14);
         y += 25;
 
         // Report Info
@@ -279,7 +279,7 @@ async function handleRequest(request: NextRequest) {
     return new NextResponse(doc.output('arraybuffer'), {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="historico_contribuicoes_${year}.pdf"`
+        'Content-Disposition': `attachment; filename="historico_contribuicoes_analitico_${year}.pdf"`
       }
     })
 

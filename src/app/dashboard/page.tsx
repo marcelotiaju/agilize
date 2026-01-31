@@ -13,12 +13,15 @@ import {
   Church,
   List,
   User,
+  UserCheck,
+  UserPen,
   PieChart
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { PermissionGuard } from '@/components/auth/PermissionGuard'
 import { permission } from 'process'
+import { Chevron } from 'react-day-picker'
 
 export default function Dashboard() {
   const { data: session } = useSession()
@@ -65,8 +68,22 @@ export default function Dashboard() {
     {
       title: "Acesso",
       description: "Meus dados",
-      icon: User,
+      icon: UserCheck,
       href: "/profile",
+      color: "from-indigo-700 to-violet-800"
+    },
+    {
+      title: "Usuários",
+      description: "Gerencie Usuários",
+      icon: Users,
+      href: "/users",
+      color: "from-indigo-700 to-violet-800"
+    },
+    {
+      title: "Perfis",
+      description: "Gerencie Perfis",
+      icon: UserPen,
+      href: "/profiles",
       color: "from-indigo-700 to-violet-800"
     },
     {
@@ -95,7 +112,7 @@ export default function Dashboard() {
     },
     {
       title: "Contribuintes",
-      description: "Gerencie registros",
+      description: "Gerencie Contribuintes",
       icon: Users,
       href: "/contributors",
       color: "from-emerald-700 to-teal-800",
@@ -142,7 +159,7 @@ export default function Dashboard() {
           </div>
 
           {/* Botões do Menu */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
             {menuOptions.map((option, index) => {
               // Verificar permissão se necessário
               if (option.permission && !session?.user?.[option.permission]) {

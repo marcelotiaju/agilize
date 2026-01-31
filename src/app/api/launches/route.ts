@@ -27,8 +27,44 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get('endDate')
     const timezone = searchParams.get('timezone') || 'America/Sao_Paulo'
     const importFilter = searchParams.get('importFilter') // 'IMPORTED', 'MANUAL' ou null
+    const importedWithoutContributor = searchParams.get('importedWithoutContributor') === 'true'
 
     const skip = (page - 1) * limit
+
+    // Se buscar lançamentos importados sem contribuinte, retornar diretamente
+    if (importedWithoutContributor) {
+      const userCongregations = await prisma.userCongregation.findMany({
+        where: {
+          userId: session.user.id
+        },
+        select: {
+          congregationId: true
+        }
+      })
+
+      const launches = await prisma.launch.findMany({
+        where: {
+          status: 'IMPORTED',
+          congregationId: {
+            in: userCongregations.map(uc => uc.congregationId)
+          },
+          AND: [
+            { contributorId: null },
+            { contributorName: '' }
+          ]
+        },
+        include: {
+          congregation: true,
+          contributor: true
+        },
+        orderBy: [
+          { date: 'desc' },
+          { createdAt: 'desc' }
+        ]
+      })
+
+      return NextResponse.json({ launches, totalCount: launches.length, totalPages: 1 })
+    }
 
     let where: any = {}
 
@@ -86,6 +122,12 @@ export async function GET(request: NextRequest) {
 
     if (importFilter === 'MANUAL') {
       where.status = { not: 'IMPORTED' }
+    }
+
+    function extractAfterColon(str: string | undefined | null): string {
+      if (!str) return '-';
+      const index = str.indexOf(':');
+      return index !== -1 ? str.substring(index + 1).trim() : str;
     }
 
 
@@ -157,6 +199,13 @@ export async function GET(request: NextRequest) {
         ]
       })
       
+      // Sort by congregation name with custom extraction in memory
+      allLaunches.sort((a, b) => {
+        const nameA = extractAfterColon(a.congregation?.name)
+        const nameB = extractAfterColon(b.congregation?.name)
+        return nameA.localeCompare(nameB)
+      })
+      
       // Filtrar resultados normalizando os textos
       const filteredLaunches = allLaunches.filter(launch => {
         const fieldsToSearch = [
@@ -221,6 +270,12 @@ export async function GET(request: NextRequest) {
       }),
       prisma.launch.count({ where })
     ])
+    
+    launches.sort((a, b) => {
+      const nameA = extractAfterColon(a.congregation?.name)
+      const nameB = extractAfterColon(b.congregation?.name)
+      return nameA.localeCompare(nameB)
+    })
 
     const totalPages = Math.ceil(totalCount / limit)
     return NextResponse.json({

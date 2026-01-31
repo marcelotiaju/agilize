@@ -96,7 +96,19 @@ export function Sidebar() {
         <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)} />
         <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white">
           <div className="flex h-16 items-center justify-between px-4">
-            <h1 className="text-xl font-bold">Agilize</h1>
+            {/* <h1 className="text-xl font-bold">Agilize</h1> */}
+            <div className='flex justify-center mb-0'>
+              {/* <h2 className="text-center text-2xl font-extrabold text-gray-900 mb-6">
+                Agilize
+              </h2> */}
+              <Image 
+                src="/images/Logo_Agilize_Azul.png"
+                alt="Logo do Agilize"
+                width={100}
+                height={80}
+                priority
+              />
+            </div>
             <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(false)}>
               <X className="h-6 w-6" />
             </Button>
@@ -187,7 +199,7 @@ export function Sidebar() {
           <div className="flex shrink-0 border-t border-gray-200 p-4">
             <Button
               variant="ghost"
-              className="w-full justify-start"
+              className="w-full justify-center font-bold text-white bg-red-600"
               onClick={handleSignOut}
             >
               <LogOut className="mr-3 h-5 w-5" />
@@ -336,7 +348,19 @@ export function Sidebar() {
           <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-6 w-6" />
           </Button>
-          <h1 className="text-lg font-semibold">Agilize</h1>
+          {/* <h1 className="text-lg font-semibold">Agilize</h1> */}
+          <div className='flex justify-center mb-0'>
+            {/* <h2 className="text-center text-2xl font-extrabold text-gray-900 mb-6">
+              Agilize
+            </h2> */}
+            <Image 
+              src="/images/Logo_Agilize_Azul.png"
+              alt="Logo do Agilize"
+              width={100}
+              height={100}
+              priority
+            />
+          </div>
           <div></div> {/* Spacer */}
         </div>
       </div>

@@ -116,7 +116,7 @@ export default function ReportsPage() {
     }, [])
 
     useEffect(() => {
-        if (selectedCongregations.length > 0 && selectedLaunchTypes.length > 0 && selectedYear && importFilter && formData.contributorIds.length >= 0) {
+        if (selectedCongregations.length > 0 && selectedLaunchTypes.length > 0 && selectedYear && importFilter && formData.contributorIds.length > 0) {
             // Fetch preview regardless of contributor selection, but need at least congregations
             fetchPreview()
         } else {
@@ -576,7 +576,7 @@ export default function ReportsPage() {
                         <Button onClick={handleExportExcel} variant="outline" className="flex-1" disabled={!previewData}>Gerar Excel</Button>
                         <Button
                             onClick={handleGenerateReport}
-                            disabled={loading || selectedCongregations.length === 0 || selectedLaunchTypes.length === 0}
+                            disabled={loading || selectedCongregations.length === 0 || selectedLaunchTypes.length === 0 || formData.contributorIds.length === 0}
                             className="flex-1"
                         >
                             {loading ? (

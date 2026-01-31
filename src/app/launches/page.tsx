@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, Search, Check, X, AlertCircle, CalendarIcon, User, Users, Ghost, List, ArrowUp, Upload, FileText, Building } from 'lucide-react'
+import { Plus, Edit, Trash2, Search, Check, X, AlertCircle, CalendarIcon, User, Users, Ghost, List, ArrowUp, Upload, FileText, Building, Loader2 } from 'lucide-react'
 import { format, startOfDay } from 'date-fns'
 import { zonedTimeToUtc } from 'date-fns-tz'
 import { ptBR } from 'date-fns/locale'
@@ -45,6 +45,9 @@ export default function Launches() {
   const [classifications, setClassifications] = useState<Classification[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
+  const [isImportedWithoutContributorDialogOpen, setIsImportedWithoutContributorDialogOpen] = useState(false)
+  const [importedWithoutContributor, setImportedWithoutContributor] = useState<Launch[]>([])
+  const [loadingImportedCheck, setLoadingImportedCheck] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [salvando, setSalvando] = useState(false)
   const [importing, setImporting] = useState(false)
@@ -318,6 +321,27 @@ useEffect(() => {
     }
   }
 
+  const fetchImportedWithoutContributor = async () => {
+    setLoadingImportedCheck(true)
+    try {
+      const response = await fetch('/api/launches?importedWithoutContributor=true')
+      if (response.ok) {
+        const data = await response.json()
+        setImportedWithoutContributor(data.launches || [])
+      }
+    } catch (error) {
+      console.error('Erro ao carregar lançamentos importados sem contribuinte:', error)
+      setError('Erro ao carregar lançamentos')
+    } finally {
+      setLoadingImportedCheck(false)
+    }
+  }
+
+  const handleOpenImportedDialog = () => {
+    setIsImportedWithoutContributorDialogOpen(true)
+    fetchImportedWithoutContributor()
+  }
+
   const fetchLaunches = async () => {
     try {
       const params = new URLSearchParams()
@@ -514,6 +538,16 @@ useEffect(() => {
       alert('Nome do contribuinte é obrigatório para lançamentos do tipo Dízimo')
       setSalvando(false)
       return
+    }
+
+    // Validar se o nome do contribuinte não é apenas espaços em branco quando não cadastrado
+    if ((formData.type === 'DIZIMO' || formData.type === 'CARNE_REVIVER') && !formData.isContributorRegistered && !formData.isAnonymous) {
+      const trimmedName = formData.contributorName?.trim() || ''
+      if (!trimmedName) {
+        alert('Nome do contribuinte não pode conter apenas espaços em branco')
+        setSalvando(false)
+        return
+      }
     }
 
     //var opcoesFormatacao = { timeZone: USER_TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit' } as const;
@@ -798,8 +832,8 @@ useEffect(() => {
         )}
         {launch.description && (
           <div className="flex justify-start">
-            <FileText className="h-4 w-4 md:hidden"/>
-            {/* <span className="text-sm font-normal">Descrição:</span> */}
+            {/* <FileText className="h-4 w-4 md:hidden"/> */}
+            <span className="text-sm font-normal">Anotações:</span>
             <span className="text-sm font-medium ml-1">{launch.description}</span>
           </div>
         )}
@@ -926,6 +960,15 @@ useEffect(() => {
                   <PieChart className="h-4 w-4" />
                   Resumo
                 </Button>}
+                <Button
+                  onClick={handleOpenImportedDialog}
+                  variant="outline"
+                  className="hidden lg:flex items-center gap-2"
+                  title="Lançamentos importados sem contribuinte/contribuinte"
+                >
+                  <AlertCircle className="h-4 w-4" />
+                  Importados Incompletos
+                </Button>
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                   <DialogTrigger asChild>
                     <Button onClick={resetForm} disabled={!canLaunchVote && !canLaunchEbd && !canLaunchCampaign && !canLaunchTithe && !canLaunchExpense && !canLaunchMission && !canLaunchCircle && !canLaunchServiceOffer && !canLaunchCarneReviver}>
@@ -995,7 +1038,7 @@ useEffect(() => {
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div className="w-full">
-                                <Label htmlFor="type">Tipo</Label>
+                                <Label htmlFor="type" className='font-bold text-red-600'>Tipo</Label>
                                 <Select
                                   value={formData.type}
                                   onValueChange={(value) => handleSelectChange('type', value)}
@@ -1339,8 +1382,8 @@ useEffect(() => {
 
                             <div>
                               <Label htmlFor="description" className="flex items-center gap-2">
-                                <FileText className="h-4 w-4 md:hidden" />
-                                <span className="hidden md:inline">Descrição</span>
+                                {/* <FileText className="h-4 w-4 md:hidden" /> */}
+                                <span className="md:inline">Anotações</span>
                               </Label>
                               <Textarea
                                 id="description"
@@ -1480,6 +1523,74 @@ useEffect(() => {
                     </DialogContent>
                   </Dialog>
                 )}
+
+                {/* Dialog de Lançamentos Importados sem Contribuinte */}
+                {canImportLaunch && (<Dialog open={isImportedWithoutContributorDialogOpen} onOpenChange={setIsImportedWithoutContributorDialogOpen}>
+                  <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Lançamentos Importados Incompletos</DialogTitle>
+                      {/* <DialogDescription>
+                        Lançamentos que foram importados mas não possuem ID do contribuinte ou nome do contribuinte
+                      </DialogDescription> */}
+                    </DialogHeader>
+
+                    {loadingImportedCheck ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        <span className="ml-2">Carregando...</span>
+                      </div>
+                    ) : importedWithoutContributor.length === 0 ? (
+                      <div className="py-8 text-center">
+                        <p className="text-gray-500 text-lg">✓ Todos os lançamentos importados possuem contribuinte!</p>
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Congregação</TableHead>
+                              <TableHead>Tipo</TableHead>
+                              <TableHead>Data</TableHead>
+                              <TableHead>Valor</TableHead>
+                              <TableHead>Contribuinte/Fornecedor</TableHead>
+                              <TableHead>Ações</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {importedWithoutContributor.map((launch) => (
+                              <TableRow key={launch.id}>
+                                <TableCell>{extractAfterColon(launch.congregation?.name)}</TableCell>
+                                <TableCell>
+                                  <span className="text-xs font-medium">{launch.type}</span>
+                                </TableCell>
+                                <TableCell>{format(new Date(launch.date), 'dd/MM/yyyy')}</TableCell>
+                                <TableCell>{formatCurrency(launch.value)}</TableCell>
+                                <TableCell className="text-yellow-600 font-medium">
+                                  {launch.contributorName && launch.contributorId ? '⚠️ Incompleto' : '❌ Vazio'}
+                                </TableCell>
+                                <TableCell>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleEdit(launch)}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                        <div className="p-4 bg-yellow-50 border-t">
+                          <p className="text-sm text-yellow-800">
+                            <AlertCircle className="inline h-4 w-4 mr-2" />
+                            Total de {importedWithoutContributor.length} lançamento(s) com contribuinte incompleto
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </DialogContent>
+                </Dialog>)}
               </div>
             </div>
 
@@ -1628,7 +1739,13 @@ useEffect(() => {
                             <TableCell>{extractAfterColon(launch.congregation?.name)}</TableCell>
                             <TableCell>{format(new Date(launch.date), 'dd/MM/yyyy')}</TableCell>
                             <TableCell>{formatCurrency(launch.value)}</TableCell>
-                            <TableCell>{truncateString(launch.contributor?.name,30) || truncateString(launch.supplier?.razaoSocial,30) || truncateString(launch.contributorName,30) || truncateString(launch.supplierName,30) || '-'}</TableCell>
+                            <TableCell>
+                              {(launch.contributor?.name && truncateString(launch.contributor.name, 30)) ||
+                               (launch.supplier?.razaoSocial && truncateString(launch.supplier.razaoSocial, 30)) ||
+                               (launch.contributorName && truncateString(launch.contributorName, 30)) ||
+                               (launch.supplierName && truncateString(launch.supplierName, 30)) ||
+                               '-'}
+                            </TableCell>
                             <TableCell>{launch.talonNumber}</TableCell>
                             <TableCell>
                               <div className="flex items-center space-x-2">
