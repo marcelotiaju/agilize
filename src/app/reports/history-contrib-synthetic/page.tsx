@@ -267,9 +267,9 @@ export default function ReportsPage() {
                         'Congregação': cong.name,
                         'Contribuinte': cont.name,
                         'Mês': MONTHS[idx],
-                        'Dízimo': m.dizimo,
-                        'Carnê Reviver': m.carne_reviver,
-                        'Total': m.total
+                        'Dízimo': formatCurrency(m.dizimo),
+                        'Carnê Reviver': formatCurrency(m.carne_reviver),
+                        'Total': formatCurrency(m.total)
                     })
                 })
 
@@ -280,9 +280,9 @@ export default function ReportsPage() {
                     'Congregação': cong.name,
                     'Contribuinte': `${cont.name} (TOTAL)`,
                     'Mês': 'TOTAL',
-                    'Dízimo': totalDizimo,
-                    'Carnê Reviver': totalCarne,
-                    'Total': totalDizimo + totalCarne
+                    'Dízimo': formatCurrency(totalDizimo),
+                    'Carnê Reviver': formatCurrency(totalCarne),
+                    'Total': formatCurrency(totalDizimo + totalCarne)
                 })
             });
         });

@@ -13,16 +13,18 @@ const fs = require('fs');
 const imageFile = fs.readFileSync('../agilize/public/images/Logo.png');
 const base64String = Buffer.from(imageFile).toString('base64');
 
-interface MonthlyData {
-  dizimo: number;
-  carne_reviver: number;
-  total: number;
+interface LaunchDetail {
+  date: Date;
+  congregationName: string;
+  type: string;
+  value: number;
 }
 
 interface ContributorData {
   code: string;
   name: string;
-  monthlyData: MonthlyData[];
+  launches: LaunchDetail[];
+  total: number;
 }
 
 interface CongregationData {
@@ -107,68 +109,74 @@ async function handleRequest(request: NextRequest) {
         contributor: { select: { name: true, code: true } }
       },
       orderBy: [
-        { congregation: { name: 'asc' } },
         { contributor: { name: 'asc' } },
         { date: 'asc' }
       ]
     });
 
-    // Grouping Logic
+    // Grouping Logic - Organize by Contributor with detailed launches
     const groupedData: CongregationData[] = [];
-    const congregationMap = new Map<string, Map<string, { data: MonthlyData[], code: string }>>();
+    const contributorMap = new Map<string, { code: string, launches: LaunchDetail[], congregations: Set<string> }>();
 
     launches.forEach(l => {
-      const congName = l.congregation.name;
       const contribName = l.contributor?.name || 'Não Identificado';
       const contribCode = l.contributor?.code || '';
+      const congName = l.congregation.name;
 
-      if (!congregationMap.has(congName)) {
-        congregationMap.set(congName, new Map());
-      }
-
-      const contribMap = congregationMap.get(congName)!;
-
-      if (!contribMap.has(contribName)) {
-        // Initialize monthly data for this contributor
-        contribMap.set(contribName, {
+      if (!contributorMap.has(contribName)) {
+        contributorMap.set(contribName, {
           code: contribCode,
-          data: new Array(12).fill(null).map(() => ({
-            dizimo: 0,
-            carne_reviver: 0,
-            total: 0
-          }))
+          launches: [],
+          congregations: new Set()
         });
       }
 
-      const entry = contribMap.get(contribName)!;
-      const monthlyData = entry.data;
-      const month = new Date(l.date).getUTCMonth();
-      const value = Number(l.value);
-
-      if (l.type === 'DIZIMO') {
-        monthlyData[month].dizimo += value;
-      } else if (l.type === 'CARNE_REVIVER') {
-        monthlyData[month].carne_reviver += value;
-      }
-
-      monthlyData[month].total = monthlyData[month].dizimo + monthlyData[month].carne_reviver;
+      const entry = contributorMap.get(contribName)!;
+      entry.launches.push({
+        date: new Date(l.date),
+        congregationName: congName,
+        type: l.type,
+        value: Number(l.value)
+      });
+      entry.congregations.add(congName);
     });
 
-    // Convert Map to Array structure
-    for (const [congName, contribMap] of congregationMap.entries()) {
-      const contributors: ContributorData[] = [];
-      for (const [contribName, entry] of contribMap.entries()) {
-        contributors.push({
-          name: contribName,
+    // Convert to grouped structure with one entry per contributor
+    // Group by congregations that the contributors belong to
+    const congregationMapByContributor = new Map<string, ContributorData[]>();
+    
+    for (const [contribName, entry] of contributorMap.entries()) {
+      // For each contributor, determine which congregation(s) to associate them with
+      // We'll create one entry per congregation the contributor has launches in
+      const congregationList = Array.from(entry.congregations).sort();
+      
+      for (const cong of congregationList) {
+        if (!congregationMapByContributor.has(cong)) {
+          congregationMapByContributor.set(cong, []);
+        }
+        
+        // Filter launches for this specific congregation
+        const congSpecificLaunches = entry.launches.filter(l => l.congregationName === cong);
+        const totalValue = congSpecificLaunches.reduce((acc, l) => acc + l.value, 0);
+        
+        congregationMapByContributor.get(cong)!.push({
           code: entry.code,
-          monthlyData: entry.data
+          name: contribName,
+          launches: congSpecificLaunches,
+          total: totalValue
         });
       }
+    }
+
+    // Convert to final structure
+    for (const [congName, contributors] of congregationMapByContributor.entries()) {
       groupedData.push({
         name: congName,
-        contributors
+        contributors: contributors.sort((a, b) => a.name.localeCompare(b.name))
       });
     }
+
+    groupedData.sort((a, b) => a.name.localeCompare(b.name));
 
     if (isPreview) {
       return NextResponse.json({
@@ -230,27 +238,23 @@ async function handleRequest(request: NextRequest) {
         doc.text(`Contribuinte: ${contributor.name} (${contributor.code})`, margin, y);
         y += 6;
 
-        // AutoTable
-        const totalDizimo = contributor.monthlyData.reduce((acc, curr) => acc + curr.dizimo, 0);
-        const totalCarneReviver = contributor.monthlyData.reduce((acc, curr) => acc + curr.carne_reviver, 0);
-        const totalGeral = totalDizimo + totalCarneReviver;
-
+        // AutoTable with detailed launches
         autoTable(doc, {
           startY: y,
-          head: [['Mês', 'Dízimo', 'Carnê Reviver', 'Total']],
-          body: monthsNames.map((name, i) => [
-            name,
-            contributor.monthlyData[i].dizimo.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
-            contributor.monthlyData[i].carne_reviver.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
-            contributor.monthlyData[i].total.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
+          head: [['Data', 'Congregação', 'Tipo de Lançamento', 'Valor']],
+          body: contributor.launches.map((launch) => [
+            format(utcToZonedTime(new Date(launch.date), timezone), 'dd/MM/yyyy', { locale: ptBR }),
+            launch.congregationName,
+            launch.type === 'DIZIMO' ? 'Dízimo' : launch.type === 'CARNE_REVIVER' ? 'Carnê Reviver' : launch.type,
+            launch.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
           ]),
           theme: 'grid',
           headStyles: { fillColor: [0, 51, 102] },
           foot: [[
-            'TOTAIS',
-            totalDizimo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-            totalCarneReviver.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-            totalGeral.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+            '',
+            '',
+            'TOTAL',
+            contributor.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
           ]],
           footStyles: {
             fillColor: [0, 51, 102],
@@ -259,9 +263,9 @@ async function handleRequest(request: NextRequest) {
             halign: 'right'
           },
           columnStyles: {
-            0: { halign: 'left' },
-            1: { halign: 'right' },
-            2: { halign: 'right' },
+            0: { halign: 'center' },
+            1: { halign: 'left' },
+            2: { halign: 'left' },
             3: { halign: 'right' }
           },
         });

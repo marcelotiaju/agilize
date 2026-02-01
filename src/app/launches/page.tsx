@@ -824,9 +824,9 @@ useEffect(() => {
           )}
         </div>
 
-        {launch.talonNumber && (
+        {launch.talonNumber && launch.type !== 'CARNE_REVIVER' && launch.type !== 'MISSAO' && (
           <div className="flex justify-start">
-            <span className="text-sm font-normal">{formData.type === 'SAIDA' ? 'Nr. Doc:' : formData.type === 'DIZIMO' ? 'Nr. Recibo:' : formData.type === 'CARNE_REVIVER' || formData.type === 'MISSAO' ? '' : 'Nr. Talão:'}</span>
+            <span className="text-sm font-normal">{launch.type === 'SAIDA' ? 'Nr. Doc:' : launch.type === 'DIZIMO' ? 'Nr. Recibo:' : 'Nr. Talão:'}</span>
             <span className="text-sm font-medium">{launch.talonNumber}</span>
           </div>
         )}

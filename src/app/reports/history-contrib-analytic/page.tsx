@@ -15,6 +15,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Input } from "@/components/ui/input"
 import { Contributor } from "@prisma/client"
 import * as XLSX from 'xlsx'
+import format from "date-fns/format"
 
 interface Congregation {
     id: string
@@ -28,9 +29,18 @@ interface MonthlyData {
     total: number
 }
 
+interface LaunchDetail {
+    date: Date
+    congregationName: string
+    type: string
+    value: number
+}
+
 interface ContributorPreview {
     name: string
-    monthlyData: MonthlyData[]
+    code: string
+    launches: LaunchDetail[]
+    total: number
 }
 
 interface CongregationPreview {
@@ -116,7 +126,7 @@ export default function ReportsPage() {
     }, [])
 
     useEffect(() => {
-        if (selectedCongregations.length > 0 && selectedLaunchTypes.length > 0 && selectedYear && importFilter && formData.contributorIds.length >= 0) {
+        if (selectedCongregations.length > 0 && selectedLaunchTypes.length > 0 && selectedYear && importFilter && formData.contributorIds.length > 0) {
             // Fetch preview regardless of contributor selection, but need at least congregations
             fetchPreview()
         } else {
@@ -154,7 +164,7 @@ export default function ReportsPage() {
     const fetchPreview = async () => {
         setLoadingPreview(true)
         try {
-            const response = await fetch('/api/reports/history-contrib-synthetic', {
+            const response = await fetch('/api/reports/history-contrib-analytic', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -262,27 +272,32 @@ export default function ReportsPage() {
 
         previewData.congregations.forEach(cong => {
             cong.contributors.forEach(cont => {
-                cont.monthlyData.forEach((m, idx) => {
+                cont.launches.forEach(launch => {
                     worksheetData.push({
                         'Congregação': cong.name,
                         'Contribuinte': cont.name,
-                        'Mês': MONTHS[idx],
-                        'Dízimo': m.dizimo,
-                        'Carnê Reviver': m.carne_reviver,
-                        'Total': m.total
+                        'Data': format(new Date(launch.date), 'dd/MM/yyyy'),
+                        'Tipo': launch.type === 'DIZIMO' ? 'Dízimo' : launch.type === 'CARNE_REVIVER' ? 'Carnê Reviver' : launch.type,
+                        'Valor': formatCurrency(launch.value)
                     })
                 })
 
                 // Add Contributor Total Row
-                const totalDizimo = cont.monthlyData.reduce((acc, curr) => acc + curr.dizimo, 0);
-                const totalCarne = cont.monthlyData.reduce((acc, curr) => acc + curr.carne_reviver, 0);
                 worksheetData.push({
                     'Congregação': cong.name,
                     'Contribuinte': `${cont.name} (TOTAL)`,
-                    'Mês': 'TOTAL',
-                    'Dízimo': totalDizimo,
-                    'Carnê Reviver': totalCarne,
-                    'Total': totalDizimo + totalCarne
+                    'Data': '',
+                    'Tipo': 'TOTAL',
+                    'Valor': formatCurrency(cont.total)
+                })
+                
+                // Add empty row for separation
+                worksheetData.push({
+                    'Congregação': '',
+                    'Contribuinte': '',
+                    'Data': '',
+                    'Tipo': '',
+                    'Valor': ''
                 })
             });
         });
@@ -298,7 +313,7 @@ export default function ReportsPage() {
 
         setLoading(true)
         try {
-            const response = await fetch('/api/reports/history-contrib-synthetic', {
+            const response = await fetch('/api/reports/history-contrib-analytic', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -317,7 +332,7 @@ export default function ReportsPage() {
             const url = window.URL.createObjectURL(blob)
             const a = document.createElement('a')
             a.href = url
-            a.download = `Historico_Contribuicoes_Sintetico_${selectedYear}.pdf`
+            a.download = `Historico_Contribuicoes_Analitico_${selectedYear}.pdf`
             a.click()
         } catch (error) {
             console.error(error)
@@ -328,7 +343,7 @@ export default function ReportsPage() {
     }
 
     const formatCurrency = (value: number) => {
-        return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        return value?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     }
 
     if (!(session?.user as any)?.canReportMonthlySummary) {
@@ -525,40 +540,39 @@ export default function ReportsPage() {
 
                                             {cong.contributors.map((contrib, contribIdx) => (
                                                 <div key={contribIdx} className="mb-6 pl-4 border-l-4 border-blue-500">
-                                                    <h4 className="font-semibold text-md mb-2">Contribuinte: {contrib.name}</h4>
+                                                    <h4 className="font-semibold text-md mb-2">Contribuinte: {contrib.name} ({contrib.code})</h4>
                                                     <Table className="border mb-4">
                                                         <TableHeader>
                                                             <TableRow className="bg-gray-100/50">
-                                                                <TableHead className="font-bold">Mês</TableHead>
-                                                                <TableHead className="text-right">Dízimo</TableHead>
-                                                                <TableHead className="text-right">Carnê Reviver</TableHead>
-                                                                <TableHead className="text-right font-bold">Total</TableHead>
+                                                                <TableHead className="font-bold">Data</TableHead>
+                                                                <TableHead className="font-bold">Congregação</TableHead>
+                                                                <TableHead className="font-bold">Tipo de Lançamento</TableHead>
+                                                                <TableHead className="text-right font-bold">Valor</TableHead>
                                                             </TableRow>
                                                         </TableHeader>
                                                         <TableBody>
-                                                            {MONTHS.map((month, mIdx) => {
-                                                                const mData = contrib.monthlyData[mIdx];
-                                                                return (
-                                                                    <TableRow key={month}>
-                                                                        <TableCell>{month}</TableCell>
-                                                                        <TableCell className="text-right">{formatCurrency(mData.dizimo)}</TableCell>
-                                                                        <TableCell className="text-right">{formatCurrency(mData.carne_reviver)}</TableCell>
-                                                                        <TableCell className="text-right font-bold">{formatCurrency(mData.total)}</TableCell>
+                                                            {contrib.launches && contrib.launches.length > 0 ? (
+                                                                contrib.launches.map((launch, launchIdx) => (
+                                                                    <TableRow key={launchIdx}>
+                                                                        <TableCell>{format(new Date(launch.date), 'dd/MM/yyyy')}</TableCell>
+                                                                        <TableCell>{launch.congregationName}</TableCell>
+                                                                        <TableCell>{launch.type === 'DIZIMO' ? 'Dízimo' : launch.type === 'CARNE_REVIVER' ? 'Carnê Reviver' : launch.type}</TableCell>
+                                                                        <TableCell className="text-right">{formatCurrency(launch.value)}</TableCell>
                                                                     </TableRow>
-                                                                )
-                                                            })}
+                                                                ))
+                                                            ) : (
+                                                                <TableRow>
+                                                                    <TableCell colSpan={4} className="text-center text-gray-500">
+                                                                        Nenhum lançamento encontrado
+                                                                    </TableCell>
+                                                                </TableRow>
+                                                            )}
                                                         </TableBody>
                                                         <tfoot className="bg-gray-50 font-bold">
                                                             <TableRow>
-                                                                <TableCell>TOTAIS</TableCell>
+                                                                <TableCell colSpan={3}>TOTAL</TableCell>
                                                                 <TableCell className="text-right">
-                                                                    {formatCurrency(contrib.monthlyData.reduce((acc, c) => acc + c.dizimo, 0))}
-                                                                </TableCell>
-                                                                <TableCell className="text-right">
-                                                                    {formatCurrency(contrib.monthlyData.reduce((acc, c) => acc + c.carne_reviver, 0))}
-                                                                </TableCell>
-                                                                <TableCell className="text-right">
-                                                                    {formatCurrency(contrib.monthlyData.reduce((acc, c) => acc + c.total, 0))}
+                                                                    {formatCurrency(contrib.total)}
                                                                 </TableCell>
                                                             </TableRow>
                                                         </tfoot>
@@ -576,7 +590,7 @@ export default function ReportsPage() {
                         <Button onClick={handleExportExcel} variant="outline" className="flex-1" disabled={!previewData}>Gerar Excel</Button>
                         <Button
                             onClick={handleGenerateReport}
-                            disabled={loading || selectedCongregations.length === 0 || selectedLaunchTypes.length === 0}
+                            disabled={loading || selectedCongregations.length === 0 || selectedLaunchTypes.length === 0 || formData.contributorIds.length === 0}
                             className="flex-1"
                         >
                             {loading ? (
