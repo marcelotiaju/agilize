@@ -33,7 +33,8 @@ export default function DeleteHistory() {
     startDate: format(new Date(new Date().setDate(new Date().getDate() - 30)), 'yyyy-MM-dd'),
     endDate: format(new Date(), 'yyyy-MM-dd'),
     type: ['DIZIMO', 'OFERTA_CULTO', 'MISSAO', 'CIRCULO', 'VOTO', 'EBD', 'CAMPANHA', 'SAIDA'],
-    congregationIds: [] as string[]
+    congregationIds: [] as string[],
+    launchStatus: 'ALL' as 'ALL' | 'IMPORTED' | 'MANUAL'
   })
   const [isDeleting, setIsDeleting] = useState(false)
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false)
@@ -185,9 +186,9 @@ export default function DeleteHistory() {
                       <Trash2 className="mr-2 h-5 w-5" />
                       Configurar Exclusão
                     </CardTitle>
-                    <CardDescription>
+                    {/* <CardDescription>
                       Selecione o período e os dados que deseja excluir permanentemente
-                    </CardDescription>
+                    </CardDescription> */}
                   </CardHeader>
                   <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-6">
@@ -218,8 +219,43 @@ export default function DeleteHistory() {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <Label className='mb-2 block'>Tipo de Dados</Label>
+                          <Label className='mb-2 block'>Status do Lançamento</Label>
+                          <div className="space-y-2">
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="status-all"
+                                checked={formData.launchStatus === 'ALL'}
+                                onCheckedChange={(checked) => {
+                                  if (checked) setFormData(prev => ({ ...prev, launchStatus: 'ALL' }))
+                                }}
+                              />
+                              <Label htmlFor="status-all" className="text-sm">Todos</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="status-imported"
+                                checked={formData.launchStatus === 'IMPORTED'}
+                                onCheckedChange={(checked) => {
+                                  if (checked) setFormData(prev => ({ ...prev, launchStatus: 'IMPORTED' }))
+                                }}
+                              />
+                              <Label htmlFor="status-imported" className="text-sm">Apenas Importados</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="status-manual"
+                                checked={formData.launchStatus === 'MANUAL'}
+                                onCheckedChange={(checked) => {
+                                  if (checked) setFormData(prev => ({ ...prev, launchStatus: 'MANUAL' }))
+                                }}
+                              />
+                              <Label htmlFor="status-manual" className="text-sm">Apenas Digitados</Label>
+                            </div>
+                          </div>
+                        </div>
 
+                        <div>
+                          <Label className='mb-2 block'>Tipo de Lançamento</Label>
                           <div className="grid grid-cols-2 gap-2">
                             <div className="flex items-center space-x-2">
                               <Checkbox
@@ -235,7 +271,7 @@ export default function DeleteHistory() {
                                 checked={formData.type.includes('OFERTA_CULTO')}
                                 onCheckedChange={(checked) => handleTypeChange('OFERTA_CULTO', checked as boolean)}
                               />
-                              <Label htmlFor="type-oferta" className="text-sm">Oferta Culto</Label>
+                              <Label htmlFor="type-oferta" className="text-sm">Oferta do Culto</Label>
                             </div>
                             <div className="flex items-center space-x-2">
                               <Checkbox
@@ -251,7 +287,7 @@ export default function DeleteHistory() {
                                 checked={formData.type.includes('CIRCULO')}
                                 onCheckedChange={(checked) => handleTypeChange('CIRCULO', checked as boolean)}
                               />
-                              <Label htmlFor="type-circulo" className="text-sm">Círculo Oração</Label>
+                              <Label htmlFor="type-circulo" className="text-sm">Círculo de Oração</Label>
                             </div>
                             <div className="flex items-center space-x-2">
                               <Checkbox

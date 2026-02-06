@@ -79,6 +79,8 @@ export default function Users() {
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
   const [isImportAssDialogOpen, setIsImportAssDialogOpen] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [filterCongregationId, setFilterCongregationId] = useState('')
+  const [filterProfileId, setFilterProfileId] = useState('')
 
   // user form: removed individual permission toggles (now managed by Profile)
   const [formData, setFormData] = useState({
@@ -410,15 +412,40 @@ export default function Users() {
   }
 
   const filteredUsers = useMemo(() => {
-    if (!searchTerm) return users
-    const normalizedSearchTerm = removeAccents(searchTerm.toLowerCase())
-    return users.filter(user => {
-      const normalizedName = removeAccents(user.name.toLowerCase())
-      const normalizedEmail = user.email ? removeAccents(user.email.toLowerCase()) : ''
-      return normalizedName.includes(normalizedSearchTerm) ||
-        (user.email && normalizedEmail.includes(normalizedSearchTerm))
-    })
-  }, [users, searchTerm])
+    let result = users
+
+    // Apply congregation filter
+    if (filterCongregationId) {
+      result = result.filter(user =>
+        user.congregations.some(c => c.id === filterCongregationId)
+      )
+    }
+
+    // Apply profile filter
+    if (filterProfileId) {
+      result = result.filter(user => user.profile?.id === filterProfileId)
+    }
+
+    // Apply search term filter (searches name, email, congregation name, and profile name)
+    if (searchTerm) {
+      const normalizedSearchTerm = removeAccents(searchTerm.toLowerCase())
+      result = result.filter(user => {
+        const normalizedName = removeAccents(user.name.toLowerCase())
+        const normalizedEmail = user.email ? removeAccents(user.email.toLowerCase()) : ''
+        const congregationMatch = user.congregations.some(c =>
+          removeAccents(c.name.toLowerCase()).includes(normalizedSearchTerm)
+        )
+        const profileMatch = user.profile && removeAccents(user.profile.name.toLowerCase()).includes(normalizedSearchTerm)
+
+        return normalizedName.includes(normalizedSearchTerm) ||
+          normalizedEmail.includes(normalizedSearchTerm) ||
+          congregationMatch ||
+          profileMatch
+      })
+    }
+
+    return result
+  }, [users, searchTerm, filterCongregationId, filterProfileId])
 
   // mapping labels to display profile permissions
   const permissionLabels: [keyof Profile, string][] = [
@@ -728,7 +755,37 @@ export default function Users() {
           </div>
 
           <div className="mb-6">
-            <SearchInput placeholder="Pesquisar usuários..." value={searchTerm} onChange={setSearchTerm} className="w-full sm:max-w-md" />
+            <div className="flex flex-col gap-4">
+              <SearchInput placeholder="Pesquisar usuários..." value={searchTerm} onChange={setSearchTerm} className="w-full sm:max-w-md" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Congregação</label>
+                  <select
+                    value={filterCongregationId}
+                    onChange={(e) => setFilterCongregationId(e.target.value)}
+                    className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Todas as congregações</option>
+                    {congregations.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Perfil</label>
+                  <select
+                    value={filterProfileId}
+                    onChange={(e) => setFilterProfileId(e.target.value)}
+                    className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Todos os perfis</option>
+                    {profiles.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
           </div>
 
           <Card>

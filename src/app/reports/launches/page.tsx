@@ -538,7 +538,7 @@ export default function Reports() {
       {showScrollTop && (
         <Button
           onClick={scrollToTop}
-          className="fixed bottom-6 right-6 z-[999] rounded-full w-12 h-12 shadow-2xl bg-blue-700"
+          className="fixed bottom-20 right-6 z-40 rounded-full w-12 h-12 shadow-2xl bg-blue-700"
           size="icon"
         >
           <ArrowUp className="h-6 w-6 text-white" />

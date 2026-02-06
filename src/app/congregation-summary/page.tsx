@@ -1568,13 +1568,14 @@ export default function CongregationSummary() {
           href="#container"
           style={{
             position: "fixed",
-            bottom: "20px",
+            bottom: "80px",
             right: "15px",
             background: "#333",
             color: "white",
             padding: "10px 15px",
             borderRadius: "5px",
             textDecoration: "none",
+            zIndex: 40,
           }}
           onClick={(e) => {
             e.preventDefault();

@@ -37,15 +37,15 @@ async function main() {
   console.log('✅ Congregações criadas:', { congregation1, congregation2, congregation3 })
 */
   // Criar usuário de teste
-  // const hashedPassword = await bcrypt.hash('19321932', 12)
-  
+  const hashedPassword = await bcrypt.hash('19321932', 10)
+const isPasswordValid = await bcrypt.compare('19321932', hashedPassword)
+  console.log('✅ Senha hash gerada:', hashedPassword)
   // const user1 = await prisma.user.upsert({
   //   where: { email: 'admin@igreja.com' },
   //   update: {},
   //   create: {
   //     name: 'Administrador',
   //     email: 'admin@igreja.com',
-  //     cpf: '12345678901',
   //     phone: '(11) 99999-9999',
   //     password: hashedPassword,
   //     validFrom: new Date(),
@@ -54,31 +54,31 @@ async function main() {
   //   }
   // })
 
-  const profile1 = await prisma.profile.create({
-    data: {
-      name: 'Administrador',
-      canExport: true,
-      canDelete: true,
-      // Novas permissões
-      canLaunchServiceOffer: true,
-      canLaunchVote: true,
-      canLaunchCampaign: true,
-      canLaunchMission: true,
-      canLaunchCircle: true,
-      canLaunchTithe: true,
-      canLaunchExpense: true,
-      canApproveTithe      :true,
-      canApproveExpense    :true,
-      canCreate            :true,
-      canEdit              :true,
-      canExclude           :true,
-      canManageUsers       :true,
-      canManageSummary     :true,
-      canApproveTreasury   :true,
-      canApproveAccountant :true,
-      canApproveDirector   :true,
-          }
-  })
+  // const profile1 = await prisma.profile.create({
+  //   data: {
+  //     name: 'Administrador',
+  //     canExport: true,
+  //     canDelete: true,
+  //     // Novas permissões
+  //     canLaunchServiceOffer: true,
+  //     canLaunchVote: true,
+  //     canLaunchCampaign: true,
+  //     canLaunchMission: true,
+  //     canLaunchCircle: true,
+  //     canLaunchTithe: true,
+  //     canLaunchExpense: true,
+  //     canApproveTithe      :true,
+  //     canApproveExpense    :true,
+  //     canCreate            :true,
+  //     canEdit              :true,
+  //     canExclude           :true,
+  //     canManageUsers       :true,
+  //     canManageSummary     :true,
+  //     canApproveTreasury   :true,
+  //     canApproveAccountant :true,
+  //     canApproveDirector   :true,
+  //         }
+  // })
 
   // const user2 = await prisma.user.upsert({
   //   where: { email: 'usuario@igreja.com' },

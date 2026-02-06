@@ -20,24 +20,34 @@ export async function GET(request: NextRequest) {
     const congregationId = searchParams.get('congregationId')
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
+    const filterByUserCongregations = searchParams.get('filterByUserCongregations') !== 'false'
+    const activeOnly = searchParams.get('activeOnly') === 'true'
 
     let where: any = {}
 
-    const userCongregations = await prisma.userCongregation.findMany({
-      where: {
-        userId: session.user.id
-      },
-      select: {
-        congregationId: true
-      }
-    })
+    // Only filter by user congregations if explicitly requested (default is to show all)
+    if (filterByUserCongregations) {
+      const userCongregations = await prisma.userCongregation.findMany({
+        where: {
+          userId: session.user.id
+        },
+        select: {
+          congregationId: true
+        }
+      })
 
-    where.congregationId = {
-      in: userCongregations.map(uc => uc.congregationId)
+      where.congregationId = {
+        in: userCongregations.map(uc => uc.congregationId)
+      }
     }
 
     if (congregationId) {
       where.congregationId = congregationId
+    }
+
+    // Fetch all contributors (active and inactive) unless activeOnly is specified
+    if (activeOnly) {
+      where.isActive = true
     }
 
     // if (startDate && endDate) {

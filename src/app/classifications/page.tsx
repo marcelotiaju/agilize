@@ -26,7 +26,8 @@ export default function Classifications() {
   const [formData, setFormData] = useState({
     code: '',
     shortCode: '',
-    description: ''
+    description: '',
+    isActive: true
   })
 
   // Verificar permissões
@@ -40,6 +41,7 @@ export default function Classifications() {
     shortCode: string
     description: string
     createdAt: string
+    isActive: boolean
   }
 
   useEffect(() => {
@@ -81,8 +83,9 @@ export default function Classifications() {
   }, [classifications, searchTerm])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+    const { name, value, type, checked } = e.target
+    const finalValue = type === 'checkbox' ? checked : value
+    setFormData(prev => ({ ...prev, [name]: finalValue }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -119,7 +122,8 @@ export default function Classifications() {
     setFormData({
       code: classification.code,
       shortCode: classification.shortCode,
-      description: classification.description
+      description: classification.description,
+      isActive: (classification as any).isActive
     })
     setIsDialogOpen(true)
   }
@@ -149,7 +153,8 @@ export default function Classifications() {
     setFormData({
       code: '',
       shortCode: '',
-      description: ''
+      description: '',
+      isActive: true
     })
   }
 
@@ -285,6 +290,20 @@ export default function Classifications() {
                           className="col-span-3"
                           //placeholder="ex: LANCHES E REFEIÇÕES"
                           required
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="isActive" className="text-right">
+                          Ativo
+                        </Label>
+                        <Input
+                          type="checkbox"
+                          id="isActive"
+                          name="isActive"
+                          checked={(formData as any).isActive}
+                          onChange={handleInputChange}
+                          className="h-4 w-4"
                         />
                       </div>
                     </div>

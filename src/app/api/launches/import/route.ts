@@ -204,7 +204,7 @@ export async function POST(request: NextRequest) {
       })
 
       const contributor = await prisma.contributor.findFirst({
-        where: { cpf: cpfContributor || null }, select: { id: true }
+        where: { cpf: cpfContributor || null }, select: { id: true, name: true }
       })
 
       if (!congregation) {
@@ -252,7 +252,7 @@ export async function POST(request: NextRequest) {
             type: launchType,
             date: launchDate,
             value,
-            contributorName: temCadastro.toLowerCase() === 'n' ? cpfContributor : '',
+            contributorName: contributor?.name || (temCadastro.toLowerCase() === 'n' ? cpfContributor : ''),
             contributorId: contributor?.id || null,
             description: description || null,
             talonNumber: talonNumber || null,

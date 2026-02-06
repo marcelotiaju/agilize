@@ -56,6 +56,7 @@ interface Congregation {
   circleAccountPlan?: string
   circleFinancialEntity?: string
   circlePaymentMethod?: string
+  isActive: boolean
 }
 
 export default function Congregations() {
@@ -107,6 +108,7 @@ export default function Congregations() {
     circleAccountPlan: '',
     circleFinancialEntity: '',
     circlePaymentMethod: '',
+    isActive: true,
   })
   // listas para múltiplas matrículas
   const [matriculaEnergisaList, setMatriculaEnergisaList] = useState<string[]>([])
@@ -154,8 +156,9 @@ export default function Congregations() {
   }, [congregations, searchTerm])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+    const { name, value, type, checked } = e.target
+    const finalValue = type === 'checkbox' ? checked : value
+    setFormData(prev => ({ ...prev, [name]: finalValue }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -235,6 +238,7 @@ export default function Congregations() {
       circleAccountPlan: congregation.circleAccountPlan || '',
       circleFinancialEntity: congregation.circleFinancialEntity || '',
       circlePaymentMethod: congregation.circlePaymentMethod || '',
+      isActive: congregation.isActive,
     })
     // popular listas a partir da string armazenada (compatibilidade com DB)
     setMatriculaEnergisaList(
@@ -320,6 +324,7 @@ export default function Congregations() {
       circleAccountPlan: '',
       circleFinancialEntity: '',
       circlePaymentMethod: '',
+      isActive: true,
     })
     setMatriculaEnergisaList([])
     setMatriculaIguaList([])
@@ -449,6 +454,20 @@ export default function Congregations() {
                           className="col-span-3"
                           required
                           placeholder="Nome Regional"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="isActive" className="text-right">
+                          Ativo
+                        </Label>
+                        <Input
+                          type="checkbox"
+                          id="isActive"
+                          name="isActive"
+                          checked={formData.isActive}
+                          onChange={handleInputChange}
+                          className="h-4 w-4"
                         />
                       </div>
                     </div>

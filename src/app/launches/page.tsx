@@ -136,6 +136,7 @@ export default function Launches() {
   const canImportLaunch = session?.user?.canImportLaunch
   const canGenerateSummary = session?.user?.canGenerateSummary
   const canListSummary = session?.user?.canListSummary
+  const canTechnicalIntervention = session?.user?.canTechnicalIntervention
   const defaultLaunchType = session?.user?.defaultLaunchType
 
       // Adicione esse useMemo para calcular os tipos permitidos
@@ -189,6 +190,24 @@ useEffect(() => {
     if (!str) return '-';
     const index = str.indexOf(':');
     return index !== -1 ? str.substring(index + 1).trim() : str;
+  }
+
+  // Função helper para verificar se um lançamento pode ser editado
+  const isEditDisabled = (launch: Launch | null) => {
+    if (!launch) return false;
+    // Se tem canTechnicalIntervention, permite editar qualquer lançamento
+    if (canTechnicalIntervention) return false;
+    // Caso contrário, desabilita se: não é NORMAL/IMPORTED OU faz parte de um resumo
+    return !(launch.status === 'NORMAL' || launch.status === 'IMPORTED') || launch.summaryId != null;
+  }
+
+  // Função helper para verificar se um campo específico deve ser desabilitado durante edição
+  const isFieldDisabledDuringEdit = () => {
+    if (!editingLaunch) return false;
+    // Se tem canTechnicalIntervention, permite editar todos os campos
+    if (canTechnicalIntervention) return false;
+    // Caso contrário, desabilita se o status não é NORMAL ou tem resumo vinculado
+    return editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null;
   }
 
   useEffect(() => {
@@ -384,7 +403,7 @@ useEffect(() => {
 
   const fetchCongregations = async () => {
     try {
-      const response = await fetch('/api/congregations')
+      const response = await fetch('/api/congregations?activeOnly=true')
       if (response.ok) {
         const data = await response.json()
         setCongregations(data)
@@ -397,7 +416,7 @@ useEffect(() => {
 
   const fetchContributors = async () => {
     try {
-      const response = await fetch(`/api/contributors`)
+      const response = await fetch(`/api/contributors?activeOnly=true`)
       if (response.ok) {
         const data = await response.json()
         setContributors(data)
@@ -410,7 +429,7 @@ useEffect(() => {
 
   const fetchSuppliers = async () => {
     try {
-      const response = await fetch('/api/suppliers')
+      const response = await fetch('/api/suppliers?activeOnly=true')
       if (response.ok) {
         const data = await response.json()
         setSuppliers(data)
@@ -423,7 +442,7 @@ useEffect(() => {
 
   const fetchClassifications = async () => {
     try {
-      const response = await fetch('/api/classifications')
+      const response = await fetch('/api/classifications?activeOnly=true')
       if (response.ok) {
         const data = await response.json()
         setClassifications(data)
@@ -544,7 +563,7 @@ useEffect(() => {
     if ((formData.type === 'DIZIMO' || formData.type === 'CARNE_REVIVER') && !formData.isContributorRegistered && !formData.isAnonymous) {
       const trimmedName = formData.contributorName?.trim() || ''
       if (!trimmedName) {
-        alert('Nome do contribuinte não pode conter apenas espaços em branco')
+        alert('Nome do contribuinte é obrigatório para lançamentos do tipo Dízimo')
         setSalvando(false)
         return
       }
@@ -745,7 +764,7 @@ useEffect(() => {
   }
 
   const filteredContributors = contributors.filter(c =>
-    !formData.congregationId || c.congregationId === formData.congregationId
+    !formData.congregationId || c.congregationId === formData.congregationId || (editingLaunch?.status === 'IMPORTED')
   )
   // Mobile
   const LaunchCard = ({ launch }) => (
@@ -832,8 +851,8 @@ useEffect(() => {
         )}
         {launch.description && (
           <div className="flex justify-start">
-            {/* <FileText className="h-4 w-4 md:hidden"/> */}
-            <span className="text-sm font-normal">Anotações:</span>
+            <FileText className="h-4 w-4 md:hidden"/>
+            {/* <span className="text-sm font-normal">Anotações:</span> */}
             <span className="text-sm font-medium ml-1">{launch.description}</span>
           </div>
         )}
@@ -916,6 +935,17 @@ useEffect(() => {
             <TooltipContent><p>Editar</p></TooltipContent>
           </Tooltip>
 
+          {canTechnicalIntervention && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="sm" onClick={() => handleEdit(launch)} className="bg-purple-50 hover:bg-purple-100 border-purple-300">
+                  <AlertCircle className="h-4 w-4 mr-1 text-purple-600" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p>Intervenção Técnica - Editar Sem Restrições</p></TooltipContent>
+            </Tooltip>
+          )}
+
         </div>
       </CardContent>
     </Card>
@@ -951,6 +981,60 @@ useEffect(() => {
           <div className="p-2">
             <div className="flex justify-end mb-2">
               <div className="flex space-x-2">
+                {canImportLaunch && (
+                  <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button className="hidden lg:flex" variant="outline" onClick={resetImportForm}>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Importar CSV
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[600px]">
+                      <DialogHeader>
+                        <DialogTitle>Importar Lançamentos via CSV</DialogTitle>
+                        <DialogDescription>
+                          Faça upload de um arquivo CSV com os Lançamentos. <br />
+                          O arquivo deve ter as colunas: <br />
+                          <span className="text-xs font-mono">Congregação,Tipo,Data,Numero,Valor,Contribuinte,Descrição</span>
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="csvFile" className="text-right">
+                            Arquivo CSV
+                          </Label>
+                          <Input
+                            id="csvFile"
+                            type="file"
+                            accept=".csv"
+                            onChange={handleFileChange}
+                            className="col-span-3"
+                            required
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button
+                          type="button"
+                          onClick={handleImportCSV}
+                          disabled={!csvFile || importing}
+                        >
+                          {importing ? 'Importando...' : 'Importar'}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                )}
+                {(canImportLaunch && <Button
+                  onClick={handleOpenImportedDialog}
+                  variant="outline"
+                  className="hidden lg:flex items-center gap-2"
+                  title="Lançamentos importados sem contribuinte/contribuinte"
+                >
+                  <AlertCircle className="h-4 w-4" />
+                  Validar Importação
+                </Button>
+                )}
                 {(canGenerateSummary || canListSummary) && 
                 <Button
                   //variant="defaulSt"
@@ -960,15 +1044,8 @@ useEffect(() => {
                   <PieChart className="h-4 w-4" />
                   Resumo
                 </Button>}
-                <Button
-                  onClick={handleOpenImportedDialog}
-                  variant="outline"
-                  className="hidden lg:flex items-center gap-2"
-                  title="Lançamentos importados sem contribuinte/contribuinte"
-                >
-                  <AlertCircle className="h-4 w-4" />
-                  Importados Incompletos
-                </Button>
+                 
+                
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                   <DialogTrigger asChild>
                     <Button onClick={resetForm} disabled={!canLaunchVote && !canLaunchEbd && !canLaunchCampaign && !canLaunchTithe && !canLaunchExpense && !canLaunchMission && !canLaunchCircle && !canLaunchServiceOffer && !canLaunchCarneReviver}>
@@ -978,7 +1055,14 @@ useEffect(() => {
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto overflow-x-hidden p-0 sm:p-6 fixed" style={{ fontSize: '16px' }}>
                     <DialogHeader>
-                      <DialogTitle>{editingLaunch ? 'Editar' : 'Novo'}</DialogTitle>
+                      <DialogTitle>
+                        {editingLaunch ? 'Editar' : 'Novo'}
+                        {canTechnicalIntervention && editingLaunch && (
+                          <Badge className="ml-2 bg-purple-600 hover:bg-purple-700">
+                            INT. TÉCNICA
+                          </Badge>
+                        )}
+                      </DialogTitle>
                       <DialogDescription asChild style={{ fontSize: '14px' }}>
                         {editingLaunch && editingLaunch.status !== 'NORMAL' && editingLaunch.status !== 'IMPORTED' && (
                           <div className="mt-2 p-2 bg-yellow-50 text-red-800 rounded-md flex items-center">
@@ -1000,6 +1084,14 @@ useEffect(() => {
                           <div className="mt-2 p-2 bg-yellow-50 text-red-800 rounded-md flex items-center">
                             <AlertCircle className="h-4 w-4 mr-2" />
                             Este lançamento faz parte de um resumo e não pode ser alterado."
+                          </div>
+                        )}
+                      </DialogDescription>
+                      <DialogDescription asChild style={{ fontSize: '14px' }}>
+                        {canTechnicalIntervention && editingLaunch && (
+                          <div className="mt-2 p-2 bg-purple-50 text-purple-700 rounded-md flex items-center border border-purple-300">
+                            <AlertCircle className="h-4 w-4 mr-2 text-purple-600" />
+                            <span className="font-semibold">Modo de Intervenção Técnica Ativo</span> - Você pode editar todos os campos independente do status do lançamento
                           </div>
                         )}
                       </DialogDescription>
@@ -1026,7 +1118,7 @@ useEffect(() => {
                                 label="Buscar Congregação"
                                 placeholder="Selecione a Congregação"
                                 value={formData.congregationId}
-                                disabled={editingLaunch ? (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null) : congregations.length === 1}
+                                disabled={isEditDisabled(editingLaunch) || (congregations.length === 1 && !editingLaunch)}
                                 onChange={(value) => handleSelectChange('congregationId', value)}
                                 name="congregationId"
                                 data={congregations.map(s => ({ id: s.id, name: s.name }))}
@@ -1042,7 +1134,7 @@ useEffect(() => {
                                 <Select
                                   value={formData.type}
                                   onValueChange={(value) => handleSelectChange('type', value)}
-                                  disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null) || allowedLaunchTypes.length === 1}
+                                  disabled={isEditDisabled(editingLaunch) || allowedLaunchTypes.length === 1}
                                   data={allowedLaunchTypes.map(t => t.value)}
                                 >
                                   <SelectTrigger className="w-full">
@@ -1069,7 +1161,7 @@ useEffect(() => {
                                     label="Buscar Classificação"
                                     placeholder="Selecione uma classificação"
                                     value={formData.classificationId}
-                                    disabled={editingLaunch && editingLaunch.status !== 'NORMAL'}
+                                    disabled={isFieldDisabledDuringEdit()}
                                     onChange={(value) => handleSelectChange('classificationId', value)}
                                     name="classificationId"
                                     data={classifications.map(c => ({ id: c.id, name: c.description }))}
@@ -1089,7 +1181,7 @@ useEffect(() => {
                                   inputMode="none"
                                   value={formData.date ?? ''}
                                   onChange={handleInputChange}
-                                  disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null)}
+                                  disabled={isFieldDisabledDuringEdit()}
                                   style={{ fontSize: '16px' }}
                                   locale="pt-BR"
                                 />
@@ -1106,7 +1198,7 @@ useEffect(() => {
                                     pattern="[0-9]*"
                                     value={formData.talonNumber ?? ''}
                                     onChange={handleInputChange}
-                                    disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null)}
+                                    disabled={isFieldDisabledDuringEdit()}
                                     style={{ fontSize: '16px' }}
                                   />
                                 )}
@@ -1123,7 +1215,7 @@ useEffect(() => {
                                   inputMode="decimal"
                                   className={cn(
                                     "col-span-3 h-10 w-full rounded-md border border-input bg-background px-3 py-2",
-                                    editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null) 
+                                    isFieldDisabledDuringEdit()
                                       ? "text-gray-500 cursor-not-allowed opacity-50" 
                                       : ""
                                   )}
@@ -1139,7 +1231,7 @@ useEffect(() => {
                                   //prefix="R$ "
                                   //decimalScale={2}
                                   //fixedDecimalScale={true}
-                                  disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null)}
+                                  disabled={isFieldDisabledDuringEdit()}
                                   style={{ fontSize: '16px' }}
                                   onFocus={(e) => {
                                     // Scroll para o input quando focado no mobile
@@ -1160,7 +1252,7 @@ useEffect(() => {
                                       type="button"
                                       variant={formData.isContributorRegistered ? "default" : "outline"}
                                       size="sm"
-                                      disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null) || !formData.congregationId}
+                                      disabled={isFieldDisabledDuringEdit() || !formData.congregationId}
                                       className={cn(
                                         "h-9 px-3 transition-all flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start",
                                         formData.isContributorRegistered
@@ -1184,7 +1276,7 @@ useEffect(() => {
                                         type="button"
                                         variant={formData.isAnonymous ? "default" : "outline"}
                                         size="sm"
-                                        disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
+                                        disabled={isFieldDisabledDuringEdit()}
                                         className={cn(
                                           "h-9 px-3 transition-all flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start",
                                           formData.isAnonymous
@@ -1212,10 +1304,10 @@ useEffect(() => {
                                       label="Buscar Contribuinte"
                                       placeholder="Selecione o contribuinte"
                                       value={formData.contributorId ?? ''}
-                                      disabled={editingLaunch && (editingLaunch.status !== 'NORMAL'|| editingLaunch.summaryId != null)}
+                                      disabled={isFieldDisabledDuringEdit()}
                                       onChange={(value) => handleSelectChange('contributorId', value)}
                                       name="contributorId"
-                                      data={contributors.filter(f => (f.congregationId == formData.congregationId)).map(c => ({ key: c.id, id: c.id, name: c.name, document: c.cpf, cargo: c.ecclesiasticalPosition, photoUrl: c.photoUrl, photoExists: c.photoExists }))}
+                                      data={contributors.filter(f => (editingLaunch?.status === 'IMPORTED' || f.congregationId == formData.congregationId)).map(c => ({ key: c.id, id: c.id, name: c.name, document: c.cpf, cargo: c.ecclesiasticalPosition, photoUrl: c.photoUrl, photoExists: c.photoExists }))}
                                       searchKeys={['name', 'document']}
                                     />
                                   </div>
@@ -1227,101 +1319,19 @@ useEffect(() => {
                                       name="contributorName"
                                       value={formData.contributorName ?? ''}
                                       onChange={handleInputChange}
-                                      disabled={formData.isAnonymous || (editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null))}
+                                      disabled={formData.isAnonymous || isFieldDisabledDuringEdit()}
                                       className="w-full"
                                       //required={!formData.isAnonymous}
                                       style={{ fontSize: '16px' }}
                                     />
+                                    {editingLaunch?.status === 'IMPORTED' && (
+                                      <p className="text-xs text-gray-500 mt-1">Campo bloqueado para lançamentos importados</p>
+                                    )}
                                   </div>
                                 )}
                               </div>
                             )}
 
-                            {/* Carne Reviver: contribuinte
-                         {formData.type === 'CARNE_REVIVER' && (
-                           <div className="w-full">
-                             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
-                               <div className="flex items-center space-x-2 w-full sm:w-auto">
-                                <Button
-                                    type="button"
-                                    variant={formData.isContributorRegistered ? "default" : "outline"}
-                                    size="sm"
-                                    disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null)}
-                                    className={cn(
-                                      "h-9 px-3 transition-all flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start",
-                                      formData.isContributorRegistered 
-                                          ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-800 shadow-sm" 
-                                          : "text-gray-600 border-gray-300 hover:bg-gray-50"
-                                    )}
-                                    onClick={() => toggleField('isContributorRegistered')}
-                                  >
-                                    {formData.isContributorRegistered ? (
-                                      <Check className="h-4 w-4 animate-in zoom-in duration-200 shrink-0" />
-                                    ) : (
-                                      <Users className="h-4 w-4 shrink-0" />
-                                    )}
-                                    <span className="text-sm sm:text-base">Contribuinte cadastrado</span>
-                                  </Button>
-                               </div>
-
-                               {!formData.isContributorRegistered && (
-                                 <div className="flex items-center space-x-2 w-full sm:w-auto">
-                                  <Button
-                                      type="button"
-                                      variant={formData.isAnonymous ? "default" : "outline"}
-                                      size="sm"
-                                      disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null)}
-                                      className={cn(
-                                        "h-9 px-3 transition-all flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start",
-                                        formData.isAnonymous 
-                                          ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-800 shadow-sm" 
-                                          : "text-gray-600 border-gray-300 hover:bg-gray-50"
-                                      )}
-                                      onClick={() => toggleField('isAnonymous')}
-                                    >
-                                      {formData.isAnonymous ? (
-                                        <Check className="h-4 w-4 animate-in zoom-in duration-200 shrink-0" />
-                                      ) : (
-                                        <Ghost className="h-4 w-4 shrink-0" />
-                                      )}
-                                      <span className="text-sm sm:text-base">Anônimo</span>
-                                    </Button>
-                                 </div>
-                               )}
-                             </div>
-
-                             {formData.isContributorRegistered ? (
-                               <div className="mt-2 w-full">
-                                 <Label htmlFor="contributorId">Contribuinte</Label>
-                                 <SearchableSelect
-                                   key={formData.contributorId}
-                                   label="Buscar Contribuinte"
-                                   placeholder="Selecione o contribuinte"
-                                   value={formData.contributorId ?? ''}
-                                   disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null)}
-                                   onChange={(value) => handleSelectChange('contributorId', value)}
-                                   name="contributorId"
-                                   data={contributors.filter(f => (f.congregationId == formData.congregationId)).map(c => ({ key: c.id, id: c.id, name: c.name, document: c.cpf, cargo: c.ecclesiasticalPosition, photoUrl: c.photoUrl, photoExists: c.photoExists }))}
-                                   searchKeys={['name', 'document']}
-                                 />
-                               </div>
-                             ) : (
-                               <div className="mt-2 w-full">
-                                 <Label htmlFor="contributorName">Nome do Contribuinte</Label>
-                                 <Input
-                                   id="contributorName"
-                                   name="contributorName"
-                                   value={formData.contributorName ?? ''}
-                                   onChange={handleInputChange}
-                                   disabled={formData.isAnonymous || (editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null))}
-                                   className="w-full"
-                                   //required={!formData.isAnonymous}
-                                   style={{ fontSize: '16px' }}
-                                 />
-                               </div>
-                             )}
-                           </div>
-                         )} */}
 
                             {/* Fornecedor para SAIDA */}
                             {['SAIDA'].includes(formData.type) && (
@@ -1331,7 +1341,7 @@ useEffect(() => {
                                     type="button"
                                     variant={formData.isSupplierRegistered ? "default" : "outline"}
                                     size="sm"
-                                    disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null)}
+                                    disabled={isFieldDisabledDuringEdit()}
                                     className={cn(
                                       "h-9 px-3 transition-all flex items-center gap-2",
                                       formData.isSupplierRegistered
@@ -1356,7 +1366,7 @@ useEffect(() => {
                                       label="Buscar Fornecedor"
                                       placeholder="Selecione o fornecedor"
                                       value={formData.supplierId ?? ''}
-                                      disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null)}
+                                      disabled={isFieldDisabledDuringEdit()}
                                       onChange={(value) => handleSelectChange('supplierId', value)}
                                       name="supplierId"
                                       data={suppliers.map(s => ({ key: s.id, id: s.id, name: truncateString(s.razaoSocial, 45), document: s.cpfcnpj }))}
@@ -1372,7 +1382,7 @@ useEffect(() => {
                                       name="supplierName"
                                       value={formData.supplierName ?? ''}
                                       onChange={handleInputChange}
-                                      disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null)}
+                                      disabled={isFieldDisabledDuringEdit()}
                                       style={{ fontSize: '16px' }}
                                     />
                                   </div>
@@ -1390,13 +1400,13 @@ useEffect(() => {
                                 name="description"
                                 value={formData.description ?? ''}
                                 onChange={handleInputChange}
-                                disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null)}
+                                disabled={isFieldDisabledDuringEdit()}
                                 style={{ fontSize: '16px' }}
                               />
                             </div>
 
                             <DialogFooter>
-                              <Button type="submit" disabled={editingLaunch && (editingLaunch.status !== 'NORMAL' || editingLaunch.status === 'IMPORTED' || editingLaunch.summaryId != null) || salvando}>
+                              <Button type="submit" disabled={isFieldDisabledDuringEdit() || salvando}>
                                 {editingLaunch ? 'Atualizar' : 'Salvar'}
                               </Button>
                             </DialogFooter>
@@ -1462,67 +1472,6 @@ useEffect(() => {
                     </Tabs>
                   </DialogContent>
                 </Dialog>
-
-                {canImportLaunch && (
-                  <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button className="hidden lg:flex" variant="outline" onClick={resetImportForm}>
-                        <Upload className="mr-2 h-4 w-4" />
-                        Importar CSV
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[600px]">
-                      <DialogHeader>
-                        <DialogTitle>Importar Lançamentos via CSV</DialogTitle>
-                        <DialogDescription>
-                          Faça upload de um arquivo CSV com os Lançamentos. <br />
-                          O arquivo deve ter as colunas: <br />
-                          <span className="text-xs font-mono">Congregação,Tipo,Data,Numero,Valor,Contribuinte,Descrição</span>
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="csvFile" className="text-right">
-                            Arquivo CSV
-                          </Label>
-                          <Input
-                            id="csvFile"
-                            type="file"
-                            accept=".csv"
-                            onChange={handleFileChange}
-                            className="col-span-3"
-                            required
-                          />
-                        </div>
-
-                        {/* <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
-                          <p className="font-medium mb-2">Formato esperado do CSV:</p>
-                          <p className="text-xs font-mono">Codigo,Nome,CPF,CargoEclesiastico,CodCongregação,Tipo,Foto</p>
-                          <p className="text-xs font-mono">1,João Silva,12345678901,Pastor,1,Congregado,foto.jpg</p>
-                          <p className="text-xs font-mono">2,Maria Santos,98765432100,Diácono,2,Membro,foto.jpg</p>
-                          <div className="mt-3 pt-3 border-t border-gray-200">
-                            <a
-                              href="/exemplo-contribuintes.csv"
-                              download
-                              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                            >
-                              📥 Baixar arquivo de exemplo
-                            </a>
-                          </div>
-                        </div> */}
-                      </div>
-                      <DialogFooter>
-                        <Button
-                          type="button"
-                          onClick={handleImportCSV}
-                          disabled={!csvFile || importing}
-                        >
-                          {importing ? 'Importando...' : 'Importar'}
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                )}
 
                 {/* Dialog de Lançamentos Importados sem Contribuinte */}
                 {canImportLaunch && (<Dialog open={isImportedWithoutContributorDialogOpen} onOpenChange={setIsImportedWithoutContributorDialogOpen}>
@@ -1857,6 +1806,17 @@ useEffect(() => {
                                   </Tooltip>
                                 ) : null}
 
+                                {canTechnicalIntervention && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button variant="outline" size="sm" onClick={() => handleEdit(launch)} className="bg-purple-50 hover:bg-purple-100 border-purple-300">
+                                        <AlertCircle className="h-4 w-4 text-purple-600" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent><p>Intervenção Técnica - Editar Sem Restrições</p></TooltipContent>
+                                  </Tooltip>
+                                )}
+
                               </div>
                             </TableCell>
                           </TableRow>
@@ -1904,13 +1864,14 @@ useEffect(() => {
           href="#container"
           style={{
             position: "fixed",
-            bottom: "20px",
+            bottom: "80px",
             right: "15px",
             background: "#333",
             color: "white",
             padding: "10px 15px",
             borderRadius: "5px",
             textDecoration: "none",
+            zIndex: 40,
           }}
           onClick={(e) => {
             e.preventDefault();

@@ -69,7 +69,8 @@ export default function Profiles() {
     canReportSummary: false,
     canReportHistoryContribSynthetic: false,
     canReportHistoryContribAnalytic: false,
-    canDeleteSummary: false
+    canDeleteSummary: false,
+    canTechinicalIntervention: false
   })
 
   useEffect(() => {
@@ -133,7 +134,8 @@ export default function Profiles() {
       canReportSummary: false,
       canReportHistoryContribSynthetic: false,
       canReportHistoryContribAnalytic: false,
-      canDeleteSummary: false
+      canDeleteSummary: false,
+      canTechinicalIntervention: false
     })
   }
 
@@ -319,6 +321,10 @@ export default function Profiles() {
                               <Checkbox checked={profileForm.canImportLaunch} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canImportLaunch: v as boolean }))} />
                               <Label>Importar Lançamento</Label>
                             </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox checked={profileForm.canTechnicalIntervention} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canTechnicalIntervention: v as boolean }))} />
+                              <Label>Intervenção Técnica</Label>
+                            </div>                            
                         </div>
                       </div>
 

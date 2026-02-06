@@ -3,7 +3,8 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { Providers } from "@/components/providers"
 import { PermissionGuard } from '@/components/auth/PermissionGuard'
-import { AuthRedirector } from "@/components/auth/AuthRedirector";
+import { AuthRedirector } from "@/components/auth/AuthRedirector"
+import { Footer } from "@/components/layout/footer";
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -23,6 +24,7 @@ export default function RootLayout({
         <Providers>
           <AuthRedirector />
           {children}
+          <Footer />
         </Providers>
         </body>
     </html>

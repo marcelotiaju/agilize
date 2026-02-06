@@ -11,7 +11,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const { searchParams } = new URL(request.url)
+    const activeOnly = searchParams.get('activeOnly') === 'true'
+    
     const classifications = await prisma.classification.findMany({
+      where: activeOnly ? { isActive: true } : {},
       orderBy: {
         description: 'asc'
       }
@@ -75,7 +79,7 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { id, code, shortCode, description } = body
+    const { id, code, shortCode, description, isActive } = body
 
     if (!id || !code || !shortCode || !description) {
       return NextResponse.json({ error: "Todos os campos são obrigatórios" }, { status: 400 })
@@ -103,7 +107,8 @@ export async function PUT(request: NextRequest) {
       data: {
         code,
         shortCode,
-        description
+        description,
+        isActive
       }
     })
 

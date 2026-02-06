@@ -40,7 +40,8 @@ export default function Suppliers() {
     code: '',
     razaoSocial: '',
     tipoPessoa: 'FISICA',
-    cpfCnpj: ''
+    cpfCnpj: '',
+    isActive: true
   })
 
   // Verificar permissões
@@ -86,8 +87,9 @@ export default function Suppliers() {
   }, [suppliers, searchTerm])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+    const { name, value, type, checked } = e.target
+    const finalValue = type === 'checkbox' ? checked : value
+    setFormData(prev => ({ ...prev, [name]: finalValue }))
   }
 
   const handleSelectChange = (name: string, value: string) => {
@@ -129,7 +131,8 @@ export default function Suppliers() {
       code: supplier.code,
       razaoSocial: supplier.razaoSocial,
       tipoPessoa: supplier.tipoPessoa,
-      cpfCnpj: supplier.cpfCnpj
+      cpfCnpj: supplier.cpfCnpj,
+      isActive: supplier.isActive
     })
     setIsDialogOpen(true)
   }
@@ -314,6 +317,20 @@ export default function Suppliers() {
                           className="col-span-3"
                           required
                           placeholder="CPF ou CNPJ"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="isActive" className="text-right">
+                          Ativo
+                        </Label>
+                        <input
+                          type="checkbox"
+                          id="isActive"
+                          name="isActive"
+                          checked={(formData as any).isActive}
+                          onChange={handleInputChange}
+                          className="h-4 w-4"
                         />
                       </div>
                     </div>

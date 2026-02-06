@@ -112,7 +112,9 @@ export async function GET(request: NextRequest) {
       in: userCongregations.map(uc => uc.congregationId)
     }
 
-    if (congregationId && congregationId !== 'all') {
+    // Se o status é IMPORTADO e há um searchTerm, não filtrar por congregação específica
+    // para permitir buscar contribuintes de outras congregações
+    if (congregationId && congregationId !== 'all' && !(importFilter === 'IMPORTED' && searchTerm)) {
       where.congregationId = congregationId
     }
 
@@ -123,6 +125,52 @@ export async function GET(request: NextRequest) {
     if (importFilter === 'MANUAL') {
       where.status = { not: 'IMPORTED' }
     }
+
+    // Filtrar apenas registros ativos de congregation, contributor, supplier e classification
+    // Isso garante que ao buscar lançamentos, só apareçam com dados de registros ativos
+    where.AND = [
+      {
+        congregation: {
+          isActive: true
+        }
+      },
+      {
+        OR: [
+          {
+            contributor: null
+          },
+          {
+            contributor: {
+              isActive: true
+            }
+          }
+        ]
+      },
+      {
+        OR: [
+          {
+            supplier: null
+          },
+          {
+            supplier: {
+              isActive: true
+            }
+          }
+        ]
+      },
+      {
+        OR: [
+          {
+            classification: null
+          },
+          {
+            classification: {
+              isActive: true
+            }
+          }
+        ]
+      }
+    ]
 
     function extractAfterColon(str: string | undefined | null): string {
       if (!str) return '-';
@@ -432,7 +480,7 @@ export async function POST(request: NextRequest) {
         
         if (existingLaunch) {
           return NextResponse.json({ 
-            error: `Já existe um lançamento de ${type === "DIZIMO" ? "dízimo" : "carne reviver"} com a mesma congregação, data, valor e contribuinte` 
+            error: `Já existe um lançamento de ${type === "DIZIMO" ? "Dízimo" : "Carne Reviver"} com a mesma congregação, data, valor e contribuinte` 
           }, { status: 400 })
         }
       }
@@ -477,7 +525,7 @@ export async function POST(request: NextRequest) {
       
       if (existingLaunch) {
         return NextResponse.json({ 
-          error: `Já existe um lançamento do tipo ${type} com a mesma congregação, data e valor` 
+          error: `Já existe um lançamento do tipo ${type === "VOTO" ? "Voto" : type === "EBD" ? "EBD" : type === "CAMPANHA" ? "Campanha" : type === "MISSAO" ? "Missão" : type === "CIRCULO" ? "Círculo de Oração" : "Oferta do Culto"} com a mesma congregação, data e valor` 
         }, { status: 400 })
       }
     }
@@ -578,12 +626,18 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Acesso não autorizado a esta congregação" }, { status: 403 })
     }
 
-    if (launch.status === "EXPORTED") {
-      return NextResponse.json({ error: "Lançamento já exportado não pode ser alterado" }, { status: 400 })
-    }
+    // Verificar permissão de Intervenção Técnica
+    const canTechnicalIntervention = session.user.canTechnicalIntervention
 
-    if (launch.status === "CANCELED" && status === "NORMAL") {
-      return NextResponse.json({ error: "Não é possível reverter um lançamento cancelado" }, { status: 400 })
+    // Se não tem permissão de intervenção técnica, aplicar restrições de status
+    if (!canTechnicalIntervention) {
+      if (launch.status === "EXPORTED") {
+        return NextResponse.json({ error: "Lançamento já exportado não pode ser alterado" }, { status: 400 })
+      }
+
+      if (launch.status === "CANCELED" && status === "NORMAL") {
+        return NextResponse.json({ error: "Não é possível reverter um lançamento cancelado" }, { status: 400 })
+      }
     }
 
     // Build update payload avoiding invalid type conversions (ids are strings)

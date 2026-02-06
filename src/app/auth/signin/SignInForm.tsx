@@ -35,7 +35,8 @@ export default function SignInForm() {
 
       if (result && result.error) {
         setError('Login ou senha incorretos')
-      } else if (result) {
+      } else
+        if (result) {
         const session = await getSession()
         if (session && session.user) {
           const user = session.user as typeof session.user & { validFrom?: string | Date; validTo?: string | Date }

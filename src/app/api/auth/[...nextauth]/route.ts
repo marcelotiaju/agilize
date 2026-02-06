@@ -25,7 +25,6 @@ export const authOptions : NextAuthOptions = {
           },
           include: { profile: true }
         })
-        //console.log('Usuário Encontrado:', user);
 
         if (!user) {
           return null
@@ -78,7 +77,8 @@ export const authOptions : NextAuthOptions = {
           canDeleteLaunch : !!p?.canDeleteLaunch,
           canImportLaunch : !!p?.canImportLaunch,
           canDeleteSummary : !!p?.canDeleteSummary,
-          defaultLaunchType: p?.defaultLaunchType ?? 'DIZIMO'
+          defaultLaunchType: p?.defaultLaunchType ?? 'DIZIMO',
+          canTechnicalIntervention: !!p?.canTechnicalIntervention,
         }
 
         return {
@@ -163,7 +163,8 @@ export const authOptions : NextAuthOptions = {
           canDeleteLaunch : (user as any).canDeleteLaunch,
           canImportLaunch : (user as any).canImportLaunch,
           canDeleteSummary : (user as any).canDeleteSummary,
-          defaultLaunchType: (user as any).defaultLaunchType ?? 'DIZIMO'
+          defaultLaunchType: (user as any).defaultLaunchType ?? 'DIZIMO',
+          canTechnicalIntervention: (user as any).canTechnicalIntervention,
         }
       }
       return token
@@ -222,6 +223,7 @@ export const authOptions : NextAuthOptions = {
         canImportLaunch : typeof token.canImportLaunch === "boolean" ? token.canImportLaunch : undefined,
         canDeleteSummary : typeof token.canDeleteSummary === "boolean" ? token.canDeleteSummary : undefined,
         defaultLaunchType: typeof token.defaultLaunchType === "string" ? token.defaultLaunchType : 'DIZIMO',
+        canTechnicalIntervention: typeof token.canTechnicalIntervention === "boolean" ? token.canTechnicalIntervention : undefined,
       }
       // Definir expiração da sessão baseada no token exp
       if (typeof token.exp === 'number') {

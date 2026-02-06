@@ -204,9 +204,9 @@ export default function Export() {
                       <FileSpreadsheet className="mr-2 h-5 w-5" />
                       Configurar Exportação
                     </CardTitle>
-                    <CardDescription>
+                    {/* <CardDescription>
                       Selecione o período e os dados que deseja exportar
-                    </CardDescription>
+                    </CardDescription> */}
                   </CardHeader>
                   <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-4">

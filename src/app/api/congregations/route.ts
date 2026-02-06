@@ -12,6 +12,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const { searchParams } = new URL(request.url)
+    const activeOnly = searchParams.get('activeOnly') === 'true'
+    
     // Buscar apenas congregações vinculadas ao usuário
     const userCongregations = await prisma.userCongregation.findMany({
       where: {
@@ -28,7 +31,8 @@ export async function GET(request: NextRequest) {
       where: {
         id: {
           in: congregationIds
-        }
+        },
+        ...(activeOnly && { isActive: true })
       },
       include: {
         users: {
@@ -163,6 +167,7 @@ export async function PUT(request: NextRequest) {
       code,
       name,
       regionalName,
+      isActive,
       // Accept both old (entradaOffer*) and new (serviceOffer*) names from client
       entradaOfferAccountPlan,
       entradaOfferFinancialEntity,
@@ -202,6 +207,7 @@ export async function PUT(request: NextRequest) {
         code,
         name,
         regionalName,
+        isActive,
         entradaOfferAccountPlan,
         entradaOfferFinancialEntity,
         entradaOfferPaymentMethod,

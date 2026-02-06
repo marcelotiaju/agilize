@@ -67,6 +67,7 @@ export const authOptions : NextAuthOptions = {
           canReportHistoryContribAnalytic: !!p?.canReportHistoryContribAnalytic,
           canReportSummary: !!p?.canReportSummary,
           canDeleteSummary: !!p?.canDeleteSummary,
+          canTechnicalIntervention: !!p?.canTechnicalIntervention,
           defaultLaunchType: p?.defaultLaunchType ?? 'DIZIMO'
         }
 
@@ -152,7 +153,8 @@ export const authOptions : NextAuthOptions = {
           canReportHistoryContribAnalytic: (user as any).canReportHistoryContribAnalytic,
           canReportSummary : (user as any).canReportSummary,
           canDeleteSummary : (user as any).canDeleteSummary,
-          defaultLaunchType: (user as any).defaultLaunchType ?? 'DIZIMO'
+          defaultLaunchType: (user as any).defaultLaunchType ?? 'DIZIMO',
+          canTechnicalIntervention: (user as any).canTechnicalIntervention,
         }
       }
       return token
@@ -208,6 +210,7 @@ export const authOptions : NextAuthOptions = {
         canReportSummary : typeof token.canReportSummary === "boolean" ? token.canReportSummary : undefined,
         canDeleteSummary : typeof token.canDeleteSummary === "boolean" ? token.canDeleteSummary : undefined,
         defaultLaunchType: typeof token.defaultLaunchType === "string" ? token.defaultLaunchType : 'DIZIMO',
+        canTechnicalIntervention: typeof token.canTechnicalIntervention === "boolean" ? token.canTechnicalIntervention : undefined,
       }
       if (typeof token.exp === 'number') {
         session.expires = new Date(token.exp * 1000).toISOString()

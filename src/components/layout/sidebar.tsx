@@ -22,7 +22,8 @@ import {
   List,
   User,
   PieChart, 
-  UserPen
+  UserPen,
+  Printer
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -116,7 +117,7 @@ export function Sidebar() {
           <div className="flex-1 overflow-y-auto">
             <nav className="mt-5 px-2">
               <Link href="/dashboard" className={cn("group flex items-center px-2 py-2 text-base font-medium rounded-md", pathname === '/dashboard' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900')} onClick={() => setSidebarOpen(false)}>
-                <Home className="mr-4 h-6 w-6" /> Página Inicial
+                <Home className="mr-4 h-6 w-6" /> Início
               </Link>
 
               {/* Tesouraria */}
@@ -135,16 +136,16 @@ export function Sidebar() {
                       {hasGenerateReport && (
                         <div className="mt-1">
                           <button type="button" onClick={() => setOpenReports(!openReports)} className="w-full flex items-center justify-between px-2 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-50">
-                            <span className="flex items-center"><FileText className="mr-3 h-5 w-5 shrink-0" />Relatórios</span>
+                            <span className="flex items-center"><Printer className="mr-3 h-5 w-5 shrink-0" />Relatórios</span>
                             <ChevronDown className={cn('h-4 w-4 transform transition-transform text-gray-500', openReports ? 'rotate-0' : '-rotate-90')} />
                           </button>
                           {openReports && (
                             <div className="mt-1 space-y-1 pl-8">
-                              {canReportLaunches && <Link href="/reports/launches" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/launches' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><FileText className="mr-3 h-5 w-5 shrink-0" />Relatório de Lançamentos</Link>}
-                              {canReportContributors && <Link href="/reports/contributors" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/contributors' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><FileText className="mr-3 h-5 w-5 shrink-0" />Relatório de Contribuintes</Link>}
-                              {canReportMonthlySummary && <Link href="/reports/monthly-summary" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/monthly-summary' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><FileText className="mr-3 h-5 w-5 shrink-0" />Resumo Mensal</Link>}
-                              {canReportHistoryContribSynthetic && <Link href="/reports/history-contrib-synthetic" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/history-contrib-synthetic' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><FileText className="mr-3 h-5 w-5 shrink-0" />Histórico de Contribuições Sintético</Link>}
-                              {canReportHistoryContribAnalytic && <Link href="/reports/history-contrib-analytic" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/history-contrib-analytic' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><FileText className="mr-3 h-5 w-5 shrink-0" />Histórico de Contribuições Analítico</Link>}
+                              {canReportLaunches && <Link href="/reports/launches" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/launches' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Printer className="mr-3 h-5 w-5 shrink-0" />Relatório de Lançamentos</Link>}
+                              {canReportContributors && <Link href="/reports/contributors" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/contributors' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Printer className="mr-3 h-5 w-5 shrink-0" />Relatório de Contribuintes</Link>}
+                              {canReportMonthlySummary && <Link href="/reports/monthly-summary" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/monthly-summary' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Printer className="mr-3 h-5 w-5 shrink-0" />Resumo Mensal</Link>}
+                              {canReportHistoryContribSynthetic && <Link href="/reports/history-contrib-synthetic" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/history-contrib-synthetic' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Printer className="mr-3 h-5 w-5 shrink-0" />Histórico de Contribuições Sintético</Link>}
+                              {canReportHistoryContribAnalytic && <Link href="/reports/history-contrib-analytic" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/history-contrib-analytic' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Printer className="mr-3 h-5 w-5 shrink-0" />Histórico de Contribuições Analítico</Link>}
                             </div>
                           )}
                         </div>
@@ -238,7 +239,7 @@ export function Sidebar() {
           <div className="flex flex-1 flex-col overflow-y-auto pt-5 pb-4">
             <nav className="mt-5 flex-1 space-y-1 px-2">
               <Link href="/dashboard" className={cn("group flex items-center px-2 py-2 text-sm font-medium rounded-md", pathname === '/dashboard' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900')}>
-                <Home className="mr-3 h-5 w-5 shrink-0" /> Página Inicial
+                <Home className="mr-3 h-5 w-5 shrink-0" /> Início
               </Link>
 
               {/* Tesouraria */}
@@ -257,16 +258,16 @@ export function Sidebar() {
                       {hasGenerateReport && (
                         <div className="mt-1">
                           <button type="button" onClick={() => setOpenReports(!openReports)} className="w-full flex items-center justify-between px-2 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-50">
-                            <span className="flex items-center"><FileText className="mr-3 h-5 w-5 shrink-0" />Relatórios</span>
+                            <span className="flex items-center"><Printer className="mr-3 h-5 w-5 shrink-0" />Relatórios</span>
                             <ChevronDown className={cn('h-4 w-4 transform transition-transform text-gray-500', openReports ? 'rotate-0' : '-rotate-90')} />
                           </button>
                           {openReports && (
                             <div className="mt-1 space-y-1 pl-8">
-                              {canReportLaunches && <Link href="/reports/launches" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/launches' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><FileText className="mr-3 h-5 w-5 shrink-0" />Relatório de Lançamentos</Link>}
-                              {canReportContributors && <Link href="/reports/contributors" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/contributors' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><FileText className="mr-3 h-5 w-5 shrink-0" />Relatório de Contribuintes</Link>}
-                              {canReportMonthlySummary && <Link href="/reports/monthly-summary" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/monthly-summary' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><FileText className="mr-3 h-5 w-5 shrink-0" />Resumo Mensal</Link>}
-                              {canReportHistoryContribSynthetic && <Link href="/reports/history-contrib-synthetic" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/history-contrib-synthetic' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><FileText className="mr-3 h-5 w-5 shrink-0" />Histórico de Contribuições Sintético</Link>}
-                              {canReportHistoryContribAnalytic && <Link href="/reports/history-contrib-analytic" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/history-contrib-analytic' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><FileText className="mr-3 h-5 w-5 shrink-0" />Histórico de Contribuições Analítico</Link>}
+                              {canReportLaunches && <Link href="/reports/launches" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/launches' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><Printer className="mr-3 h-5 w-5 shrink-0" />Relatório de Lançamentos</Link>}
+                              {canReportContributors && <Link href="/reports/contributors" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/contributors' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><Printer className="mr-3 h-5 w-5 shrink-0" />Relatório de Contribuintes</Link>}
+                              {canReportMonthlySummary && <Link href="/reports/monthly-summary" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/monthly-summary' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><Printer className="mr-3 h-5 w-5 shrink-0" />Resumo Mensal</Link>}
+                              {canReportHistoryContribSynthetic && <Link href="/reports/history-contrib-synthetic" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/history-contrib-synthetic' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Printer className="mr-3 h-5 w-5 shrink-0" />Histórico de Contribuições Sintético</Link>}
+                              {canReportHistoryContribAnalytic && <Link href="/reports/history-contrib-analytic" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/history-contrib-analytic' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Printer className="mr-3 h-5 w-5 shrink-0" />Histórico de Contribuições Analítico</Link>}
                             </div>
                           )}
                         </div>

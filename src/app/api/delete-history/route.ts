@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { startDate, endDate, type, congregationIds } = body
+    const { startDate, endDate, type, congregationIds, launchStatus } = body
 
     const launchDateStart = new Date(`${body.startDate}T12:00:00Z`)
     const launchDateEnd = new Date(`${body.endDate}T12:00:00Z`)
@@ -51,23 +51,47 @@ export async function POST(request: NextRequest) {
     // }
 
     // if (type === "contributors" || type === "both") {
-      const deleteResult = await prisma.launch.deleteMany({
-        where: {
-          congregationId: { in: congregationIds },
-          date: {
-            gte: launchDateStart,
-            lte: launchDateEnd
+      // Construir filtro de status baseado na seleção do usuário
+      const where: any = {
+        congregationId: { in: congregationIds },
+        date: {
+          gte: launchDateStart,
+          lte: launchDateEnd
+        },
+        type: { in: type },
+        OR: [
+          { status: "CANCELED" },
+          { status: "EXPORTED" }
+        ]
+      }
+
+      // Filtrar por status de importação se especificado
+      if (launchStatus === 'IMPORTED') {
+        where.AND = [
+          {
+            OR: [
+              { status: "CANCELED" },
+              { status: "EXPORTED" }
+            ]
           },
-          type: { in: type },
-          OR: [
-            {
-              status: "CANCELED" 
-            },
-            {
-              status: "EXPORTED"
-            }
-          ]
-        }
+          { status: "IMPORTED" }
+        ]
+        delete where.OR
+      } else if (launchStatus === 'MANUAL') {
+        where.AND = [
+          {
+            OR: [
+              { status: "CANCELED" },
+              { status: "EXPORTED" }
+            ]
+          },
+          { status: { not: "IMPORTED" } }
+        ]
+        delete where.OR
+      }
+
+      const deleteResult = await prisma.launch.deleteMany({
+        where
       })
 
       deletedCount += deleteResult.count

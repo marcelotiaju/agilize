@@ -57,7 +57,8 @@ export default function Contributors() {
     cpf: '',
     ecclesiasticalPosition: '',
     tipo: 'MEMBRO',
-    photoUrl: ''
+    photoUrl: '',
+    isActive: true
   })
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const [importing, setImporting] = useState(false)
@@ -77,7 +78,7 @@ export default function Contributors() {
 
   const fetchContributors = async () => {
     try {
-      const response = await fetch('/api/contributors')
+      const response = await fetch('/api/contributors?filterByUserCongregations=false')
       if (response.ok) {
         const data = await response.json()
         setContributors(data)
@@ -120,8 +121,9 @@ export default function Contributors() {
   }
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+    const { name, value, type, checked } = e.target
+    const finalValue = type === 'checkbox' ? checked : value
+    setFormData(prev => ({ ...prev, [name]: finalValue }))
   }
 
   const handleSelectChange = (name: string, value: string) => {
@@ -203,7 +205,8 @@ export default function Contributors() {
       cpf: contributor.cpf || '',
       ecclesiasticalPosition: contributor.ecclesiasticalPosition || '',
       tipo: contributor.tipo || '',
-      photoUrl: contributor.photoUrl || ''
+      photoUrl: contributor.photoUrl || '',
+      isActive: contributor.isActive
     })
     setPhotoPreview(`uploads/${contributor.photoUrl}` || '')
     setIsDialogOpen(true)
@@ -441,6 +444,20 @@ export default function Contributors() {
                             <SelectItem value="MEMBRO">Membro</SelectItem>
                           </SelectContent>
                         </Select>
+                      </div>
+
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="isActive" className="text-right">
+                          Ativo
+                        </Label>
+                        <input
+                          type="checkbox"
+                          id="isActive"
+                          name="isActive"
+                          checked={(formData as any).isActive}
+                          onChange={handleInputChange}
+                          className="h-4 w-4"
+                        />
                       </div>
 
                       {/* Campo de Foto */}

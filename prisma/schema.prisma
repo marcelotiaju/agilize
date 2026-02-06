@@ -49,7 +49,7 @@ model User {
   id                 String    @id @default(cuid())
   login              String?   @unique
   name               String?
-  email              String    @unique
+  email              String?   @unique
   emailVerified      DateTime? @db.DateTime(0)
   image              String?   @db.Text
   phone              String?
@@ -115,6 +115,7 @@ model Profile {
   canDeleteLaunch                  Boolean @default(false)
   canImportLaunch                  Boolean @default(false)
   canDeleteSummary                 Boolean @default(false)
+  canTechnicalIntervention         Boolean @default(false)
   defaultLaunchType                String? @default("DIZIMO")
 
   users     User[]
@@ -126,6 +127,7 @@ model Congregation {
   id                                 String                @id @default(cuid())
   code                               String                @unique
   name                               String
+  isActive                           Boolean               @default(true)
   regionalName                       String?
   // Campos legados de "Entrada->Oferta"
   entradaOfferAccountPlan            String?
@@ -223,6 +225,7 @@ model Contributor {
   congregation           Congregation?    @relation(fields: [congregationId], references: [id], onDelete: Cascade)
   code                   String           @unique
   name                   String
+  isActive               Boolean          @default(true)
   cpf                    String?
   ecclesiasticalPosition String?
   tipo                   ContributorType?
@@ -239,6 +242,7 @@ model Supplier {
   id          String      @id @default(cuid())
   code        String      @unique
   razaoSocial String
+  isActive    Boolean     @default(true)
   tipoPessoa  PessoaType?
   cpfCnpj     String?
   createdAt   DateTime    @default(now()) @db.DateTime(0)
@@ -251,6 +255,7 @@ model Classification {
   code        String   @unique
   shortCode   String   @unique
   description String
+  isActive    Boolean  @default(true)
   createdAt   DateTime @default(now()) @db.DateTime(0)
   updatedAt   DateTime @updatedAt @db.DateTime(0)
   Launch      Launch[]
