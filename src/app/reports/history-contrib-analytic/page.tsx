@@ -587,7 +587,7 @@ export default function ReportsPage() {
                     ) : null}
 
                     <div className="flex gap-2">
-                        <Button onClick={handleExportExcel} variant="outline" className="flex-1" disabled={!previewData}>Gerar Excel</Button>
+                        <Button onClick={handleExportExcel}  className="flex-1 bg-green-600 hover:bg-green-700" disabled={!previewData}>Gerar Excel</Button>
                         <Button
                             onClick={handleGenerateReport}
                             disabled={loading || selectedCongregations.length === 0 || selectedLaunchTypes.length === 0 || formData.contributorIds.length === 0}

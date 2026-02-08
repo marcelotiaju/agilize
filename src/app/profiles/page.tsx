@@ -29,6 +29,7 @@ export default function Profiles() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
 
   const [profileForm, setProfileForm] = useState<any>({
     name: '',
@@ -196,6 +197,11 @@ export default function Profiles() {
       alert('Erro ao excluir perfil')
     }
   }
+
+  const filteredProfiles = profiles.filter(p => 
+  p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  (p.description || '').toLowerCase().includes(searchTerm.toLowerCase())
+)
 
   const canManageUsers = Boolean((session as any)?.user?.canManageUsers)
 
@@ -476,9 +482,21 @@ export default function Profiles() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Perfis ({profiles.length})</CardTitle>
-              <CardDescription>Gerencie os perfis e permissões do sistema</CardDescription>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <CardTitle>Perfis ({filteredProfiles.length})</CardTitle>
+                  {/* <CardDescription>Gerencie os perfis e permissões do sistema</CardDescription> */}
+                </div>
+                <div className="w-full sm:w-64">
+                  <Input
+                    placeholder="Pesquisar perfis..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+              </div>
             </CardHeader>
+
             <CardContent>
               {isLoading ? (
                 <div className="flex justify-center py-8">
@@ -494,7 +512,7 @@ export default function Profiles() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {profiles.map((p) => (
+                    {filteredProfiles.map((p) => (
                       <TableRow key={p.id}>
                         <TableCell className="font-medium">{p.name}</TableCell>
                         <TableCell>{p.description || '-'}</TableCell>

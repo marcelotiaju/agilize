@@ -15,6 +15,8 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
 import { format as formatDate } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import * as XLSX from 'xlsx'
+import format from "date-fns/format"
 
 interface Congregation {
   id: string
@@ -55,6 +57,7 @@ export default function Reports() {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [showScrollTop, setShowScrollTop] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isGeneratingExcel, setIsGeneratingExcel] = useState(false)
   const [loadingPreview, setLoadingPreview] = useState(false)
   const [previewData, setPreviewData] = useState<PreviewData | null>(null)
   const [importFilter, setImportFilter] = useState<'ALL' | 'IMPORTED' | 'MANUAL'>('MANUAL');
@@ -186,6 +189,48 @@ export default function Reports() {
     }
   }
 
+  const handleExportExcel = () => {
+      if (!previewData) return;
+
+      setIsGeneratingExcel(true)
+
+      const worksheetData: any[] = [];
+
+      previewData.congregations.forEach(cong => {
+                cong.launches.forEach(launch => {
+                  worksheetData.push({
+                      'Congregação': cong.name,
+                      'Contribuinte': cong.name,
+                      'Data': format(new Date(launch.date), 'dd/MM/yyyy'),
+                      'Tipo': launch.type === 'DIZIMO' ? 'Dízimo' : launch.type === 'CARNE_REVIVER' ? 'Carnê Reviver' : launch.type,
+                      'Valor': formatCurrency(launch.value)
+                  })
+              })
+              // Add Contributor Total Row
+              worksheetData.push({
+                  'Congregação': cong.name,
+                  'Contribuinte': `${cong.name} (TOTAL)`,
+                  'Data': '',
+                  'Tipo': 'TOTAL',
+                  'Valor': formatCurrency(cong.entrada - cong.saida)
+              })
+              
+              // Add empty row for separation
+              worksheetData.push({
+                  'Congregação': '',
+                  'Contribuinte': '',
+                  'Data': '',
+                  'Tipo': '',
+                  'Valor': ''
+              })
+          })
+      setIsGeneratingExcel(false)
+      const ws = XLSX.utils.json_to_sheet(worksheetData, { header: ['Congregação', 'Contribuinte', 'Data', 'Tipo', 'Valor'] });
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Relatório");
+      XLSX.writeFile(wb, `Relatorio_Lançamentos_${formatDate(startDate, 'dd-MM-yyyy')}_${formatDate(endDate, 'dd-MM-yyyy')}.xlsx`);
+  };
+  
   const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   }
@@ -512,25 +557,44 @@ export default function Reports() {
             </Card>
           )}
 
-          {/* Botão de Gerar PDF */}
-          <Button
-            onClick={handleGenerateReport}
-            disabled={isGenerating || selectedCongregations.length === 0 || selectedTypes.length === 0}
-            className="w-full"
-            size="lg"
-          >
-            {isGenerating ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Gerando PDF...
-              </>
-            ) : (
-              <>
-                <FileText className="mr-2 h-4 w-4" />
-                Gerar Relatório PDF
-              </>
-            )}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleExportExcel}
+              disabled={!previewData}
+              className="flex-1 bg-green-600 hover:bg-green-700"
+              size="lg"
+            >
+              {isGeneratingExcel ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Gerando Excel...
+                </>
+              ) : (
+                <>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Gerar Excel
+                </>
+              )}
+            </Button>
+            <Button
+              onClick={handleGenerateReport}
+              disabled={isGenerating || selectedCongregations.length === 0 || selectedTypes.length === 0}
+              className="flex-1"
+              size="lg"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Gerando PDF...
+                </>
+              ) : (
+                <>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Gerar Relatório PDF
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
 

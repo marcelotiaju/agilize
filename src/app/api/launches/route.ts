@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '50')
     const congregationId = searchParams.get('congregationId')
+    const typeFilter = searchParams.get('type')
     const searchTerm = searchParams.get('searchTerm') || ''
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
@@ -77,27 +78,23 @@ export async function GET(request: NextRequest) {
     if (session.user.canLaunchCampaign) allowedTypes.push('CAMPANHA');
     if (session.user.canLaunchMission) allowedTypes.push('MISSAO');
     if (session.user.canLaunchCircle) allowedTypes.push('CIRCULO');
-    if (session.user.canLaunchOffering) allowedTypes.push('OFERTA_CULTO');
+    if (session.user.canLaunchServiceOffer) allowedTypes.push('OFERTA_CULTO');
     if (session.user.canLaunchExpense) allowedTypes.push('SAIDA');
-
-    // 2. Aplicar o filtro de segurança
-    // Se o usuário já filtrou por um tipo específico via UI, verificamos se ele tem acesso a esse tipo
-    const typeFilter = searchParams.get('type');
-    if (typeFilter) {
-      if (allowedTypes.includes(typeFilter)) {
-        where.type = typeFilter;
-      // } else {
-      //   // Se ele tentou filtrar por algo que não tem acesso, forçamos um filtro que resultará em vazio
-      //   where.type = 'NONE'; 
-      }
-    } else {
-      // Se ele não filtrou nada, mostramos todos os tipos que ele tem permissão
-      where.type = { in: allowedTypes };
-    }
 
     // Se o usuário não tem nenhuma permissão de lançamento, retorna lista vazia
     if (allowedTypes.length === 0) {
       return NextResponse.json({ launches: [], totalCount: 0, totalPages: 0 });
+    }
+console.log(typeFilter)
+    // 2. Aplicar o filtro de tipos
+    if (typeFilter && typeFilter !== 'all') {
+      // Verificar se o usuário tem permissão para este tipo
+      if (allowedTypes.includes(typeFilter)) {
+        where.type = typeFilter;
+      } 
+    } else {
+      // Se não filtrou por tipo, mostra todos os tipos permitidos
+      where.type = { in: allowedTypes };
     }
     
     const userCongregations = await prisma.userCongregation.findMany({

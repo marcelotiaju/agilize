@@ -151,7 +151,7 @@ export async function GET(request: NextRequest) {
     doc.text(`Usuário: ${session.user?.name || 'N/A'}`, rightAlignX, y - 5, { align: 'right' })
     const now = new Date()
     doc.text(` ${format(utcToZonedTime(now, timezone), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`, rightAlignX, y, { align: 'right' })
-    
+
     y += 4
     doc.text(`Origem dos Lançamentos: ${importFilter === 'ALL' ? 'Todos' : importFilter === 'IMPORTED' ? 'Importados' : 'Apenas Digitados'}`, margin, y)
     y += 8
@@ -172,47 +172,47 @@ export async function GET(request: NextRequest) {
     const totalExpense = monthlyData.reduce((a, b) => a + b.expense, 0);
 
     tableData.push([
-      { content: 'TOTAL GERAL', styles: { fontStyle: 'bold' } }, 
+      { content: 'TOTAL GERAL', styles: { fontStyle: 'bold' } },
       { content: totalIncome.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } },
       { content: totalExpense.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } },
       { content: (totalIncome - totalExpense).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } }
     ])
 
     autoTable(doc, {
-    startY: 50,
-    head: [
+      startY: 50,
+      head: [
         [{ content: 'Mês', rowSpan: 2 }, { content: 'Valores', colSpan: 3, styles: { halign: 'center' } }],
         ['Entrada', 'Saída', 'Total']
-    ],
-    body: monthsNames.map((name, i) => [
+      ],
+      body: monthsNames.map((name, i) => [
         name,
         monthlyData[i].income.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
         monthlyData[i].expense.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
         monthlyData[i].total.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
-    ]),
-    theme: 'grid',
-    headStyles: { fillColor: [0, 51, 102] },
+      ]),
+      theme: 'grid',
+      headStyles: { fillColor: [0, 51, 102] },
 
-    foot: [[
-          { content: 'TOTAL GERAL' }, 
-          { content: totalIncome.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) },
-          { content: totalExpense.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) },
-          { content: (totalIncome - totalExpense).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }
-          ]],
-        footStyles: { 
+      foot: [[
+        { content: 'TOTAL GERAL' },
+        { content: totalIncome.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) },
+        { content: totalExpense.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) },
+        { content: (totalIncome - totalExpense).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }
+      ]],
+      footStyles: {
         fillColor: [0, 51, 102], // Cinza claro
         textColor: [240, 240, 240],       // Preto
         fontStyle: 'bold',
         halign: 'right'             // Alinhamento à direita (opcional)
-        },
-        columnStyles: {
-            0: { halign: 'left' },      // Mês à esquerda
-            1: { halign: 'right' },     // Entradas à direita
-            2: { halign: 'right' },     // Saídas à direita
-            3: { halign: 'right' }      // Saldo à direita
-        },
-      })
-    
+      },
+      columnStyles: {
+        0: { halign: 'left' },      // Mês à esquerda
+        1: { halign: 'right' },     // Entradas à direita
+        2: { halign: 'right' },     // Saídas à direita
+        3: { halign: 'right' }      // Saldo à direita
+      },
+    })
+
 
     // Adicionar número da página em todas as páginas
     const totalPages = doc.getNumberOfPages()

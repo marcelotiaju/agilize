@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     const timezone = searchParams.get('timezone') || 'America/Sao_Paulo'
     const contributionFilter = searchParams.get('contributionFilter') || 'BOTH';
     const importFilter = searchParams.get('importFilter') || 'ALL';
-console.log('Import Filter:', importFilter);
+    console.log('Import Filter:', importFilter);
     // 1. Buscamos todas as congregações selecionadas para garantir que todas apareçam
     const selectedCongs = await prisma.congregation.findMany({
       where: { id: { in: congregationIds } },
@@ -128,89 +128,89 @@ console.log('Import Filter:', importFilter);
 
     // Se for preview, retorna JSON com a estrutura para a tabela
     if (preview && year) {
-        const startDate = new Date(`${year}-01-01T00:00:00Z`)
-        const endDate = new Date(`${year}-12-31T23:59:59Z`)
-        
-        const congregationsData = await prisma.congregation.findMany({
-            where: { id: { in: congregationIds } },
+      const startDate = new Date(`${year}-01-01T00:00:00Z`)
+      const endDate = new Date(`${year}-12-31T23:59:59Z`)
+
+      const congregationsData = await prisma.congregation.findMany({
+        where: { id: { in: congregationIds } },
+        include: {
+          contributors: {
+            where: positions.length > 0 ? { ecclesiasticalPosition: { in: positions } } : {},
             include: {
-                contributors: {
-                    where: positions.length > 0 ? { ecclesiasticalPosition: { in: positions } } : {},
-                    include: {
-                        Launch: {
-                            where: {
-                                date: { gte: startDate, lte: endDate },
-                                type: { in: launchTypes as any },
-                                status: {
-                                  ...importFilter === 'IMPORTED' ? { equals: 'IMPORTED' } : importFilter === 'MANUAL' ? { not: { in: ['IMPORTED', 'CANCELED'] } } : { not: 'CANCELED' }
-                                }
-                            }
-                        }
-                    },
-                    orderBy: { name: 'asc' }
+              Launch: {
+                where: {
+                  date: { gte: startDate, lte: endDate },
+                  type: { in: launchTypes as any },
+                  status: {
+                    ...importFilter === 'IMPORTED' ? { equals: 'IMPORTED' } : importFilter === 'MANUAL' ? { not: { in: ['IMPORTED', 'CANCELED'] } } : { not: 'CANCELED' }
+                  }
                 }
+              }
             },
             orderBy: { name: 'asc' }
+          }
+        },
+        orderBy: { name: 'asc' }
+      })
+
+      let totalContributors = 0
+      let totalValue = 0
+
+      const congregations = congregationsData.map(cong => {
+        const monthTotals = new Array(12).fill(0)
+        let grandTotal = 0
+
+        let contributors = cong.contributors.map((contrib: any) => {
+          const months = new Array(12).fill(0)
+          let total = 0
+
+          contrib.Launch.forEach((launch: any) => {
+            const month = new Date(launch.date).getUTCMonth()
+            months[month] += Number(launch.value) || 0
+            total += Number(launch.value) || 0
+          })
+
+          //months.forEach((val, idx) => monthTotals[idx] += val)
+          //grandTotal += total
+
+          return {
+            name: contrib.name,
+            position: contrib.ecclesiasticalPosition || '-',
+            months,
+            total
+          }
         })
-        
-        let totalContributors = 0
-        let totalValue = 0
-        
-        const congregations = congregationsData.map(cong => {
-            const monthTotals = new Array(12).fill(0)
-            let grandTotal = 0
-            
-            let contributors = cong.contributors.map((contrib: any) => {
-                const months = new Array(12).fill(0)
-                let total = 0
-                
-                contrib.Launch.forEach((launch: any) => {
-                    const month = new Date(launch.date).getUTCMonth()
-                    months[month] += Number(launch.value) || 0
-                    total += Number(launch.value) || 0
-                })
-                
-                //months.forEach((val, idx) => monthTotals[idx] += val)
-                //grandTotal += total
-                
-                return {
-                    name: contrib.name,
-                    position: contrib.ecclesiasticalPosition || '-',
-                    months,
-                    total
-                }
-            })
-            
-            
-            // APLICAÇÃO DO FILTRO SOLICITADO
-            if (contributionFilter === 'WITH_LAUNCH') {
-              contributors = contributors.filter(c => c.total > 0)
-            } else if (contributionFilter === 'WITHOUT_LAUNCH') {
-              contributors = contributors.filter(c => c.total === 0)
-            }
 
-            // Calcula totais da congregação após filtro
-            contributors.forEach(c => {
-              c.months.forEach((val, idx) => monthTotals[idx] += val)
-              grandTotal += c.total
-            })
-            
-            //totalContributors += contributors.length
-            //totalValue += grandTotal
-            return {
-                name: cong.name,
-                contributors,
-                monthTotals,
-                grandTotal
-            }
-        }).filter(cong => cong.contributors.length > 0) // Remove congregações vazias
 
-        // 3. Resposta para Preview (JSON)
-        if (preview) {
-          const totalContributors = congregations.reduce((sum, c) => sum + c.contributors.length, 0)
-          const totalValue = congregations.reduce((sum, c) => sum + c.grandTotal, 0)
-          return NextResponse.json({ congregations, totalContributors, totalValue })
+        // APLICAÇÃO DO FILTRO SOLICITADO
+        if (contributionFilter === 'WITH_LAUNCH') {
+          contributors = contributors.filter(c => c.total > 0)
+        } else if (contributionFilter === 'WITHOUT_LAUNCH') {
+          contributors = contributors.filter(c => c.total === 0)
         }
+
+        // Calcula totais da congregação após filtro
+        contributors.forEach(c => {
+          c.months.forEach((val, idx) => monthTotals[idx] += val)
+          grandTotal += c.total
+        })
+
+        //totalContributors += contributors.length
+        //totalValue += grandTotal
+        return {
+          name: cong.name,
+          contributors,
+          monthTotals,
+          grandTotal
+        }
+      }).filter(cong => cong.contributors.length > 0) // Remove congregações vazias
+
+      // 3. Resposta para Preview (JSON)
+      if (preview) {
+        const totalContributors = congregations.reduce((sum, c) => sum + c.contributors.length, 0)
+        const totalValue = congregations.reduce((sum, c) => sum + c.grandTotal, 0)
+        return NextResponse.json({ congregations, totalContributors, totalValue })
+      }
     }
 
 
@@ -305,8 +305,8 @@ console.log('Import Filter:', importFilter);
       drawTableHeader(cong.name)
 
       // Filtramos os contribuintes desta congregação específica
-      const congContributors = contributors.filter(c => c.congregationId === cong.id && contributionFilter === 'WITH_LAUNCH'? c.Launch.length > 0 : contributionFilter === 'WITHOUT_LAUNCH' ? c.Launch.length === 0  : true)
-      
+      const congContributors = contributors.filter(c => c.congregationId === cong.id && contributionFilter === 'WITH_LAUNCH' ? c.Launch.length > 0 : contributionFilter === 'WITHOUT_LAUNCH' ? c.Launch.length === 0 : true)
+
 
       if (congContributors.length === 0) {
         doc.setFont('helvetica', 'italic').setTextColor(100)
@@ -323,7 +323,7 @@ console.log('Import Filter:', importFilter);
       // 5. Listar Dados
       const totaisMensais = new Array(12).fill(0)
       let totalGeralCong = 0
-      
+
 
       congContributors.forEach((row: any) => {
         if (y > 185) { doc.addPage(); y = 20; drawTableHeader(cong.name) }
@@ -385,7 +385,7 @@ console.log('Import Filter:', importFilter);
       doc.text(formatCurrency(totalGeralCong, showValues), 276, y + 5, { align: 'right' })
 
       y += 15
-    
+
     }
 
     // Adicionar número da página em todas as páginas

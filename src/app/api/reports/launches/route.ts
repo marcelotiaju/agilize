@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
           ...importFilter === 'IMPORTED' ? { equals: 'IMPORTED' } : importFilter === 'MANUAL' ? { not: { in: ['IMPORTED', 'CANCELED'] } } : { not: 'CANCELED' }
         }
       },
-      include: { congregation: true, contributor: true, supplier: true},
+      include: { congregation: true, contributor: true, supplier: true },
       orderBy: [{ date: 'asc' }]
     })
 
@@ -108,9 +108,9 @@ export async function GET(request: NextRequest) {
         }
       })
 
-      return NextResponse.json({ 
-        totalEntrada, 
-        totalSaida, 
+      return NextResponse.json({
+        totalEntrada,
+        totalSaida,
         byCongregation: stats,
         congregations: congregationsPreview
       })
@@ -135,16 +135,16 @@ export async function GET(request: NextRequest) {
     }
 
     // Cabeçalho
-// --- CABEÇALHO COM LOGO ---
+    // --- CABEÇALHO COM LOGO ---
     // Substitua o retângulo abaixo por: doc.addImage(base64String, 'PNG', margin, yPos, 20, 20)
     doc.setFillColor(200, 200, 200)
     //doc.rect(margin, yPos, 20, 20, 'F') 
     doc.addImage(base64String, 'PNG', margin, yPos, 20, 20)
-    
+
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
     doc.text('IGREJA ASSEMBLEIA DE DEUS NO ESTADO DE SERGIPE', margin + 25, yPos + 7)
-    
+
     doc.setFontSize(11)
     doc.text('RELAÇÃO DE LANÇAMENTOS', margin + 25, yPos + 14)
     yPos += 25
@@ -152,16 +152,16 @@ export async function GET(request: NextRequest) {
     // Informações do relatório
     doc.setFontSize(9)
     doc.setFont('helvetica', 'normal')
-    
+
     // Esquerda: Tipos e Período
-   
-    doc.text(`PERÍODO: ${startDate.substring(8,10)}/${startDate.substring(5,7)}/${startDate.substring(0,4)} A ${endDate.substring(8,10)}/${endDate.substring(5,7)}/${endDate.substring(0,4)}`, margin, yPos)
+
+    doc.text(`PERÍODO: ${startDate.substring(8, 10)}/${startDate.substring(5, 7)}/${startDate.substring(0, 4)} A ${endDate.substring(8, 10)}/${endDate.substring(5, 7)}/${endDate.substring(0, 4)}`, margin, yPos)
     yPos += 5
     const typeLabels = types.map(t => formatLaunchType(t))
     doc.text(`TIPOS: ${typeLabels.join(', ')}`, margin, yPos)
     yPos += 5
     doc.text(`Origem dos Lançamentos: ${importFilter === 'ALL' ? 'Todos' : importFilter === 'IMPORTED' ? 'Importados' : 'Apenas Digitados'}`, margin, yPos)
-    
+
     // Direita: Usuário e Data (posicionando no yPos original do bloco)
     const rightAlignX = pageWidth - margin
     doc.text(`Usuário: ${session.user.name || 'N/A'}`, rightAlignX, yPos - 5, { align: 'right' })
@@ -173,7 +173,7 @@ export async function GET(request: NextRequest) {
     // Processar cada congregação
     for (const congregation of congregations) {
       const launches = launchesByCongregation[congregation.id] || []
-      
+
       if (launches.length === 0) continue
 
       // Cabeçalho da congregação
@@ -196,14 +196,14 @@ export async function GET(request: NextRequest) {
       doc.setTextColor(255, 255, 255) // Texto Branco
       const colWidths = [25, 25, 70, 20, 30, 30]
       const colX = [margin + 2, margin + colWidths[0], margin + colWidths[0] + colWidths[1], margin + colWidths[0] + colWidths[1] + colWidths[2], margin + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], margin + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4]]
-      
+
       doc.text('DATA', colX[0], yPos)
       doc.text('TIPO', colX[1], yPos)
       doc.text('NOME', colX[2], yPos)
       doc.text('NRO', colX[3], yPos)
       doc.text('           VALORES R$', colX[4], yPos)
       yPos += lineHeight * 0.5
-      
+
       // Subcabeçalhos ENTRADA e SAÍDA
       doc.setFontSize(8)
       doc.text('ENTRADA', colX[4], yPos)
@@ -225,7 +225,7 @@ export async function GET(request: NextRequest) {
 
       for (const launch of launches) {
         checkNewPage(lineHeight * 1.5)
-        
+
         const launchDate = format(utcToZonedTime(launch.date, timezone), 'dd/MM/yyyy', { locale: ptBR })
         const tipo = formatLaunchType(launch.type)
         const nome = launch.contributor?.name || launch.supplier?.razaoSocial || launch.contributorName || launch.supplierName || launch.description || '-'
@@ -240,26 +240,26 @@ export async function GET(request: NextRequest) {
         doc.setFont('helvetica', 'normal')
         doc.text(launchDate, colX[0], yPos + (maxLines > 1 ? lineHeight * 0.5 : 0))
         doc.text(tipo, colX[1], yPos + (maxLines > 1 ? lineHeight * 0.5 : 0))
-        
+
         // Nome pode ter múltiplas linhas
         let nomeY = yPos
         nomeTruncado.forEach((line: string, idx: number) => {
           doc.text(line, colX[2], nomeY)
           nomeY += lineHeight * 0.8
         })
-        
+
         doc.text(nro, colX[3], yPos + (maxLines > 1 ? lineHeight * 0.5 : 0))
 
         // Formatar valor com separador de milhares
         const valorFormatado = valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
         if (launch.type === 'SAIDA') {
-          doc.text('-', colX[4]+8, yPos + (maxLines > 1 ? lineHeight * 0.5 : 0), { align: 'right' })
-          doc.text(`R$ ${valorFormatado}`, colX[5]+8, yPos + (maxLines > 1 ? lineHeight * 0.5 : 0), { align: 'right' })
+          doc.text('-', colX[4] + 8, yPos + (maxLines > 1 ? lineHeight * 0.5 : 0), { align: 'right' })
+          doc.text(`R$ ${valorFormatado}`, colX[5] + 8, yPos + (maxLines > 1 ? lineHeight * 0.5 : 0), { align: 'right' })
           congSaida += valor
         } else {
-          doc.text(`R$ ${valorFormatado}`, colX[4]+8, yPos + (maxLines > 1 ? lineHeight * 0.5 : 0), { align: 'right' })
-          doc.text('-', colX[5]+8, yPos + (maxLines > 1 ? lineHeight * 0.5 : 0), { align: 'right' })
+          doc.text(`R$ ${valorFormatado}`, colX[4] + 8, yPos + (maxLines > 1 ? lineHeight * 0.5 : 0), { align: 'right' })
+          doc.text('-', colX[5] + 8, yPos + (maxLines > 1 ? lineHeight * 0.5 : 0), { align: 'right' })
           congEntrada += valor
         }
 
@@ -279,11 +279,11 @@ export async function GET(request: NextRequest) {
       const totalEntradaFormatado = congEntrada.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
       const totalSaidaFormatado = congSaida.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
       doc.text('TOTAL CONGREGAÇÃO', colX[0], yPos)
-      doc.text(`    R$ ${totalEntradaFormatado}`, colX[4]+8, yPos, { align: 'right'})
-      doc.text(congSaida > 0 ? `    R$ ${totalSaidaFormatado}` : 'R$ -', colX[5]+8, yPos, { align: 'right'})
+      doc.text(`    R$ ${totalEntradaFormatado}`, colX[4] + 8, yPos, { align: 'right' })
+      doc.text(congSaida > 0 ? `    R$ ${totalSaidaFormatado}` : 'R$ -', colX[5] + 8, yPos, { align: 'right' })
       yPos += lineHeight
       doc.text('SALDO CONGREGAÇÃO', colX[0], yPos)
-      doc.text(`    R$ ${(Number(congEntrada)-Number(congSaida)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, colX[5]+8, yPos, { align: 'right'})
+      doc.text(`    R$ ${(Number(congEntrada) - Number(congSaida)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, colX[5] + 8, yPos, { align: 'right' })
       yPos += lineHeight
     }
 
@@ -306,7 +306,7 @@ export async function GET(request: NextRequest) {
       yPos += lineHeight
       doc.text(`SAÍDA: R$ ${totalSaidaGeralFormatado}`, margin, yPos)
       yPos += lineHeight
-      doc.text(`SALDO: R$ ${(Number(totalEntrada)-Number(totalSaida)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, margin, yPos)
+      doc.text(`SALDO: R$ ${(Number(totalEntrada) - Number(totalSaida)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, margin, yPos)
       yPos += lineHeight
     }
 

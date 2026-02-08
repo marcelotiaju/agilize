@@ -52,7 +52,7 @@ export default function Dashboard() {
     {
       title: "Lançamentos",
       description: "Registre entradas e saídas",
-      icon: FileText,
+      icon: List,
       href: "/launches",
       color: "from-sky-700 to-indigo-800",
       permission: `${hasLaunchPermission}`
@@ -77,14 +77,16 @@ export default function Dashboard() {
       description: "Gerencie Usuários",
       icon: Users,
       href: "/users",
-      color: "from-indigo-700 to-violet-800"
+      color: "from-indigo-700 to-violet-800",
+      permission: "canManageUsers"
     },
     {
       title: "Perfis",
       description: "Gerencie Perfis",
       icon: UserPen,
       href: "/profiles",
-      color: "from-indigo-700 to-violet-800"
+      color: "from-indigo-700 to-violet-800",
+      permission: "canManageUsers"
     },
     {
       title: "Exportar Dados",

@@ -32,7 +32,7 @@ export default function DeleteHistory() {
   const [formData, setFormData] = useState({
     startDate: format(new Date(new Date().setDate(new Date().getDate() - 30)), 'yyyy-MM-dd'),
     endDate: format(new Date(), 'yyyy-MM-dd'),
-    type: ['DIZIMO', 'OFERTA_CULTO', 'MISSAO', 'CIRCULO', 'VOTO', 'EBD', 'CAMPANHA', 'SAIDA'],
+    type: ['DIZIMO', 'OFERTA_CULTO', 'MISSAO', 'CIRCULO', 'VOTO', 'EBD', 'CAMPANHA','CARNE_REVIVER', 'SAIDA'],
     congregationIds: [] as string[],
     launchStatus: 'ALL' as 'ALL' | 'IMPORTED' | 'MANUAL'
   })
@@ -263,8 +263,32 @@ export default function DeleteHistory() {
                                 checked={formData.type.includes('DIZIMO')}
                                 onCheckedChange={(checked) => handleTypeChange('DIZIMO', checked as boolean)}
                               />
-                              <Label htmlFor="type-dizimo" className="text-sm">Dízimos</Label>
+                              <Label htmlFor="type-dizimo" className="text-sm">Dízimo</Label>
                             </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="type-ebd"
+                                checked={formData.type.includes('EBD')}
+                                onCheckedChange={(checked) => handleTypeChange('EBD', checked as boolean)}
+                              />
+                              <Label htmlFor="type-ebd" className="text-sm">EBD</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="type-campanha"
+                                checked={formData.type.includes('CAMPANHA')}
+                                onCheckedChange={(checked) => handleTypeChange('CAMPANHA', checked as boolean)}
+                              />
+                              <Label htmlFor="type-campanha" className="text-sm">Campanha</Label>
+                            </div>    
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="type-circulo"
+                                checked={formData.type.includes('CIRCULO')}
+                                onCheckedChange={(checked) => handleTypeChange('CIRCULO', checked as boolean)}
+                              />
+                              <Label htmlFor="type-circulo" className="text-sm">Círculo de Oração</Label>
+                            </div>                                                    
                             <div className="flex items-center space-x-2">
                               <Checkbox
                                 id="type-oferta"
@@ -283,14 +307,6 @@ export default function DeleteHistory() {
                             </div>
                             <div className="flex items-center space-x-2">
                               <Checkbox
-                                id="type-circulo"
-                                checked={formData.type.includes('CIRCULO')}
-                                onCheckedChange={(checked) => handleTypeChange('CIRCULO', checked as boolean)}
-                              />
-                              <Label htmlFor="type-circulo" className="text-sm">Círculo de Oração</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
                                 id="type-voto"
                                 checked={formData.type.includes('VOTO')}
                                 onCheckedChange={(checked) => handleTypeChange('VOTO', checked as boolean)}
@@ -299,19 +315,11 @@ export default function DeleteHistory() {
                             </div>
                             <div className="flex items-center space-x-2">
                               <Checkbox
-                                id="type-ebd"
-                                checked={formData.type.includes('EBD')}
-                                onCheckedChange={(checked) => handleTypeChange('EBD', checked as boolean)}
+                                id="type-carne-reviver"
+                                checked={formData.type.includes('CARNE_REVIVER')}
+                                onCheckedChange={(checked) => handleTypeChange('CARNE_REVIVER', checked as boolean)}
                               />
-                              <Label htmlFor="type-ebd" className="text-sm">EBD</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
-                                id="type-campanha"
-                                checked={formData.type.includes('CAMPANHA')}
-                                onCheckedChange={(checked) => handleTypeChange('CAMPANHA', checked as boolean)}
-                              />
-                              <Label htmlFor="type-campanha" className="text-sm">Campanha</Label>
+                              <Label htmlFor="type-carne-reviver" className="text-sm">Carnê Reviver</Label>
                             </div>
                             <div className="flex items-center space-x-2">
                               <Checkbox
@@ -319,7 +327,7 @@ export default function DeleteHistory() {
                                 checked={formData.type.includes('SAIDA')}
                                 onCheckedChange={(checked) => handleTypeChange('SAIDA', checked as boolean)}
                               />
-                              <Label htmlFor="type-saida" className="text-sm">Saídas</Label>
+                              <Label htmlFor="type-saida" className="text-sm">Saída</Label>
                             </div>
                           </div>
                         </div>

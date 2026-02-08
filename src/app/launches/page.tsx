@@ -45,6 +45,7 @@ export default function Launches() {
   const [classifications, setClassifications] = useState<Classification[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
+  const [isTechnicalIntervention, setIsTechnicalIntervention] = useState(false)
   const [isImportedWithoutContributorDialogOpen, setIsImportedWithoutContributorDialogOpen] = useState(false)
   const [importedWithoutContributor, setImportedWithoutContributor] = useState<Launch[]>([])
   const [loadingImportedCheck, setLoadingImportedCheck] = useState(false)
@@ -64,6 +65,7 @@ export default function Launches() {
   const [totalPages, setTotalPages] = useState(0)
   const [totalCount, setTotalCount] = useState(0)
   const [selectedCongregation, setSelectedCongregation] = useState('all')
+  const [selectedType, setSelectedType] = useState('all')
 
   // Por padrão, definir data inicial e final como data atual
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
@@ -180,6 +182,7 @@ useEffect(() => {
     isSupplierRegistered: false,
     classificationId: '',
     summaryId: '',
+    status: 'NORMAL'
   })
 
   function truncateString(str: string | null | undefined, num: number) {
@@ -216,7 +219,7 @@ useEffect(() => {
     fetchContributors()
     fetchSuppliers()
     fetchClassifications()
-  }, [currentPage, itemsPerPage, searchTerm, selectedCongregation, startDate, endDate,importFilter])
+  }, [currentPage, itemsPerPage, searchTerm, selectedCongregation, selectedType, startDate, endDate, importFilter])
 
   useEffect(() => {
     // Se houver apenas uma congregação, definir como default
@@ -256,6 +259,7 @@ useEffect(() => {
   const clearFilters = () => {
     setSearchTerm('')
     setSelectedCongregation('all')
+    setSelectedType('all')
     setCurrentPage(1)
   }
 
@@ -366,9 +370,9 @@ useEffect(() => {
       const params = new URLSearchParams()
       params.append('page', currentPage.toString())
       params.append('limit', itemsPerPage.toString())
-      params.append('type', allowedLaunchTypes.map(t => t.value).join(','))
       if (searchTerm) params.append('searchTerm', searchTerm)
       if (selectedCongregation !== 'all') params.append('congregationId', selectedCongregation)
+      if (selectedType !== 'all') params.append('type', selectedType)
       params.append('timezone', USER_TIMEZONE)
 
       if (startDate) {
@@ -554,7 +558,7 @@ useEffect(() => {
     }
 
     if (formData.type === 'DIZIMO' && !formData.contributorName && !formData.contributorId) {
-      alert('Nome do contribuinte é obrigatório para lançamentos do tipo Dízimo')
+      alert(`Nome do contribuinte é obrigatório para lançamentos do tipo ${formData.type === 'DIZIMO' ? 'Dízimo' : 'Carnê Reviver'}`)
       setSalvando(false)
       return
     }
@@ -563,7 +567,7 @@ useEffect(() => {
     if ((formData.type === 'DIZIMO' || formData.type === 'CARNE_REVIVER') && !formData.isContributorRegistered && !formData.isAnonymous) {
       const trimmedName = formData.contributorName?.trim() || ''
       if (!trimmedName) {
-        alert('Nome do contribuinte é obrigatório para lançamentos do tipo Dízimo')
+        alert(`Nome do contribuinte é obrigatório para lançamentos do tipo ${formData.type === 'DIZIMO' ? 'Dízimo' : 'Carnê Reviver'}`)
         setSalvando(false)
         return
       }
@@ -584,7 +588,8 @@ useEffect(() => {
         contributorId: formData.isContributorRegistered ? formData.contributorId : '',
         // Limpar supplierId se não for fornecedor cadastrado
         supplierId: formData.isSupplierRegistered ? formData.supplierId : '',
-        value: Number(parseFloat(formData.value as any) || 0)
+        value: Number(parseFloat(formData.value as any) || 0),
+        status: canTechnicalIntervention ? formData.status : undefined
       }
 
       const response = await fetch(url, {
@@ -614,6 +619,7 @@ useEffect(() => {
   }
 
   const handleEdit = (launch: Launch) => {
+    setIsTechnicalIntervention(false)  
     setEditingLaunch(launch)
     setFormData({
       congregationId: launch.congregationId,
@@ -631,6 +637,31 @@ useEffect(() => {
       isSupplierRegistered: !!launch.supplierId,
       classificationId: launch.classificationId || '',
       summaryId: launch.summaryId || '',
+      status: launch.status || 'NORMAL'
+    })
+    setIsDialogOpen(true)
+  }
+
+  const handleTechnicalEdit = (launch: Launch) => {
+    setIsTechnicalIntervention(true)
+    setEditingLaunch(launch)
+    setFormData({
+      congregationId: launch.congregationId,
+      type: launch.type,
+      date: format(new Date(launch.date), 'yyyy-MM-dd'),
+      talonNumber: launch.talonNumber || '',
+      value: launch.value?.toFixed(2) || '',
+      description: launch.description || '',
+      contributorId: launch.contributorId?.toString() || '',
+      contributorName: launch.contributor?.name || launch.contributorName || '',
+      isContributorRegistered: !!launch.contributorId,
+      isAnonymous: launch.contributorName === 'ANÔNIMO' && !launch.contributorId,
+      supplierId: launch.supplierId?.toString() || '',
+      supplierName: launch.supplierName || '',
+      isSupplierRegistered: !!launch.supplierId,
+      classificationId: launch.classificationId || '',
+      summaryId: launch.summaryId || '',
+      status: launch.status || 'NORMAL'
     })
     setIsDialogOpen(true)
   }
@@ -732,6 +763,7 @@ useEffect(() => {
 
   const resetForm = () => {
     setEditingLaunch(null)
+    setIsTechnicalIntervention(false)  
     setFormData({
       congregationId: congregations.length === 1 ? congregations[0].id : '',
       type: allowedLaunchTypes.length === 1 ? allowedLaunchTypes[0].value : (allowedLaunchTypes.find(t => t.value === session?.user?.defaultLaunchType)?.value || 'DIZIMO'),
@@ -748,6 +780,7 @@ useEffect(() => {
       isSupplierRegistered: false,
       classificationId: '',
       summaryId: '',
+      status: 'NORMAL'
     })
     setError(null)
   }
@@ -866,6 +899,17 @@ useEffect(() => {
 
         <div className="flex justify-end space-x-2 pt-0">
 
+          {canTechnicalIntervention && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="sm" onClick={() => handleTechnicalEdit(launch)} className="bg-purple-50 hover:bg-purple-100 border-purple-300">
+                  <AlertCircle className="h-4 w-4 mr-1 text-purple-600" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p>Intervenção Técnica - Editar Sem Restrições</p></TooltipContent>
+            </Tooltip>
+          )}
+
           {launch.status === 'CANCELED' && launch.summaryId == null && canDeleteLaunch && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -934,17 +978,6 @@ useEffect(() => {
             </TooltipTrigger>
             <TooltipContent><p>Editar</p></TooltipContent>
           </Tooltip>
-
-          {canTechnicalIntervention && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="sm" onClick={() => handleEdit(launch)} className="bg-purple-50 hover:bg-purple-100 border-purple-300">
-                  <AlertCircle className="h-4 w-4 mr-1 text-purple-600" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent><p>Intervenção Técnica - Editar Sem Restrições</p></TooltipContent>
-            </Tooltip>
-          )}
 
         </div>
       </CardContent>
@@ -1057,7 +1090,7 @@ useEffect(() => {
                     <DialogHeader>
                       <DialogTitle>
                         {editingLaunch ? 'Editar' : 'Novo'}
-                        {canTechnicalIntervention && editingLaunch && (
+                        {isTechnicalIntervention && canTechnicalIntervention && editingLaunch && (
                           <Badge className="ml-2 bg-purple-600 hover:bg-purple-700">
                             INT. TÉCNICA
                           </Badge>
@@ -1088,7 +1121,7 @@ useEffect(() => {
                         )}
                       </DialogDescription>
                       <DialogDescription asChild style={{ fontSize: '14px' }}>
-                        {canTechnicalIntervention && editingLaunch && (
+                        {isTechnicalIntervention && canTechnicalIntervention && editingLaunch && (
                           <div className="mt-2 p-2 bg-purple-50 text-purple-700 rounded-md flex items-center border border-purple-300">
                             <AlertCircle className="h-4 w-4 mr-2 text-purple-600" />
                             <span className="font-semibold">Modo de Intervenção Técnica Ativo</span> - Você pode editar todos os campos independente do status do lançamento
@@ -1241,6 +1274,32 @@ useEffect(() => {
                                   }}
                                 />
                               </div>
+                              {/* Verificação de permissão para Intervenção Técnica */}
+                              {canTechnicalIntervention && isTechnicalIntervention && (
+                                <div className="space-y-2 border-l-4 border-purple-500 pl-4 bg-amber-50/50 py-2">
+                                  <Label htmlFor="status" className="text-purple-700 font-bold flex items-center gap-2">
+                                    <AlertCircle className="h-4 w-4" /> Status do Lançamento
+                                  </Label>
+                                  <Select
+                                    value={formData.status}
+                                    onValueChange={(value) => setFormData({ ...formData, status: value })}
+                                  >
+                                    <SelectTrigger id="status" className="border-purple-300">
+                                      <SelectValue placeholder="Selecione o status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="NORMAL">Normal</SelectItem>
+                                      <SelectItem value="CANCELLED">Cancelado</SelectItem>
+                                      <SelectItem value="APPROVED">Aprovado</SelectItem>
+                                      <SelectItem value="EXPORTED">Exportado</SelectItem>
+                                      <SelectItem value="IMPORTED">Importado</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  {/* <p className="text-xs text-amber-600">
+                                    Este campo só está visível para usuários com perfil de suporte/técnico.
+                                  </p> */}
+                                </div>
+                              )}
                             </div>
 
                             {/* Dízimo: contribuinte */}
@@ -1622,6 +1681,26 @@ useEffect(() => {
               </div>
 
               <div className="w-full sm:w-64">
+                <Select value={selectedType} onValueChange={setSelectedType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filtrar por tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os tipos</SelectItem>
+                    {canLaunchTithe && <SelectItem value="DIZIMO">Dízimo</SelectItem>}
+                    {canLaunchServiceOffer && <SelectItem value="OFERTA_CULTO">Oferta do Culto</SelectItem>}
+                    {canLaunchEbd && <SelectItem value="EBD">EBD</SelectItem>}
+                    {canLaunchMission && <SelectItem value="MISSAO">Missão</SelectItem>}
+                    {canLaunchCampaign && <SelectItem value="CAMPANHA">Campanha</SelectItem>}
+                    {canLaunchVote && <SelectItem value="VOTO">Voto</SelectItem>}
+                    {canLaunchCircle && <SelectItem value="CIRCULO">Círculo de Oração</SelectItem>}
+                    {canLaunchCarneReviver && <SelectItem value="CARNE_REVIVER">Carnê Reviver</SelectItem>}
+                    {canLaunchExpense && <SelectItem value="SAIDA">Saída</SelectItem>}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="w-full sm:w-64">
                 <Select value={selectedCongregation} onValueChange={setSelectedCongregation}>
                   <SelectTrigger>
                     <SelectValue placeholder="Filtrar por congregação" />
@@ -1636,13 +1715,14 @@ useEffect(() => {
                   </SelectContent>
                 </Select>
               </div>
+
             </div>
 
             {/* Lista Desktop */}
             <div className="hidden lg:block">
               <Card>
                 <CardHeader>
-                  <CardTitle>Lançamentos Recentes</CardTitle>
+                  <CardTitle>Lançamentos</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
@@ -1728,6 +1808,17 @@ useEffect(() => {
                             </TableCell>
                             <TableCell>
                               <div className="flex space-x-2">
+                                
+                                {canTechnicalIntervention && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button variant="outline" size="sm" onClick={() => handleTechnicalEdit(launch)} className="bg-purple-50 hover:bg-purple-100 border-purple-300">
+                                        <AlertCircle className="h-4 w-4 text-purple-600" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent><p>Intervenção Técnica - Editar Sem Restrições</p></TooltipContent>
+                                  </Tooltip>
+                                )}
 
                                 {(launch.status === 'CANCELED' || launch.status === 'IMPORTED') && launch.summaryId == null && canDeleteLaunch && (
                                   <Tooltip>
@@ -1805,17 +1896,6 @@ useEffect(() => {
                                     <TooltipContent><p>Editar</p></TooltipContent>
                                   </Tooltip>
                                 ) : null}
-
-                                {canTechnicalIntervention && (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button variant="outline" size="sm" onClick={() => handleEdit(launch)} className="bg-purple-50 hover:bg-purple-100 border-purple-300">
-                                        <AlertCircle className="h-4 w-4 text-purple-600" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent><p>Intervenção Técnica - Editar Sem Restrições</p></TooltipContent>
-                                  </Tooltip>
-                                )}
 
                               </div>
                             </TableCell>

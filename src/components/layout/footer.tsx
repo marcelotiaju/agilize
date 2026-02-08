@@ -26,6 +26,11 @@ export function Footer() {
   const { data: session } = useSession()
   const [isReportsOpen, setIsReportsOpen] = useState(false)
 
+  // Não mostrar footer em páginas de autenticação
+  if (pathname?.startsWith('/auth')) {
+    return null
+  }
+
   const canAccessLaunches = ['canLaunchVote',
      'canLaunchEbd', 
      'canLaunchCampaign',

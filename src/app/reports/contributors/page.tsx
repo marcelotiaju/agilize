@@ -12,6 +12,8 @@ import { Sidebar } from "@/components/layout/sidebar"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import * as XLSX from 'xlsx'
+import format from "date-fns/format"
 
 interface Congregation {
     id: string
@@ -50,6 +52,7 @@ export default function ReportsPage() {
     const [selectedTypes, setSelectedTypes] = useState<string[]>([])
     const [selectedLaunchTypes, setSelectedLaunchTypes] = useState<string[]>([])
     const [previewData, setPreviewData] = useState<PreviewData | null>(null)
+    const [isGeneratingExcel, setIsGeneratingExcel] = useState(false)
 
     const [availableYears, setAvailableYears] = useState<string[]>([])
     const [selectedYear, setSelectedYear] = useState("")
@@ -235,6 +238,51 @@ export default function ReportsPage() {
         } finally {
             setLoading(false)
         }
+    }
+
+    const handleExportExcel = () => {
+        if (!previewData) return;
+
+        setIsGeneratingExcel(true)
+
+        const worksheetData: any[] = [];
+
+        previewData.congregations.forEach(cong => {
+                cong.contributors.forEach(contributor => {
+
+                const row: any = {
+                    'Congregação': cong.name,
+                    'Contribuinte': contributor.name || 'Não Informado',
+                    'Cargo': contributor.position || 'Não Informado',
+                };
+                // Adiciona os valores de cada mês dinamicamente
+                MONTHS.forEach((month, index) => {
+                    row[month] = formatCurrency(contributor.months[index] || 0);
+                });
+                row['Total Anual'] = formatCurrency(contributor.total);
+                worksheetData.push(row);
+
+                })
+            // Linha de TOTAL da Congregação
+                    const totalRow: any = {
+                        'Congregação': cong.name,
+                        'Contribuinte': `TOTAL ${cong.name}`,
+                        'Cargo': '',
+                    };
+                    MONTHS.forEach((month, index) => {
+                        totalRow[month] = formatCurrency(cong.monthTotals[index] || 0);
+                    });
+                    totalRow['Total Anual'] = formatCurrency(cong.grandTotal);
+                    
+                    worksheetData.push(totalRow);
+                    worksheetData.push({}); // Linha vazia para separar congregações
+                });
+
+        setIsGeneratingExcel(false)
+        const ws = XLSX.utils.json_to_sheet(worksheetData, { header: ['Congregação', 'Contribuinte', 'Cargo', ...MONTHS, 'Total'] })
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Relatório");
+        XLSX.writeFile(wb, `Relatorio_Contribuintes_${selectedYear}.xlsx`);
     }
 
     const formatCurrency = (value: number) => {
@@ -519,25 +567,44 @@ export default function ReportsPage() {
                         </Card>
                     )}
 
-                    {/* Botão de Gerar PDF */}
-                    <Button
-                        onClick={handleGenerateReport}
-                        disabled={loading || selectedCongregations.length === 0 || selectedTypes.length === 0 || selectedLaunchTypes.length === 0}
-                        className="w-full"
+                    <div className="flex gap-2">
+                        <Button
+                        onClick={handleExportExcel}
+                        disabled={!previewData}
+                        className="flex-1 bg-green-600 hover:bg-green-700"
                         size="lg"
-                    >
-                        {loading ? (
+                        >
+                        {isGeneratingExcel ? (
                             <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Gerando PDF...
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Gerando Excel...
                             </>
                         ) : (
                             <>
-                                <FileText className="mr-2 h-4 w-4" />
-                                Gerar Relatório PDF
+                            <FileText className="mr-2 h-4 w-4" />
+                            Gerar Excel
                             </>
                         )}
-                    </Button>
+                        </Button>
+                        <Button
+                            onClick={handleGenerateReport}
+                            disabled={loading || selectedCongregations.length === 0 || selectedTypes.length === 0 || selectedLaunchTypes.length === 0}
+                            className="flex-1"
+                            size="lg"
+                        >
+                            {loading ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Gerando PDF...
+                                </>
+                            ) : (
+                                <>
+                                    <FileText className="mr-2 h-4 w-4" />
+                                    Gerar Relatório PDF
+                                </>
+                            )}
+                        </Button>
+                    </div>
                 </div>
             </div>
         </div>
