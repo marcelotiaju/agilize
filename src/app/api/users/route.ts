@@ -61,6 +61,7 @@ export async function GET(request: NextRequest) {
         login: user.login ?? null,
         name: user.name,
         email: user.email,
+        image: user.image,
         phone: user.phone,
         validFrom: user.validFrom,
         validTo: user.validTo,
@@ -87,8 +88,8 @@ export async function POST(request: NextRequest) {
   try {
     const payload = await request.json()
     const {
-      login, name, email, phone, password, validFrom, validTo, historyDays,maxRetroactiveDays,
-      profileId, defaultPage
+      login, name, email, phone, password, validFrom, validTo, historyDays, maxRetroactiveDays,
+      profileId, defaultPage, image
     } = payload
 
     if (!email || !password) {
@@ -116,7 +117,8 @@ export async function POST(request: NextRequest) {
         historyDays: parseInt(historyDays || '30'),
         maxRetroactiveDays: parseInt(maxRetroactiveDays || '30'),
         profile: profileId ? { connect: { id: profileId } } : undefined,
-        defaultPage: defaultPage || '/dashboard'
+        defaultPage: defaultPage || '/dashboard',
+        image
       }
     })
 
@@ -131,8 +133,8 @@ export async function PUT(request: NextRequest) {
   try {
     const payload = await request.json()
     const {
-      id, login, name, email, phone, password, validFrom, validTo, historyDays,maxRetroactiveDays,
-      profileId, defaultPage
+      id, login, name, email, phone, password, validFrom, validTo, historyDays, maxRetroactiveDays,
+      profileId, defaultPage, image
     } = payload
 
     if (!id) return NextResponse.json({ error: "ID do usuário é obrigatório" }, { status: 400 })
@@ -164,7 +166,8 @@ export async function PUT(request: NextRequest) {
         historyDays: parseInt(historyDays || `${existingUser.historyDays}`),
         maxRetroactiveDays: parseInt(maxRetroactiveDays || `${existingUser.maxRetroactiveDays}`),
         profile: typeof profileId === 'string' && profileId.trim() !== '' ? { connect: { id: profileId } } : { disconnect: true },
-        defaultPage: defaultPage || '/dashboard'
+        defaultPage: defaultPage || '/dashboard',
+        image
       }
     })
 

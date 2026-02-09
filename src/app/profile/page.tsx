@@ -1,7 +1,7 @@
 // app/profile/page.tsx
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Eye, EyeOff, Lock, User, Save } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { SelectContent, SelectValue, Select, SelectItem, SelectTrigger } from '@/components/ui/select'
+import { ImageUpload } from '@/components/ui/image-upload'
 
 export default function ProfilePage() {
   const { data: session } = useSession()
@@ -25,6 +26,40 @@ export default function ProfilePage() {
   const [message, setMessage] = useState({ type: '', text: '' })
   const [defaultPage, setDefaultPage] = useState(session?.user?.defaultPage || '/dashboard')
   const router = useRouter()
+  const [userImage, setUserImage] = useState(session?.user?.image || null)
+  const { update } = useSession()
+
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const res = await fetch('/api/user/profile')
+        if (res.ok) {
+          const data = await res.json()
+          if (data.image) setUserImage(data.image)
+        }
+      } catch (error) {
+        console.error('Erro ao carregar perfil:', error)
+      }
+    }
+    loadProfile()
+  }, [])
+
+
+  const handleImageUpdate = async (url: string) => {
+    setUserImage(url)
+    try {
+      const response = await fetch('/api/user/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: url })
+      })
+      if (!response.ok) throw new Error('Falha ao atualizar imagem')
+      await update({ image: url })
+    } catch (error) {
+      console.error(error)
+      setMessage({ type: 'error', text: 'Erro ao salvar foto de perfil' })
+    }
+  }
 
   // Adicione a função para atualizar a página inicial
   const updateDefaultPage = async () => {
@@ -99,7 +134,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Sidebar />
-      
+
       <div className="lg:pl-64">
         <div className="p-6">
           <div className="max-w-3xl mx-auto">
@@ -133,6 +168,31 @@ export default function ProfilePage() {
                     <p className="text-sm text-gray-500">Telefone</p>
                     <p className="font-medium">{session?.user?.phone || 'Não informado'}</p>
                   </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Congregação</p>
+                    <p className="font-medium">{session?.user?.congregation?.name || 'Não informado'}</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Card de Foto de Perfil */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <User className="mr-2 h-5 w-5" />
+                    Foto de Perfil
+                  </CardTitle>
+                  <CardDescription>
+                    Atualize sua foto de identificação
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex justify-center">
+                  <ImageUpload
+                    value={userImage}
+                    onChange={handleImageUpdate}
+                    onRemove={() => handleImageUpdate('')}
+                    folder="user"
+                  />
                 </CardContent>
               </Card>
 
@@ -282,8 +342,8 @@ export default function ProfilePage() {
               </Card>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
+        </div >
+      </div >
+    </div >
   )
 }

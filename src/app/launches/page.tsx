@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, Search, Check, X, AlertCircle, CalendarIcon, User, Users, Ghost, List, ArrowUp, Upload, FileText, Building, Loader2 } from 'lucide-react'
+import { Plus, Edit, Trash2, Search, Check, X, AlertCircle, CalendarIcon, User, Users, Ghost, List, ArrowUp, Upload, FileText, Building, Loader2, Camera } from 'lucide-react'
 import { format, startOfDay } from 'date-fns'
 import { zonedTimeToUtc } from 'date-fns-tz'
 import { ptBR } from 'date-fns/locale'
@@ -32,6 +32,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { cn } from "@/lib/utils";
 import { useRouter } from 'next/navigation'
 import { PieChart } from 'lucide-react'
+import { ImageUpload } from '@/components/ui/image-upload'
 
 // Get the user's timezone
 const USER_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -110,6 +111,7 @@ export default function Launches() {
     approvedByAccountant?: boolean
     approvedByDirector?: boolean
     approvedVia?: string
+    attachmentUrl?: string
   }
 
   // Permissões (mantém nomes existentes)
@@ -141,34 +143,34 @@ export default function Launches() {
   const canTechnicalIntervention = session?.user?.canTechnicalIntervention
   const defaultLaunchType = session?.user?.defaultLaunchType
 
-      // Adicione esse useMemo para calcular os tipos permitidos
-const allowedLaunchTypes = useMemo(() => {
-  const types: { value: string; label: string }[] = [];
-  if (canLaunchTithe) types.push({ value: 'DIZIMO', label: 'Dízimo' });
-  if (canLaunchServiceOffer) types.push({ value: 'OFERTA_CULTO', label: 'Oferta do Culto' });
-  if (canLaunchEbd) types.push({ value: 'EBD', label: 'EBD' });
-  if (canLaunchMission) types.push({ value: 'MISSAO', label: 'Missão' });
-  if (canLaunchCampaign) types.push({ value: 'CAMPANHA', label: 'Campanha' });
-  if (canLaunchVote) types.push({ value: 'VOTO', label: 'Voto' });
-  if (canLaunchCircle) types.push({ value: 'CIRCULO', label: 'Círculo de Oração' });
-  if (canLaunchCarneReviver) types.push({ value: 'CARNE_REVIVER', label: 'Carnê Reviver' });
-  if (canLaunchExpense) types.push({ value: 'SAIDA', label: 'Saída' });
-  return types;
-}, [canLaunchTithe, canLaunchServiceOffer, canLaunchCarneReviver, canLaunchVote, canLaunchEbd, canLaunchCampaign, canLaunchMission, canLaunchCircle, canLaunchExpense]);
+  // Adicione esse useMemo para calcular os tipos permitidos
+  const allowedLaunchTypes = useMemo(() => {
+    const types: { value: string; label: string }[] = [];
+    if (canLaunchTithe) types.push({ value: 'DIZIMO', label: 'Dízimo' });
+    if (canLaunchServiceOffer) types.push({ value: 'OFERTA_CULTO', label: 'Oferta do Culto' });
+    if (canLaunchEbd) types.push({ value: 'EBD', label: 'EBD' });
+    if (canLaunchMission) types.push({ value: 'MISSAO', label: 'Missão' });
+    if (canLaunchCampaign) types.push({ value: 'CAMPANHA', label: 'Campanha' });
+    if (canLaunchVote) types.push({ value: 'VOTO', label: 'Voto' });
+    if (canLaunchCircle) types.push({ value: 'CIRCULO', label: 'Círculo de Oração' });
+    if (canLaunchCarneReviver) types.push({ value: 'CARNE_REVIVER', label: 'Carnê Reviver' });
+    if (canLaunchExpense) types.push({ value: 'SAIDA', label: 'Saída' });
+    return types;
+  }, [canLaunchTithe, canLaunchServiceOffer, canLaunchCarneReviver, canLaunchVote, canLaunchEbd, canLaunchCampaign, canLaunchMission, canLaunchCircle, canLaunchExpense]);
 
-// Adicione um useEffect para auto-selecionar
-useEffect(() => {
-  if (allowedLaunchTypes.length === 1) {
-    setFormData(prev => ({ ...prev, type: allowedLaunchTypes[0].value }));
-  }
-}, [allowedLaunchTypes]);
+  // Adicione um useEffect para auto-selecionar
+  useEffect(() => {
+    if (allowedLaunchTypes.length === 1) {
+      setFormData(prev => ({ ...prev, type: allowedLaunchTypes[0].value }));
+    }
+  }, [allowedLaunchTypes]);
 
   const [editingLaunch, setEditingLaunch] = useState<Launch | null>(null)
   const [formData, setFormData] = useState({
     congregationId: '',
-    type: allowedLaunchTypes.length === 1 
-    ? allowedLaunchTypes[0].value 
-    : 'DIZIMO',
+    type: allowedLaunchTypes.length === 1
+      ? allowedLaunchTypes[0].value
+      : 'DIZIMO',
     date: format(new Date(), 'yyyy-MM-dd'),
     talonNumber: '',
     value: '',
@@ -182,7 +184,8 @@ useEffect(() => {
     isSupplierRegistered: false,
     classificationId: '',
     summaryId: '',
-    status: 'NORMAL'
+    status: 'NORMAL',
+    attachmentUrl: ''
   })
 
   function truncateString(str: string | null | undefined, num: number) {
@@ -602,6 +605,9 @@ useEffect(() => {
         // Scroll para o topo da página no mobile
         window.scrollTo({ top: 0, behavior: 'smooth' })
 
+        // Limpar o formulário explícito para garantir
+        setFormData(prev => ({ ...prev, attachmentUrl: '' }))
+
         fetchLaunches()
         setIsDialogOpen(false)
         resetForm()
@@ -619,7 +625,7 @@ useEffect(() => {
   }
 
   const handleEdit = (launch: Launch) => {
-    setIsTechnicalIntervention(false)  
+    setIsTechnicalIntervention(false)
     setEditingLaunch(launch)
     setFormData({
       congregationId: launch.congregationId,
@@ -637,7 +643,8 @@ useEffect(() => {
       isSupplierRegistered: !!launch.supplierId,
       classificationId: launch.classificationId || '',
       summaryId: launch.summaryId || '',
-      status: launch.status || 'NORMAL'
+      status: launch.status || 'NORMAL',
+      attachmentUrl: launch.attachmentUrl || ''
     })
     setIsDialogOpen(true)
   }
@@ -661,7 +668,8 @@ useEffect(() => {
       isSupplierRegistered: !!launch.supplierId,
       classificationId: launch.classificationId || '',
       summaryId: launch.summaryId || '',
-      status: launch.status || 'NORMAL'
+      status: launch.status || 'NORMAL',
+      attachmentUrl: launch.attachmentUrl || ''
     })
     setIsDialogOpen(true)
   }
@@ -669,34 +677,34 @@ useEffect(() => {
   const handleCancel = async (id: string) => {
     setError(null)
     if (confirm('Tem certeza que deseja cancelar este lançamento?')) {
-    try {
-      const launch = launches.find(l => l.id === id)
+      try {
+        const launch = launches.find(l => l.id === id)
 
-      if (launch?.status !== 'NORMAL') {
-        setError(`Apenas lançamentos com status Normal podem ser cancelados. Status atual: ${launch?.status}`)
-        return
+        if (launch?.status !== 'NORMAL') {
+          setError(`Apenas lançamentos com status Normal podem ser cancelados. Status atual: ${launch?.status}`)
+          return
+        }
+
+        const response = await fetch(`api/launches/status/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id,
+            status: 'CANCELED',
+            cancelledBy: session?.user?.name,
+            cancelledAt: new Date().toISOString()
+          }),
+        })
+
+        if (response.ok) fetchLaunches()
+        else {
+          const errorData = await response.json()
+          setError(errorData.error || 'Erro ao cancelar lançamento.')
+        }
+      } catch (error) {
+        console.error('Erro ao cancelar lançamento:', error)
+        setError('Erro ao cancelar lançamento. Tente novamente.')
       }
-
-      const response = await fetch(`api/launches/status/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id,
-          status: 'CANCELED',
-          cancelledBy: session?.user?.name,
-          cancelledAt: new Date().toISOString()
-        }),
-      })
-
-      if (response.ok) fetchLaunches()
-      else {
-        const errorData = await response.json()
-        setError(errorData.error || 'Erro ao cancelar lançamento.')
-      }
-    } catch (error) {
-      console.error('Erro ao cancelar lançamento:', error)
-      setError('Erro ao cancelar lançamento. Tente novamente.')
-    }
     }
   }
 
@@ -763,7 +771,7 @@ useEffect(() => {
 
   const resetForm = () => {
     setEditingLaunch(null)
-    setIsTechnicalIntervention(false)  
+    setIsTechnicalIntervention(false)
     setFormData({
       congregationId: congregations.length === 1 ? congregations[0].id : '',
       type: allowedLaunchTypes.length === 1 ? allowedLaunchTypes[0].value : (allowedLaunchTypes.find(t => t.value === session?.user?.defaultLaunchType)?.value || 'DIZIMO'),
@@ -780,7 +788,8 @@ useEffect(() => {
       isSupplierRegistered: false,
       classificationId: '',
       summaryId: '',
-      status: 'NORMAL'
+      status: 'NORMAL',
+      attachmentUrl: ''
     })
     setError(null)
   }
@@ -805,14 +814,14 @@ useEffect(() => {
       <CardContent className="p-4 pt-0.5 pb-1">
         <div className="flex justify-between items-start mb-1">
           <div className={`px-3 py-1 rounded text-white text-sm font-medium ${launch.type === 'VOTO' ? 'bg-green-500' :
-              launch.type === 'EBD' ? 'bg-green-500' :
-                launch.type === 'CAMPANHA' ? 'bg-green-500' :
-                  launch.type === 'DIZIMO' ? 'bg-blue-500' :
-                    launch.type === 'CARNE_REVIVER' ? 'bg-green-500' :
-                      launch.type === 'SAIDA' ? 'bg-red-500' :
-                        launch.type === 'MISSAO' ? 'bg-green-500' :
-                          launch.type === 'OFERTA_CULTO' ? 'bg-green-500' :
-                            launch.type === 'CIRCULO' ? 'bg-green-500' : ''
+            launch.type === 'EBD' ? 'bg-green-500' :
+              launch.type === 'CAMPANHA' ? 'bg-green-500' :
+                launch.type === 'DIZIMO' ? 'bg-blue-500' :
+                  launch.type === 'CARNE_REVIVER' ? 'bg-green-500' :
+                    launch.type === 'SAIDA' ? 'bg-red-500' :
+                      launch.type === 'MISSAO' ? 'bg-green-500' :
+                        launch.type === 'OFERTA_CULTO' ? 'bg-green-500' :
+                          launch.type === 'CIRCULO' ? 'bg-green-500' : ''
             }`}>
             {launch.type === 'VOTO' ? 'Voto' :
               launch.type === 'EBD' ? 'EBD' :
@@ -826,16 +835,16 @@ useEffect(() => {
           </div>
           <div className={`flex items-center space-x-2`}>
             <Badge className={`${launch.status === 'IMPORTED' ? 'bg-orange-500 hover:bg-orange-600' : ''}`}
-            variant={
-              launch.status === 'NORMAL' ? 'default' :
-                launch.status === 'APPROVED' ? 'default' :
-                  launch.status === 'EXPORTED' ? 'secondary' : 
-                    launch.status === 'IMPORTED' ? 'destructive' : 'destructive'
-            }>
+              variant={
+                launch.status === 'NORMAL' ? 'default' :
+                  launch.status === 'APPROVED' ? 'default' :
+                    launch.status === 'EXPORTED' ? 'secondary' :
+                      launch.status === 'IMPORTED' ? 'destructive' : 'destructive'
+              }>
               {launch.status === 'NORMAL' ? 'Normal' :
                 launch.status === 'APPROVED' ? 'Aprovado' :
-                  launch.status === 'EXPORTED' ? 'Exportado' : 
-                  launch.status === 'IMPORTED' ? 'Importado' : 'Cancelado'}
+                  launch.status === 'EXPORTED' ? 'Exportado' :
+                    launch.status === 'IMPORTED' ? 'Importado' : 'Cancelado'}
             </Badge>
             {launch.approvedBy && (
               <Tooltip>
@@ -884,7 +893,7 @@ useEffect(() => {
         )}
         {launch.description && (
           <div className="flex justify-start">
-            <FileText className="h-4 w-4 md:hidden"/>
+            <FileText className="h-4 w-4 md:hidden" />
             {/* <span className="text-sm font-normal">Anotações:</span> */}
             <span className="text-sm font-medium ml-1">{launch.description}</span>
           </div>
@@ -1068,17 +1077,17 @@ useEffect(() => {
                   Validar Importação
                 </Button>
                 )}
-                {(canGenerateSummary || canListSummary) && 
-                <Button
-                  //variant="defaulSt"
-                  onClick={() => router.push('/congregation-summary')}
-                  className="md:flex items-center gap-2 bg-amber-600 text-white"
-                >
-                  <PieChart className="h-4 w-4" />
-                  Resumo
-                </Button>}
+                {(canGenerateSummary || canListSummary) &&
+                  <Button
+                    //variant="defaulSt"
+                    onClick={() => router.push('/congregation-summary')}
+                    className="md:flex items-center gap-2 bg-amber-600 text-white"
+                  >
+                    <PieChart className="h-4 w-4" />
+                    Resumo
+                  </Button>}
                  
-                
+
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                   <DialogTrigger asChild>
                     <Button onClick={resetForm} disabled={!canLaunchVote && !canLaunchEbd && !canLaunchCampaign && !canLaunchTithe && !canLaunchExpense && !canLaunchMission && !canLaunchCircle && !canLaunchServiceOffer && !canLaunchCarneReviver}>
@@ -1137,398 +1146,427 @@ useEffect(() => {
                       </div>
                     )}
 
-                    <Tabs defaultValue="dados" className="w-full mt-4">
-                      <TabsList className="grid w-full grid-cols-2 px-4 sm:px-0">
-                        <TabsTrigger value="dados">Dados</TabsTrigger>
-                        <TabsTrigger value="logs">Logs</TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="dados" className="max-w-[calc(105vw-3rem)] p-2 sm:p-0 overflow-x-hidden">
-                        <form onSubmit={handleSubmit} className="space-y-2 px-2 sm:px-0 w-full max-w-full overflow-x-hidden">
+                    <form onSubmit={handleSubmit} className="space-y-2 px-2 sm:px-0 w-full max-w-full overflow-x-hidden">
+                      <Tabs defaultValue="dados" className="w-full mt-4">
+                        <TabsList className="grid w-full grid-cols-3 px-4 sm:px-0">
+                          <TabsTrigger value="dados">Dados</TabsTrigger>
+                          <TabsTrigger value="logs">Logs</TabsTrigger>
+                          <TabsTrigger value="comprovantes">Comprovantes</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="dados" className="max-w-[calc(105vw-3rem)] p-2 sm:p-0 overflow-x-hidden">
                           <div className="space-y-2">
-                            <div>
-                              <Label htmlFor="congregationId">Congregação</Label>
-                              <SearchableSelect
-                                label="Buscar Congregação"
-                                placeholder="Selecione a Congregação"
-                                value={formData.congregationId}
-                                disabled={isEditDisabled(editingLaunch) || (congregations.length === 1 && !editingLaunch)}
-                                onChange={(value) => handleSelectChange('congregationId', value)}
-                                name="congregationId"
-                                data={congregations.map(s => ({ id: s.id, name: s.name }))}
-                                itemRenderMode="congregation"
-                                searchKeys={['name']}
-                                required
-                              />
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                              <div className="w-full">
-                                <Label htmlFor="type" className='font-bold text-red-600'>Tipo</Label>
-                                <Select
-                                  value={formData.type}
-                                  onValueChange={(value) => handleSelectChange('type', value)}
-                                  disabled={isEditDisabled(editingLaunch) || allowedLaunchTypes.length === 1}
-                                  data={allowedLaunchTypes.map(t => t.value)}
-                                >
-                                  <SelectTrigger className="w-full">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {canLaunchTithe && <SelectItem value="DIZIMO">Dízimo</SelectItem>}
-                                    {canLaunchServiceOffer && <SelectItem value="OFERTA_CULTO">Oferta do Culto</SelectItem>}
-                                    {canLaunchEbd && <SelectItem value="EBD">EBD</SelectItem>}
-                                    {canLaunchMission && <SelectItem value="MISSAO">Missão</SelectItem>}
-                                    {canLaunchCampaign && <SelectItem value="CAMPANHA">Campanha</SelectItem>}
-                                    {canLaunchVote && <SelectItem value="VOTO">Voto</SelectItem>}
-                                    {canLaunchCircle && <SelectItem value="CIRCULO">Círculo de Oração</SelectItem>}
-                                    {canLaunchCarneReviver && <SelectItem value="CARNE_REVIVER">Carnê Reviver</SelectItem>}
-                                    {canLaunchExpense && <SelectItem value="SAIDA">Saída</SelectItem>}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-
-                              {formData.type === 'SAIDA' && (
-                                <div className="w-full">
-                                  <Label htmlFor="classificationId">Classificação</Label>
-                                  <SearchableSelect
-                                    label="Buscar Classificação"
-                                    placeholder="Selecione uma classificação"
-                                    value={formData.classificationId}
-                                    disabled={isFieldDisabledDuringEdit()}
-                                    onChange={(value) => handleSelectChange('classificationId', value)}
-                                    name="classificationId"
-                                    data={classifications.map(c => ({ id: c.id, name: c.description }))}
-                                    itemRenderMode="classification"
-                                    searchKeys={['name']}
-                                  />
-                              </div>
-                              )}
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
                               <div>
-                                <Label htmlFor="date">Data</Label>
-                                <Input
-                                  id="date"
-                                  name="date"
-                                  type="date"
-                                  inputMode="none"
-                                  value={formData.date ?? ''}
-                                  onChange={handleInputChange}
-                                  disabled={isFieldDisabledDuringEdit()}
-                                  style={{ fontSize: '16px' }}
-                                  locale="pt-BR"
+                                <Label htmlFor="congregationId">Congregação</Label>
+                                <SearchableSelect
+                                  label="Buscar Congregação"
+                                  placeholder="Selecione a Congregação"
+                                  value={formData.congregationId}
+                                  disabled={isEditDisabled(editingLaunch) || (congregations.length === 1 && !editingLaunch)}
+                                  onChange={(value) => handleSelectChange('congregationId', value)}
+                                  name="congregationId"
+                                  data={congregations.map(s => ({ id: s.id, name: s.name }))}
+                                  itemRenderMode="congregation"
+                                  searchKeys={['name']}
+                                  required
                                 />
                               </div>
 
-                              <div>
-                                {formData.type === 'SAIDA' ? <Label htmlFor="talonNumber">Nr. Doc</Label> : formData.type === 'DIZIMO' ? <Label htmlFor="talonNumber">Nr. Recibo</Label> : formData.type === 'CARNE_REVIVER' || formData.type === 'MISSAO' ? '' : <Label htmlFor="talonNumber">Nr. Talão</Label>}
-                                {(formData.type !== 'CARNE_REVIVER' && formData.type !== 'MISSAO') && (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="w-full">
+                                  <Label htmlFor="type" className='font-bold text-red-600'>Tipo</Label>
+                                  <Select
+                                    value={formData.type}
+                                    onValueChange={(value) => handleSelectChange('type', value)}
+                                    disabled={isEditDisabled(editingLaunch) || allowedLaunchTypes.length === 1}
+                                    data={allowedLaunchTypes.map(t => t.value)}
+                                  >
+                                    <SelectTrigger className="w-full">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {canLaunchTithe && <SelectItem value="DIZIMO">Dízimo</SelectItem>}
+                                      {canLaunchServiceOffer && <SelectItem value="OFERTA_CULTO">Oferta do Culto</SelectItem>}
+                                      {canLaunchEbd && <SelectItem value="EBD">EBD</SelectItem>}
+                                      {canLaunchMission && <SelectItem value="MISSAO">Missão</SelectItem>}
+                                      {canLaunchCampaign && <SelectItem value="CAMPANHA">Campanha</SelectItem>}
+                                      {canLaunchVote && <SelectItem value="VOTO">Voto</SelectItem>}
+                                      {canLaunchCircle && <SelectItem value="CIRCULO">Círculo de Oração</SelectItem>}
+                                      {canLaunchCarneReviver && <SelectItem value="CARNE_REVIVER">Carnê Reviver</SelectItem>}
+                                      {canLaunchExpense && <SelectItem value="SAIDA">Saída</SelectItem>}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+
+                                {formData.type === 'SAIDA' && (
+                                  <div className="w-full">
+                                    <Label htmlFor="classificationId">Classificação</Label>
+                                    <SearchableSelect
+                                      label="Buscar Classificação"
+                                      placeholder="Selecione uma classificação"
+                                      value={formData.classificationId}
+                                      disabled={isFieldDisabledDuringEdit()}
+                                      onChange={(value) => handleSelectChange('classificationId', value)}
+                                      name="classificationId"
+                                      data={classifications.map(c => ({ id: c.id, name: c.description }))}
+                                      itemRenderMode="classification"
+                                      searchKeys={['name']}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <Label htmlFor="date">Data</Label>
                                   <Input
-                                    id="talonNumber"
-                                    name="talonNumber"
-                                    type="text"
-                                    inputMode="numeric"
-                                    pattern="[0-9]*"
-                                    value={formData.talonNumber ?? ''}
+                                    id="date"
+                                    name="date"
+                                    type="date"
+                                    inputMode="none"
+                                    value={formData.date ?? ''}
                                     onChange={handleInputChange}
                                     disabled={isFieldDisabledDuringEdit()}
                                     style={{ fontSize: '16px' }}
+                                    locale="pt-BR"
                                   />
-                                )}
-                              </div>
-                            </div>
+                                </div>
 
-                            {/* Campo único de valor para todos os tipos */}
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <Label htmlFor="value">{formData.type === 'VOTO' ? 'Valor Voto' : formData.type === 'EBD' ? 'Valor EBD' : formData.type === 'CAMPANHA' ? 'Valor Campanha' : formData.type === 'OFERTA_CULTO' ? 'Valor Oferta' : 'Valor'}</Label>
-                                <NumericFormat
-                                  id="value"
-                                  name="value"
-                                  inputMode="decimal"
-                                  className={cn(
-                                    "col-span-3 h-10 w-full rounded-md border border-input bg-background px-3 py-2",
-                                    isFieldDisabledDuringEdit()
-                                      ? "text-gray-500 cursor-not-allowed opacity-50" 
-                                      : ""
+                                <div>
+                                  {formData.type === 'SAIDA' ? <Label htmlFor="talonNumber">Nr. Doc</Label> : formData.type === 'DIZIMO' ? <Label htmlFor="talonNumber">Nr. Recibo</Label> : formData.type === 'CARNE_REVIVER' || formData.type === 'MISSAO' ? '' : <Label htmlFor="talonNumber">Nr. Talão</Label>}
+                                  {(formData.type !== 'CARNE_REVIVER' && formData.type !== 'MISSAO') && (
+                                    <Input
+                                      id="talonNumber"
+                                      name="talonNumber"
+                                      type="text"
+                                      inputMode="numeric"
+                                      pattern="[0-9]*"
+                                      value={formData.talonNumber ?? ''}
+                                      onChange={handleInputChange}
+                                      disabled={isFieldDisabledDuringEdit()}
+                                      style={{ fontSize: '16px' }}
+                                    />
                                   )}
-                                  value={formData.value ?? ''}
-                                  onValueChange={(values) => {
-                                    const { floatValue, value } = values;
-                                    // armazenar como string normalizada
-                                    setFormData(prev => ({ ...prev, value: (floatValue !== undefined ? floatValue : value) as any }))
-                                  }}
-                                  thousandSeparator="."
-                                  decimalSeparator=","
-                                  allowNegative={false}
-                                  //prefix="R$ "
-                                  //decimalScale={2}
-                                  //fixedDecimalScale={true}
-                                  disabled={isFieldDisabledDuringEdit()}
-                                  style={{ fontSize: '16px' }}
-                                  onFocus={(e) => {
-                                    // Scroll para o input quando focado no mobile
-                                    setTimeout(() => {
-                                      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                                    }, 300)
-                                  }}
-                                />
+                                </div>
                               </div>
-                              {/* Verificação de permissão para Intervenção Técnica */}
-                              {canTechnicalIntervention && isTechnicalIntervention && (
-                                <div className="space-y-2 border-l-4 border-purple-500 pl-4 bg-amber-50/50 py-2">
-                                  <Label htmlFor="status" className="text-purple-700 font-bold flex items-center gap-2">
-                                    <AlertCircle className="h-4 w-4" /> Status do Lançamento
-                                  </Label>
-                                  <Select
-                                    value={formData.status}
-                                    onValueChange={(value) => setFormData({ ...formData, status: value })}
-                                  >
-                                    <SelectTrigger id="status" className="border-purple-300">
-                                      <SelectValue placeholder="Selecione o status" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="NORMAL">Normal</SelectItem>
-                                      <SelectItem value="CANCELLED">Cancelado</SelectItem>
-                                      <SelectItem value="APPROVED">Aprovado</SelectItem>
-                                      <SelectItem value="EXPORTED">Exportado</SelectItem>
-                                      <SelectItem value="IMPORTED">Importado</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  {/* <p className="text-xs text-amber-600">
+
+                              {/* Campo único de valor para todos os tipos */}
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <Label htmlFor="value">{formData.type === 'VOTO' ? 'Valor Voto' : formData.type === 'EBD' ? 'Valor EBD' : formData.type === 'CAMPANHA' ? 'Valor Campanha' : formData.type === 'OFERTA_CULTO' ? 'Valor Oferta' : 'Valor'}</Label>
+                                  <NumericFormat
+                                    id="value"
+                                    name="value"
+                                    inputMode="decimal"
+                                    className={cn(
+                                      "col-span-3 h-10 w-full rounded-md border border-input bg-background px-3 py-2",
+                                      isFieldDisabledDuringEdit()
+                                        ? "text-gray-500 cursor-not-allowed opacity-50"
+                                        : ""
+                                    )}
+                                    value={formData.value ?? ''}
+                                    onValueChange={(values) => {
+                                      const { floatValue, value } = values;
+                                      // armazenar como string normalizada
+                                      setFormData(prev => ({ ...prev, value: (floatValue !== undefined ? floatValue : value) as any }))
+                                    }}
+                                    thousandSeparator="."
+                                    decimalSeparator=","
+                                    allowNegative={false}
+                                    //prefix="R$ "
+                                    //decimalScale={2}
+                                    //fixedDecimalScale={true}
+                                    disabled={isFieldDisabledDuringEdit()}
+                                    style={{ fontSize: '16px' }}
+                                    onFocus={(e) => {
+                                      // Scroll para o input quando focado no mobile
+                                      setTimeout(() => {
+                                        e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                                      }, 300)
+                                    }}
+                                  />
+                                </div>
+                                {/* Verificação de permissão para Intervenção Técnica */}
+                                {canTechnicalIntervention && isTechnicalIntervention && (
+                                  <div className="space-y-2 border-l-4 border-purple-500 pl-4 bg-amber-50/50 py-2">
+                                    <Label htmlFor="status" className="text-purple-700 font-bold flex items-center gap-2">
+                                      <AlertCircle className="h-4 w-4" /> Status do Lançamento
+                                    </Label>
+                                    <Select
+                                      value={formData.status}
+                                      onValueChange={(value) => setFormData({ ...formData, status: value })}
+                                    >
+                                      <SelectTrigger id="status" className="border-purple-300">
+                                        <SelectValue placeholder="Selecione o status" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="NORMAL">Normal</SelectItem>
+                                        <SelectItem value="CANCELLED">Cancelado</SelectItem>
+                                        <SelectItem value="APPROVED">Aprovado</SelectItem>
+                                        <SelectItem value="EXPORTED">Exportado</SelectItem>
+                                        <SelectItem value="IMPORTED">Importado</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                    {/* <p className="text-xs text-amber-600">
                                     Este campo só está visível para usuários com perfil de suporte/técnico.
                                   </p> */}
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Dízimo: contribuinte */}
-                            {(formData.type === 'DIZIMO' || formData.type === 'CARNE_REVIVER') && (
-                              <div className="w-full">
-                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
-                                  <div className="flex items-center space-x-2 w-full sm:w-auto">
-                                    <Button
-                                      type="button"
-                                      variant={formData.isContributorRegistered ? "default" : "outline"}
-                                      size="sm"
-                                      disabled={isFieldDisabledDuringEdit() || !formData.congregationId}
-                                      className={cn(
-                                        "h-9 px-3 transition-all flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start",
-                                        formData.isContributorRegistered
-                                          ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-800 shadow-sm"
-                                          : "text-gray-600 border-gray-300 hover:bg-gray-50"
-                                      )}
-                                      onClick={() => toggleField('isContributorRegistered')}
-                                    >
-                                      {formData.isContributorRegistered ? (
-                                        <Check className="h-4 w-4 animate-in zoom-in duration-200 shrink-0" />
-                                      ) : (
-                                        <Users className="h-4 w-4 shrink-0" />
-                                      )}
-                                      <span className="text-sm sm:text-base">Contribuinte Cadastrado</span>
-                                    </Button>
                                   </div>
+                                )}
+                              </div>
 
-                                  {!formData.isContributorRegistered && (
+                              {/* Dízimo: contribuinte */}
+                              {(formData.type === 'DIZIMO' || formData.type === 'CARNE_REVIVER') && (
+                                <div className="w-full">
+                                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
                                     <div className="flex items-center space-x-2 w-full sm:w-auto">
                                       <Button
                                         type="button"
-                                        variant={formData.isAnonymous ? "default" : "outline"}
+                                        variant={formData.isContributorRegistered ? "default" : "outline"}
                                         size="sm"
-                                        disabled={isFieldDisabledDuringEdit()}
+                                        disabled={isFieldDisabledDuringEdit() || !formData.congregationId}
                                         className={cn(
                                           "h-9 px-3 transition-all flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start",
-                                          formData.isAnonymous
+                                          formData.isContributorRegistered
                                             ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-800 shadow-sm"
                                             : "text-gray-600 border-gray-300 hover:bg-gray-50"
                                         )}
-                                        onClick={() => toggleField('isAnonymous')}
+                                        onClick={() => toggleField('isContributorRegistered')}
                                       >
-                                        {formData.isAnonymous ? (
+                                        {formData.isContributorRegistered ? (
                                           <Check className="h-4 w-4 animate-in zoom-in duration-200 shrink-0" />
                                         ) : (
-                                          <Ghost className="h-4 w-4 shrink-0" />
+                                          <Users className="h-4 w-4 shrink-0" />
                                         )}
-                                        <span className="text-sm sm:text-base">Anônimo</span>
+                                        <span className="text-sm sm:text-base">Contribuinte Cadastrado</span>
                                       </Button>
+                                    </div>
+
+                                    {!formData.isContributorRegistered && (
+                                      <div className="flex items-center space-x-2 w-full sm:w-auto">
+                                        <Button
+                                          type="button"
+                                          variant={formData.isAnonymous ? "default" : "outline"}
+                                          size="sm"
+                                          disabled={isFieldDisabledDuringEdit()}
+                                          className={cn(
+                                            "h-9 px-3 transition-all flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start",
+                                            formData.isAnonymous
+                                              ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-800 shadow-sm"
+                                              : "text-gray-600 border-gray-300 hover:bg-gray-50"
+                                          )}
+                                          onClick={() => toggleField('isAnonymous')}
+                                        >
+                                          {formData.isAnonymous ? (
+                                            <Check className="h-4 w-4 animate-in zoom-in duration-200 shrink-0" />
+                                          ) : (
+                                            <Ghost className="h-4 w-4 shrink-0" />
+                                          )}
+                                          <span className="text-sm sm:text-base">Anônimo</span>
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {formData.isContributorRegistered ? (
+                                    <div className="mt-2 w-full">
+                                      <Label htmlFor="contributorId">Contribuinte</Label>
+                                      <SearchableSelect
+                                        key={formData.contributorId}
+                                        label="Buscar Contribuinte"
+                                        placeholder="Selecione o contribuinte"
+                                        value={formData.contributorId ?? ''}
+                                        disabled={isFieldDisabledDuringEdit()}
+                                        onChange={(value) => handleSelectChange('contributorId', value)}
+                                        name="contributorId"
+                                        data={contributors.filter(f => (editingLaunch?.status === 'IMPORTED' || f.congregationId == formData.congregationId)).map(c => ({ key: c.id, id: c.id, name: c.name, document: c.cpf, cargo: c.ecclesiasticalPosition, photoUrl: c.photoUrl, photoExists: c.photoExists }))}
+                                        searchKeys={['name', 'document']}
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="mt-2 w-full">
+                                      <Label htmlFor="contributorName">Nome do Contribuinte</Label>
+                                      <Input
+                                        id="contributorName"
+                                        name="contributorName"
+                                        value={formData.contributorName ?? ''}
+                                        onChange={handleInputChange}
+                                        disabled={formData.isAnonymous || isFieldDisabledDuringEdit()}
+                                        className="w-full"
+                                        //required={!formData.isAnonymous}
+                                        style={{ fontSize: '16px' }}
+                                      />
+                                      {editingLaunch?.status === 'IMPORTED' && (
+                                        <p className="text-xs text-gray-500 mt-1">Campo bloqueado para lançamentos importados</p>
+                                      )}
                                     </div>
                                   )}
                                 </div>
+                              )}
 
-                                {formData.isContributorRegistered ? (
-                                  <div className="mt-2 w-full">
-                                    <Label htmlFor="contributorId">Contribuinte</Label>
-                                    <SearchableSelect
-                                      key={formData.contributorId}
-                                      label="Buscar Contribuinte"
-                                      placeholder="Selecione o contribuinte"
-                                      value={formData.contributorId ?? ''}
+
+                              {/* Fornecedor para SAIDA */}
+                              {['SAIDA'].includes(formData.type) && (
+                                <>
+                                  <div className="flex items-center space-x-2">
+                                    <Button
+                                      type="button"
+                                      variant={formData.isSupplierRegistered ? "default" : "outline"}
+                                      size="sm"
                                       disabled={isFieldDisabledDuringEdit()}
-                                      onChange={(value) => handleSelectChange('contributorId', value)}
-                                      name="contributorId"
-                                      data={contributors.filter(f => (editingLaunch?.status === 'IMPORTED' || f.congregationId == formData.congregationId)).map(c => ({ key: c.id, id: c.id, name: c.name, document: c.cpf, cargo: c.ecclesiasticalPosition, photoUrl: c.photoUrl, photoExists: c.photoExists }))}
-                                      searchKeys={['name', 'document']}
-                                    />
+                                      className={cn(
+                                        "h-9 px-3 transition-all flex items-center gap-2",
+                                        formData.isSupplierRegistered
+                                          ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-800 shadow-sm"
+                                          : "text-gray-600 border-gray-300 hover:bg-gray-50"
+                                      )}
+                                      onClick={() => toggleField('isSupplierRegistered')}
+                                    >
+                                      {formData.isSupplierRegistered ? (
+                                        <Check className="h-4 w-4 animate-in zoom-in duration-200" />
+                                      ) : (
+                                        <User className="h-4 w-4" />
+                                      )}
+                                      Fornecedor Cadastrado
+                                    </Button>
                                   </div>
-                                ) : (
-                                  <div className="mt-2 w-full">
-                                    <Label htmlFor="contributorName">Nome do Contribuinte</Label>
-                                    <Input
-                                      id="contributorName"
-                                      name="contributorName"
-                                      value={formData.contributorName ?? ''}
-                                      onChange={handleInputChange}
-                                      disabled={formData.isAnonymous || isFieldDisabledDuringEdit()}
-                                      className="w-full"
-                                      //required={!formData.isAnonymous}
-                                      style={{ fontSize: '16px' }}
-                                    />
-                                    {editingLaunch?.status === 'IMPORTED' && (
-                                      <p className="text-xs text-gray-500 mt-1">Campo bloqueado para lançamentos importados</p>
-                                    )}
-                                  </div>
-                                )}
+                                  {formData.isSupplierRegistered ? (
+                                    <div>
+                                      <Label htmlFor="supplierId">Fornecedor</Label>
+                                      <SearchableSelect
+                                        key={formData.supplierId}
+                                        label="Buscar Fornecedor"
+                                        placeholder="Selecione o fornecedor"
+                                        value={formData.supplierId ?? ''}
+                                        disabled={isFieldDisabledDuringEdit()}
+                                        onChange={(value) => handleSelectChange('supplierId', value)}
+                                        name="supplierId"
+                                        data={suppliers.map(s => ({ key: s.id, id: s.id, name: truncateString(s.razaoSocial, 45), document: s.cpfcnpj }))}
+                                        searchKeys={['name', 'document']}
+                                        itemRenderMode="supplier"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div>
+                                      <Label htmlFor="supplierName">Nome do Fornecedor</Label>
+                                      <Input
+                                        id="supplierName"
+                                        name="supplierName"
+                                        value={formData.supplierName ?? ''}
+                                        onChange={handleInputChange}
+                                        disabled={isFieldDisabledDuringEdit()}
+                                        style={{ fontSize: '16px' }}
+                                      />
+                                    </div>
+                                  )}
+                                </>
+                              )}
+
+                              <div>
+                                <Label htmlFor="description" className="flex items-center gap-2">
+                                  {/* <FileText className="h-4 w-4 md:hidden" /> */}
+                                  <span className="md:inline">Anotações</span>
+                                </Label>
+                                <Textarea
+                                  id="description"
+                                  name="description"
+                                  value={formData.description ?? ''}
+                                  onChange={handleInputChange}
+                                  disabled={isFieldDisabledDuringEdit()}
+                                  style={{ fontSize: '16px' }}
+                                />
                               </div>
-                            )}
 
-
-                            {/* Fornecedor para SAIDA */}
-                            {['SAIDA'].includes(formData.type) && (
-                              <>
-                                <div className="flex items-center space-x-2">
-                                  <Button
-                                    type="button"
-                                    variant={formData.isSupplierRegistered ? "default" : "outline"}
-                                    size="sm"
-                                    disabled={isFieldDisabledDuringEdit()}
-                                    className={cn(
-                                      "h-9 px-3 transition-all flex items-center gap-2",
-                                      formData.isSupplierRegistered
-                                        ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-800 shadow-sm"
-                                        : "text-gray-600 border-gray-300 hover:bg-gray-50"
-                                    )}
-                                    onClick={() => toggleField('isSupplierRegistered')}
-                                  >
-                                    {formData.isSupplierRegistered ? (
-                                      <Check className="h-4 w-4 animate-in zoom-in duration-200" />
-                                    ) : (
-                                      <User className="h-4 w-4" />
-                                    )}
-                                    Fornecedor Cadastrado
-                                  </Button>
-                                </div>
-                                {formData.isSupplierRegistered ? (
-                                  <div>
-                                    <Label htmlFor="supplierId">Fornecedor</Label>
-                                    <SearchableSelect
-                                      key={formData.supplierId}
-                                      label="Buscar Fornecedor"
-                                      placeholder="Selecione o fornecedor"
-                                      value={formData.supplierId ?? ''}
-                                      disabled={isFieldDisabledDuringEdit()}
-                                      onChange={(value) => handleSelectChange('supplierId', value)}
-                                      name="supplierId"
-                                      data={suppliers.map(s => ({ key: s.id, id: s.id, name: truncateString(s.razaoSocial, 45), document: s.cpfcnpj }))}
-                                      searchKeys={['name', 'document']}
-                                      itemRenderMode="supplier"
-                                    />
-                                  </div>
-                                ) : (
-                                  <div>
-                                    <Label htmlFor="supplierName">Nome do Fornecedor</Label>
-                                    <Input
-                                      id="supplierName"
-                                      name="supplierName"
-                                      value={formData.supplierName ?? ''}
-                                      onChange={handleInputChange}
-                                      disabled={isFieldDisabledDuringEdit()}
-                                      style={{ fontSize: '16px' }}
-                                    />
-                                  </div>
-                                )}
-                              </>
-                            )}
-
-                            <div>
-                              <Label htmlFor="description" className="flex items-center gap-2">
-                                {/* <FileText className="h-4 w-4 md:hidden" /> */}
-                                <span className="md:inline">Anotações</span>
-                              </Label>
-                              <Textarea
-                                id="description"
-                                name="description"
-                                value={formData.description ?? ''}
-                                onChange={handleInputChange}
-                                disabled={isFieldDisabledDuringEdit()}
-                                style={{ fontSize: '16px' }}
+                            </div>
+                          </div>
+                        </TabsContent>
+                        {/* <TabsContent value="comprovantes" className="max-w-[calc(105vw-3rem)] p-2 sm:p-0 overflow-x-hidden">
+                          <div className="space-y-4 py-4">
+                            <div className="flex justify-center">
+                              <ImageUpload
+                                value={(formData as any).attachmentUrl}
+                                onChange={(url) => setFormData(prev => ({ ...prev, attachmentUrl: url }))}
+                                onRemove={() => setFormData(prev => ({ ...prev, attachmentUrl: '' }))}
+                                folder="document"
                               />
                             </div>
-
-                            <DialogFooter>
-                              <Button type="submit" disabled={isFieldDisabledDuringEdit() || salvando}>
-                                {editingLaunch ? 'Atualizar' : 'Salvar'}
-                              </Button>
-                            </DialogFooter>
                           </div>
-                        </form>
-                      </TabsContent>
-                      <TabsContent value="logs" className="max-w-[350px] md:max-w-[600px] max-h-[50vh] h-[50vh] min-h-0">
-                        <div className="space-y-4 py-4 p-2">
-                          <div className="rounded-md border">
-                            <div>
-                              <Table className="min-w-max">
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead>Ação</TableHead>
-                                    <TableHead>Usuário</TableHead>
-                                    <TableHead>Data/Hora</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {/* Log de Inclusão */}
-                                  <TableRow>
-                                    <TableCell className="font-medium">Inclusão</TableCell>
-                                    <TableCell>{editingLaunch?.createdBy || 'N/A'}</TableCell>
-                                    <TableCell>{editingLaunch?.createdAt ? format(new Date(editingLaunch.createdAt), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
-                                  </TableRow>
-                                  {/* Log de Cancelamento */}
-                                  {editingLaunch?.status === 'CANCELED' && (
-                                    <TableRow className="text-red-600">
-                                      <TableCell className="font-medium">Cancelamento</TableCell>
-                                      <TableCell>{editingLaunch?.cancelledBy || '-'}</TableCell>
-                                      <TableCell>{editingLaunch?.cancelledAt ? format(new Date(editingLaunch.cancelledAt), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
+                        </TabsContent> */}
+                        <TabsContent value="logs" className="max-w-[350px] md:max-w-[600px] max-h-[50vh] h-[50vh] min-h-0">
+                          <div className="space-y-4 py-4 p-2">
+                            <div className="rounded-md border">
+                              <div>
+                                <Table className="min-w-max">
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Ação</TableHead>
+                                      <TableHead>Usuário</TableHead>
+                                      <TableHead>Data/Hora</TableHead>
                                     </TableRow>
-                                  )}
-                                  {/* Logs de Aprovação Específicos */}
-                                  <TableRow>
-                                    <TableCell className="font-medium">Tesoureiro</TableCell>
-                                    <TableCell>{editingLaunch?.approvedByTreasury || '-'}</TableCell>
-                                    <TableCell>{editingLaunch?.approvedAtTreasury ? format(new Date(editingLaunch.approvedAtTreasury), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
-                                  </TableRow>
-                                  <TableRow>
-                                    <TableCell className="font-medium">Contador</TableCell>
-                                    <TableCell>{editingLaunch?.approvedByAccountant || '-'}</TableCell>
-                                    <TableCell>{editingLaunch?.approvedAtAccountant ? format(new Date(editingLaunch.approvedAtAccountant), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
-                                  </TableRow>
-                                  <TableRow>
-                                    <TableCell className="font-medium">Dirigente</TableCell>
-                                    <TableCell>{editingLaunch?.approvedByDirector || '-'}</TableCell>
-                                    <TableCell>{editingLaunch?.approvedAtDirector ? format(new Date(editingLaunch.approvedAtDirector), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
-                                  </TableRow>
-                                  <TableRow>
-                                    <TableCell className="font-medium">Método de Aprovação</TableCell>
-                                    <TableCell colSpan={2}>
-                                      {editingLaunch?.approvedVia === 'GRID' ? 'Via Grid de Lançamentos' :
-                                        editingLaunch?.approvedVia === 'SUMMARY' ? 'Via Resumo' : '-'}
-                                    </TableCell>
-                                  </TableRow>
-                                </TableBody>
-                              </Table>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {/* Log de Inclusão */}
+                                    <TableRow>
+                                      <TableCell className="font-medium">Inclusão</TableCell>
+                                      <TableCell>{editingLaunch?.createdBy || 'N/A'}</TableCell>
+                                      <TableCell>{editingLaunch?.createdAt ? format(new Date(editingLaunch.createdAt), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
+                                    </TableRow>
+                                    {/* Log de Cancelamento */}
+                                    {editingLaunch?.status === 'CANCELED' && (
+                                      <TableRow className="text-red-600">
+                                        <TableCell className="font-medium">Cancelamento</TableCell>
+                                        <TableCell>{editingLaunch?.cancelledBy || '-'}</TableCell>
+                                        <TableCell>{editingLaunch?.cancelledAt ? format(new Date(editingLaunch.cancelledAt), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
+                                      </TableRow>
+                                    )}
+                                    {/* Logs de Aprovação Específicos */}
+                                    <TableRow>
+                                      <TableCell className="font-medium">Tesoureiro</TableCell>
+                                      <TableCell>{editingLaunch?.approvedByTreasury || '-'}</TableCell>
+                                      <TableCell>{editingLaunch?.approvedAtTreasury ? format(new Date(editingLaunch.approvedAtTreasury), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
+                                    </TableRow>
+                                    <TableRow>
+                                      <TableCell className="font-medium">Contador</TableCell>
+                                      <TableCell>{editingLaunch?.approvedByAccountant || '-'}</TableCell>
+                                      <TableCell>{editingLaunch?.approvedAtAccountant ? format(new Date(editingLaunch.approvedAtAccountant), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
+                                    </TableRow>
+                                    <TableRow>
+                                      <TableCell className="font-medium">Dirigente</TableCell>
+                                      <TableCell>{editingLaunch?.approvedByDirector || '-'}</TableCell>
+                                      <TableCell>{editingLaunch?.approvedAtDirector ? format(new Date(editingLaunch.approvedAtDirector), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
+                                    </TableRow>
+                                    <TableRow>
+                                      <TableCell className="font-medium">Método de Aprovação</TableCell>
+                                      <TableCell colSpan={2}>
+                                        {editingLaunch?.approvedVia === 'GRID' ? 'Via Grid de Lançamentos' :
+                                          editingLaunch?.approvedVia === 'SUMMARY' ? 'Via Resumo' : '-'}
+                                      </TableCell>
+                                    </TableRow>
+                                  </TableBody>
+                                </Table>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </TabsContent>
-                    </Tabs>
+                        </TabsContent>
+                        <TabsContent value="comprovantes" className="p-4">
+                          <div className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
+                            <ImageUpload
+                              value={(formData as any).attachmentUrl}
+                              onChange={(url) => setFormData(prev => ({ ...prev, attachmentUrl: url }))}
+                              onRemove={() => setFormData(prev => ({ ...prev, attachmentUrl: '' }))}
+                              folder="document"
+                            />
+                            <p className="text-sm text-gray-500 mt-2">
+                              Anexe comprovantes, recibos ou fotos do lançamento.
+                            </p>
+                          </div>
+                        </TabsContent>
+                      </Tabs>
+
+                      <DialogFooter className="mt-4">
+                        <Button type="submit" disabled={isFieldDisabledDuringEdit() || salvando}>
+                          {editingLaunch ? 'Atualizar' : 'Salvar'}
+                        </Button>
+                      </DialogFooter>
+                    </form>
                   </DialogContent>
                 </Dialog>
 
@@ -1604,6 +1642,7 @@ useEffect(() => {
 
             {/* Filtros */}
             <div className="mb-6 flex flex-col sm:flex-row gap-4">
+              {/* Search and Dates - Full width on mobile, flex on desktop */}
               <div className="relative flex-1 flex flex-col sm:flex-row sm:items-center gap-2">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -1615,105 +1654,110 @@ useEffect(() => {
                   />
                 </div>
 
-                {/* Data Inicial */}
-                <div className="w-full sm:w-44">
-                  <Label className="sr-only">Data Inicial</Label>
-                  <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start text-left font-normal">
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {startDate ? format(startDate, 'dd/MM/yyyy') : 'Data Inicial'}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={startDate}
-                        onSelect={(d) => {
-                          setStartDate(d);
-                          setStartDateOpen(false);
-                          setCurrentPage(1);
-                        }}
-                        locale={ptBR}
-                      />
-                    </PopoverContent>
-                  </Popover>
+                {/* Date Filters - 2 columns on mobile */}
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-2">
+                  {/* Data Inicial */}
+                  <div className="w-full sm:w-44">
+                    <Label className="sr-only">Data Inicial</Label>
+                    <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start text-left font-normal">
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {startDate ? format(startDate, 'dd/MM/yyyy') : 'Data Inicial'}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={startDate}
+                          onSelect={(d) => {
+                            setStartDate(d);
+                            setStartDateOpen(false);
+                            setCurrentPage(1);
+                          }}
+                          locale={ptBR}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {/* Data Final */}
+                  <div className="w-full sm:w-44">
+                    <Label className="sr-only">Data Final</Label>
+                    <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start text-left font-normal">
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {endDate ? format(endDate, 'dd/MM/yyyy') : 'Data Final'}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={endDate}
+                          onSelect={(d) => {
+                            setEndDate(d);
+                            setEndDateOpen(false);
+                            setCurrentPage(1);
+                          }}
+                          locale={ptBR}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+              </div>
+
+              {/* Filters Grid - 2 columns on mobile, single row on desktop */}
+              <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2 sm:gap-4">
+                <div className="w-full sm:w-auto">
+                  <Select value={importFilter} onValueChange={(v: any) => setImportFilter(v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">Todos os Lançamentos</SelectItem>
+                      <SelectItem value="IMPORTED">Apenas Importados</SelectItem>
+                      <SelectItem value="MANUAL">Apenas Digitados</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                {/* Data Final */}
-                <div className="w-full sm:w-44">
-                  <Label className="sr-only">Data Final</Label>
-                  <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start text-left font-normal">
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {endDate ? format(endDate, 'dd/MM/yyyy') : 'Data Final'}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={endDate}
-                        onSelect={(d) => {
-                          setEndDate(d);
-                          setEndDateOpen(false);
-                          setCurrentPage(1);
-                        }}
-                        locale={ptBR}
-                      />
-                    </PopoverContent>
-                  </Popover>
+                <div className="w-full sm:w-64">
+                  <Select value={selectedType} onValueChange={setSelectedType}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filtrar por tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os tipos</SelectItem>
+                      {canLaunchTithe && <SelectItem value="DIZIMO">Dízimo</SelectItem>}
+                      {canLaunchServiceOffer && <SelectItem value="OFERTA_CULTO">Oferta do Culto</SelectItem>}
+                      {canLaunchEbd && <SelectItem value="EBD">EBD</SelectItem>}
+                      {canLaunchMission && <SelectItem value="MISSAO">Missão</SelectItem>}
+                      {canLaunchCampaign && <SelectItem value="CAMPANHA">Campanha</SelectItem>}
+                      {canLaunchVote && <SelectItem value="VOTO">Voto</SelectItem>}
+                      {canLaunchCircle && <SelectItem value="CIRCULO">Círculo de Oração</SelectItem>}
+                      {canLaunchCarneReviver && <SelectItem value="CARNE_REVIVER">Carnê Reviver</SelectItem>}
+                      {canLaunchExpense && <SelectItem value="SAIDA">Saída</SelectItem>}
+                    </SelectContent>
+                  </Select>
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                {/* <Label>Origem do Lançamento</Label> */}
-                <Select value={importFilter} onValueChange={(v: any) => setImportFilter(v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">Todos os Lançamentos</SelectItem>
-                    <SelectItem value="IMPORTED">Apenas Importados</SelectItem>
-                    <SelectItem value="MANUAL">Apenas Digitados</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="w-full sm:w-64">
-                <Select value={selectedType} onValueChange={setSelectedType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filtrar por tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os tipos</SelectItem>
-                    {canLaunchTithe && <SelectItem value="DIZIMO">Dízimo</SelectItem>}
-                    {canLaunchServiceOffer && <SelectItem value="OFERTA_CULTO">Oferta do Culto</SelectItem>}
-                    {canLaunchEbd && <SelectItem value="EBD">EBD</SelectItem>}
-                    {canLaunchMission && <SelectItem value="MISSAO">Missão</SelectItem>}
-                    {canLaunchCampaign && <SelectItem value="CAMPANHA">Campanha</SelectItem>}
-                    {canLaunchVote && <SelectItem value="VOTO">Voto</SelectItem>}
-                    {canLaunchCircle && <SelectItem value="CIRCULO">Círculo de Oração</SelectItem>}
-                    {canLaunchCarneReviver && <SelectItem value="CARNE_REVIVER">Carnê Reviver</SelectItem>}
-                    {canLaunchExpense && <SelectItem value="SAIDA">Saída</SelectItem>}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="w-full sm:w-64">
-                <Select value={selectedCongregation} onValueChange={setSelectedCongregation}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filtrar por congregação" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas as congregações</SelectItem>
-                    {congregations.map((congregation) => (
-                      <SelectItem key={congregation.id} value={congregation.id}>
-                        {congregation.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="w-full sm:w-64 col-span-2 sm:col-span-1">
+                  <Select value={selectedCongregation} onValueChange={setSelectedCongregation}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filtrar por congregação" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas as congregações</SelectItem>
+                      {congregations.map((congregation) => (
+                        <SelectItem key={congregation.id} value={congregation.id}>
+                          {congregation.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
             </div>
@@ -1744,15 +1788,15 @@ useEffect(() => {
                           <TableRow key={launch.id}>
                             <TableCell>
                               <div className={`w-full py-1 px-0 rounded text-center text-white font-medium ${launch.type === 'DIZIMO' ? 'bg-blue-500' :
-                                  launch.type === 'OFERTA_CULTO' ? 'bg-green-500' :
-                                    launch.type === 'VOTO' ? 'bg-green-500' :
-                                      launch.type === 'EBD' ? 'bg-green-500' :
-                                        launch.type === 'CAMPANHA' ? 'bg-green-500' :
-                                          launch.type === 'CARNE_REVIVER' ? 'bg-green-500' :
-                                            launch.type === 'SAIDA' ? 'bg-red-500' :
-                                              launch.type === 'MISSAO' ? 'bg-green-500' :
-                                                launch.type === 'OFERTA_CULTO' ? 'bg-green-500' :
-                                                  launch.type === 'CIRCULO' ? 'bg-green-500' : ''
+                                launch.type === 'OFERTA_CULTO' ? 'bg-green-500' :
+                                  launch.type === 'VOTO' ? 'bg-green-500' :
+                                    launch.type === 'EBD' ? 'bg-green-500' :
+                                      launch.type === 'CAMPANHA' ? 'bg-green-500' :
+                                        launch.type === 'CARNE_REVIVER' ? 'bg-green-500' :
+                                          launch.type === 'SAIDA' ? 'bg-red-500' :
+                                            launch.type === 'MISSAO' ? 'bg-green-500' :
+                                              launch.type === 'OFERTA_CULTO' ? 'bg-green-500' :
+                                                launch.type === 'CIRCULO' ? 'bg-green-500' : ''
                                 }`}>
                                 {launch.type === 'VOTO' ? 'Voto' :
                                   launch.type === 'OFERTA_CULTO' ? 'Oferta do Culto' :
@@ -1770,27 +1814,27 @@ useEffect(() => {
                             <TableCell>{formatCurrency(launch.value)}</TableCell>
                             <TableCell>
                               {(launch.contributor?.name && truncateString(launch.contributor.name, 30)) ||
-                               (launch.supplier?.razaoSocial && truncateString(launch.supplier.razaoSocial, 30)) ||
-                               (launch.contributorName && truncateString(launch.contributorName, 30)) ||
-                               (launch.supplierName && truncateString(launch.supplierName, 30)) ||
-                               '-'}
+                                (launch.supplier?.razaoSocial && truncateString(launch.supplier.razaoSocial, 30)) ||
+                                (launch.contributorName && truncateString(launch.contributorName, 30)) ||
+                                (launch.supplierName && truncateString(launch.supplierName, 30)) ||
+                                '-'}
                             </TableCell>
                             <TableCell>{launch.talonNumber}</TableCell>
                             <TableCell>
                               <div className="flex items-center space-x-2">
                                 <Badge className={`w-32 text-center py-1.5 px-1 rounded 
                                 ${launch.status === 'EXPORTED' ? 'text-black' : 'text-white'} 
-                                ${launch.status === 'IMPORTED' ? 'bg-orange-500 hover:bg-orange-600' : ''} font-medium`} 
-                                
-                                variant={
-                                  launch.status === 'NORMAL' ? 'default' :
-                                    launch.status === 'APPROVED' ? 'default' :
-                                      launch.status === 'EXPORTED' ? 'secondary' : 
-                                        launch.status === 'IMPORTED' ? 'secondary' : 'destructive'
-                                }>
+                                ${launch.status === 'IMPORTED' ? 'bg-orange-500 hover:bg-orange-600' : ''} font-medium`}
+
+                                  variant={
+                                    launch.status === 'NORMAL' ? 'default' :
+                                      launch.status === 'APPROVED' ? 'default' :
+                                        launch.status === 'EXPORTED' ? 'secondary' :
+                                          launch.status === 'IMPORTED' ? 'secondary' : 'destructive'
+                                  }>
                                   {launch.status === 'NORMAL' ? 'Normal' :
                                     launch.status === 'APPROVED' ? 'Aprovado' :
-                                      launch.status === 'EXPORTED' ? 'Exportado' : 
+                                      launch.status === 'EXPORTED' ? 'Exportado' :
                                         launch.status === 'IMPORTED' ? 'Importado' : 'Cancelado'}
                                 </Badge>
                                 {/* {launch.approvedBy && (
@@ -1808,7 +1852,7 @@ useEffect(() => {
                             </TableCell>
                             <TableCell>
                               <div className="flex space-x-2">
-                                
+
                                 {canTechnicalIntervention && (
                                   <Tooltip>
                                     <TooltipTrigger asChild>
@@ -1828,7 +1872,7 @@ useEffect(() => {
                                     <TooltipContent><p>Excluir</p></TooltipContent>
                                   </Tooltip>
                                 )}
-                                
+
                                 {launch.status == 'NORMAL' && launch.summaryId == null && (canLaunchVote || canLaunchEbd || canLaunchCampaign || canLaunchExpense || canLaunchTithe || canLaunchMission || canLaunchCircle || canLaunchServiceOffer) ? (
                                   <Tooltip>
                                     <TooltipTrigger asChild>
@@ -1837,7 +1881,7 @@ useEffect(() => {
                                     <TooltipContent><p>Cancelar</p></TooltipContent>
                                   </Tooltip>
                                 ) : null}
- 
+
                                 {launch.status === 'NORMAL' && launch.summaryId == null && (
                                   <>
                                     {(launch.type === 'VOTO' && canApproveVote) ||

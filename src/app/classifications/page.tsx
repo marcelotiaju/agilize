@@ -69,16 +69,16 @@ export default function Classifications() {
   const filteredClassifications = useMemo(() => {
     if (!searchTerm) return classifications
     const normalizedSearchTerm = removeAccents(searchTerm.toLowerCase())
-    
+
     return classifications.filter(classification => {
       const normalizedCode = removeAccents(classification.code.toLowerCase())
       const normalizedShortCode = removeAccents(classification.shortCode.toLowerCase())
-      const normalizedDescription = classification.description 
-        ? removeAccents(classification.description.toLowerCase()) 
+      const normalizedDescription = classification.description
+        ? removeAccents(classification.description.toLowerCase())
         : ''
       return normalizedCode.includes(normalizedSearchTerm) ||
-             normalizedShortCode.includes(normalizedSearchTerm) ||
-             (classification.description && normalizedDescription.includes(normalizedSearchTerm))
+        normalizedShortCode.includes(normalizedSearchTerm) ||
+        (classification.description && normalizedDescription.includes(normalizedSearchTerm))
     })
   }, [classifications, searchTerm])
 
@@ -90,11 +90,11 @@ export default function Classifications() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     try {
       const url = '/api/classifications'
       const method = editingClassification ? 'PUT' : 'POST'
-      
+
       const response = await fetch(url, {
         method,
         headers: {
@@ -158,7 +158,7 @@ export default function Classifications() {
     })
   }
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file && file.type === 'text/csv') {
       setCsvFile(file)
@@ -168,7 +168,7 @@ export default function Classifications() {
     }
   }
 
-    const handleImportCSV = async () => {
+  const handleImportCSV = async () => {
     if (!csvFile) {
       alert('Por favor, selecione um arquivo CSV')
       return
@@ -209,234 +209,234 @@ export default function Classifications() {
 
 
   return (
-    <PermissionGuard 
+    <PermissionGuard
       requiredPermissions={{
         canCreate: true,
         canEdit: true,
         canExclude: true
       }}
     >
-    <div className="min-h-screen bg-gray-50">
-      <Sidebar />
-      
-      <div className="lg:pl-64">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Classificações</h1>
-              {/* <p className="text-gray-600">Gerencie as classificações do sistema</p> */}
-            </div>
-            
-            <div className="flex space-x-2">
-              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button
+      <div className="min-h-screen bg-gray-50">
+        <Sidebar />
+
+        <div className="lg:pl-64">
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Classificações</h1>
+                {/* <p className="text-gray-600">Gerencie as classificações do sistema</p> */}
+              </div>
+
+              <div className="flex space-x-2">
+                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
                       onClick={resetForm}
                       disabled={!canCreate}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Nova Classificação
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
-                  <DialogHeader>
-                    <DialogTitle>
-                      {editingClassification ? 'Editar Classificação' : 'Nova Classificação'}
-                    </DialogTitle>
-                    <DialogDescription>
-                      Preencha os dados da classificação
-                    </DialogDescription>
-                  </DialogHeader>
-                  <form onSubmit={handleSubmit}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Nova Classificação
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle>
+                        {editingClassification ? 'Editar Classificação' : 'Nova Classificação'}
+                      </DialogTitle>
+                      <DialogDescription>
+                        Preencha os dados da classificação
+                      </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleSubmit}>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="code" className="text-right">
+                            Código
+                          </Label>
+                          <Input
+                            id="code"
+                            name="code"
+                            value={formData.code}
+                            onChange={handleInputChange}
+                            className="col-span-3"
+                            //placeholder="ex: 4.3.14"
+                            required
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="shortCode" className="text-right">
+                            Reduzido
+                          </Label>
+                          <Input
+                            id="shortCode"
+                            name="shortCode"
+                            value={formData.shortCode}
+                            onChange={handleInputChange}
+                            className="col-span-3"
+                            //placeholder="ex: 4314"
+                            required
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="description" className="text-right">
+                            Descrição
+                          </Label>
+                          <Input
+                            id="description"
+                            name="description"
+                            value={formData.description}
+                            onChange={handleInputChange}
+                            className="col-span-3"
+                            //placeholder="ex: LANCHES E REFEIÇÕES"
+                            required
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="isActive" className="text-right">
+                            Ativo
+                          </Label>
+                          <Input
+                            type="checkbox"
+                            id="isActive"
+                            name="isActive"
+                            checked={(formData as any).isActive}
+                            onChange={handleInputChange}
+                            className="h-4 w-4"
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button type="submit">
+                          {editingClassification ? 'Atualizar' : 'Salvar'}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+
+                <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" onClick={resetImportForm}>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Importar CSV
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[600px]">
+                    <DialogHeader>
+                      <DialogTitle>Importar Classificações via CSV</DialogTitle>
+                      <DialogDescription>
+                        Faça upload de um arquivo CSV com as Classificações. O arquivo deve ter as colunas: Codigo, Reduzido, Descrição.
+                      </DialogDescription>
+                    </DialogHeader>
                     <div className="grid gap-4 py-4">
                       <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="code" className="text-right">
-                          Código
+                        <Label htmlFor="csvFile" className="text-right">
+                          Arquivo CSV
                         </Label>
                         <Input
-                          id="code"
-                          name="code"
-                          value={formData.code}
-                          onChange={handleInputChange}
+                          id="csvFile"
+                          type="file"
+                          accept=".csv"
+                          onChange={handleFileChange}
                           className="col-span-3"
-                          //placeholder="ex: 4.3.14"
-                          required
-                        />
-                      </div>
-                      
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="shortCode" className="text-right">
-                          Reduzido
-                        </Label>
-                        <Input
-                          id="shortCode"
-                          name="shortCode"
-                          value={formData.shortCode}
-                          onChange={handleInputChange}
-                          className="col-span-3"
-                          //placeholder="ex: 4314"
-                          required
-                        />
-                      </div>
-                      
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="description" className="text-right">
-                          Descrição
-                        </Label>
-                        <Input
-                          id="description"
-                          name="description"
-                          value={formData.description}
-                          onChange={handleInputChange}
-                          className="col-span-3"
-                          //placeholder="ex: LANCHES E REFEIÇÕES"
                           required
                         />
                       </div>
 
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="isActive" className="text-right">
-                          Ativo
-                        </Label>
-                        <Input
-                          type="checkbox"
-                          id="isActive"
-                          name="isActive"
-                          checked={(formData as any).isActive}
-                          onChange={handleInputChange}
-                          className="h-4 w-4"
-                        />
+                      <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
+                        <p className="font-medium mb-2">Formato esperado do CSV:</p>
+                        <p className="text-xs font-mono">Codigo, Reduzido, Descrição</p>
+                        <p className="text-xs font-mono">4.3.14,4314,LANCHES E REFEIÇÕES</p>
+                        {/* <p className="text-xs font-mono">2,MARIA SANTOS,F,98765432100</p> */}
+                        <div className="mt-3 pt-3 border-t border-gray-200">
+                          <a
+                            href="/exemplo-classificacao.csv"
+                            download
+                            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                          >
+                            📥 Baixar arquivo de exemplo
+                          </a>
+                        </div>
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button type="submit">
-                        {editingClassification ? 'Atualizar' : 'Salvar'}
+                      <Button
+                        type="button"
+                        onClick={handleImportCSV}
+                        disabled={!csvFile || importing}
+                      >
+                        {importing ? 'Importando...' : 'Importar'}
                       </Button>
                     </DialogFooter>
-                  </form>
-                </DialogContent>
-              </Dialog>
-
-              <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" onClick={resetImportForm}>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Importar CSV
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[600px]">
-                  <DialogHeader>
-                    <DialogTitle>Importar Classificações via CSV</DialogTitle>
-                    <DialogDescription>
-                      Faça upload de um arquivo CSV com as Classificações. O arquivo deve ter as colunas: Codigo, Reduzido, Descrição.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="csvFile" className="text-right">
-                        Arquivo CSV
-                      </Label>
-                      <Input
-                        id="csvFile"
-                        type="file"
-                        accept=".csv"
-                        onChange={handleFileChange}
-                        className="col-span-3"
-                        required
-                      />
-                    </div>
-                    
-                    <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
-                      <p className="font-medium mb-2">Formato esperado do CSV:</p>
-                      <p className="text-xs font-mono">Codigo, Reduzido, Descrição</p>
-                      <p className="text-xs font-mono">4.3.14,4314,LANCHES E REFEIÇÕES</p>
-                      {/* <p className="text-xs font-mono">2,MARIA SANTOS,F,98765432100</p> */}
-                      <div className="mt-3 pt-3 border-t border-gray-200">
-                        <a 
-                          href="/exemplo-classificacao.csv" 
-                          download
-                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                        >
-                          📥 Baixar arquivo de exemplo
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button 
-                      type="button" 
-                      onClick={handleImportCSV}
-                      disabled={!csvFile || importing}
-                    >
-                      {importing ? 'Importando...' : 'Importar'}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </div>
-          </div>
 
-          {/* Campo de pesquisa */}
-          <div className="mb-6">
-            <SearchInput
-              placeholder="Pesquisar classificações por codigo, reduzido e descrição ..."
-              value={searchTerm}
-              onChange={setSearchTerm}
-              className="max-w-md"
-            />
-          </div>
+            {/* Campo de pesquisa */}
+            <div className="mb-6">
+              <SearchInput
+                placeholder="Pesquisar classificações por codigo, reduzido e descrição ..."
+                value={searchTerm}
+                onChange={setSearchTerm}
+                className="max-w-md"
+              />
+            </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Classificações Cadastradas</CardTitle>
-              {/* <CardDescription>Lista de classificações do sistema</CardDescription> */}
-              <CardDescription>
-                {filteredClassifications.length} classificações encontradas
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Código</TableHead>
-                    <TableHead>Reduzido</TableHead>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredClassifications.map((classification: Classification) => (
-                    <TableRow key={classification.id}>
-                      <TableCell className="font-medium">{classification.code}</TableCell>
-                      <TableCell>{classification.shortCode}</TableCell>
-                      <TableCell>{classification.description}</TableCell>
-                      <TableCell>
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(classification)}
-                            disabled={!canEdit}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDelete(classification.id)}
-                            disabled={!canExclude}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+            <Card>
+              <CardHeader>
+                <CardTitle>Classificações Cadastradas</CardTitle>
+                {/* <CardDescription>Lista de classificações do sistema</CardDescription> */}
+                <CardDescription>
+                  {filteredClassifications.length} classificações encontradas
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Código</TableHead>
+                      <TableHead>Reduzido</TableHead>
+                      <TableHead>Descrição</TableHead>
+                      <TableHead>Ações</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredClassifications.map((classification: Classification) => (
+                      <TableRow key={classification.id}>
+                        <TableCell className="font-medium">{classification.code}</TableCell>
+                        <TableCell>{classification.shortCode}</TableCell>
+                        <TableCell>{classification.description}</TableCell>
+                        <TableCell>
+                          <div className="flex space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDelete(classification.id)}
+                              disabled={!canExclude}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEdit(classification)}
+                              disabled={!canEdit}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </div>
       </div>
     </PermissionGuard>
   )

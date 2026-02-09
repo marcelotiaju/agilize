@@ -23,6 +23,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Nenhum arquivo enviado" }, { status: 400 })
     }
 
+    // Validar tamanho do arquivo (2MB = 2,097,152 bytes)
+    const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json({
+        error: "O arquivo excede o tamanho máximo permitido de 2MB"
+      }, { status: 400 })
+    }
+
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
 

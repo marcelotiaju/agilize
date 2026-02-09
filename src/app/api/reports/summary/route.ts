@@ -20,15 +20,15 @@ const formatCurrency = (val: number) => {
 }
 
 const typeLabels: Record<string, string> = {
-    'DIZIMO': 'Dízimo',
-    'OFERTA_CULTO': 'Oferta do Culto',
-    'VOTO': 'Voto',
-    'EBD': 'EBD',
-    'CAMPANHA': 'Campanha',
-    'MISSAO': 'Missão',
-    'CIRCULO': 'Círculo de Oração',
-    'CARNE_REVIVER': 'Carnê Reviver',
-    'SAIDA': 'Saída'
+  'DIZIMO': 'Dízimo',
+  'OFERTA_CULTO': 'Oferta do Culto',
+  'VOTO': 'Voto',
+  'EBD': 'EBD',
+  'CAMPANHA': 'Campanha',
+  'MISSAO': 'Missão',
+  'CIRCULO': 'Círculo de Oração',
+  'CARNE_REVIVER': 'Carnê Reviver',
+  'SAIDA': 'Saída'
 }
 
 export async function GET(request: NextRequest) {
@@ -47,9 +47,24 @@ export async function GET(request: NextRequest) {
     // Buscar resumo com lançamentos
     const summary = await prisma.congregationSummary.findUnique({
       where: { id: summaryId },
-      include: {
+      select: {
+        id: true,
+        startDate: true,
+        endDate: true,
+        congregation: {
+          select: {
+            name: true
+          }
+        },
         Launch: {
-          include: {
+          select: {
+            date: true,
+            type: true,
+            value: true,
+            contributorId: true,
+            supplierId: true,
+            contributorName: true,
+            supplierName: true,
             contributor: {
               select: {
                 name: true
@@ -65,11 +80,6 @@ export async function GET(request: NextRequest) {
             { type: 'asc' },
             { date: 'asc' }
           ]
-        },
-        congregation: {
-          select: {
-            name: true
-          }
         }
       }
     })
@@ -141,38 +151,25 @@ export async function GET(request: NextRequest) {
 
     drawTableHeader()
 
-    // Pré-processar lançamentos para otimizar formatação
-    const processedLaunches = summary.Launch.map((launch: any) => {
+    // Calcular totais e listar lançamentos em um único loop
+    const totaisPorTipo: Record<string, number> = {}
+    let totalGeral = 0
+
+    summary.Launch.forEach((launch: any, index: number) => {
+      // Processar dados do lançamento
       const launchDateZoned = utcToZonedTime(launch.date, timezone)
       const launchDate = format(launchDateZoned, 'dd/MM/yyyy', { locale: ptBR })
-      const contributorName = launch.contributorId ? launch.contributor?.name || launch.contributorName  : '---'
+      const contributorName = launch.contributorId ? launch.contributor?.name || launch.contributorName : '---'
       const supplierName = launch.supplierId ? launch.supplier?.razaoSocial || launch.supplierName || '' : ''
       const typeLabel = typeLabels[launch.type] || launch.type
       const value = Number(launch.value)
       const valueFormatted = formatCurrency(value)
 
-      return { launchDate, contributorName, supplierName, typeLabel, value, valueFormatted, type: launch.type }
-    })
+      // Atualizar totais
+      const effectiveValue = launch.type === 'SAIDA' ? value * -1 : value
+      totaisPorTipo[launch.type] = (totaisPorTipo[launch.type] || 0) + effectiveValue
+      totalGeral += effectiveValue
 
-    // Calcular totais por tipo
-    const totaisPorTipo: Record<string, number> = {}
-    let totalGeral = 0
-
-    processedLaunches.forEach((processed) => {
-      totaisPorTipo[processed.type] = (totaisPorTipo[processed.type] || 0) + (processed.type === 'SAIDA' ? processed.value*-1 : processed.value)
-      totalGeral += processed.type === 'SAIDA' ? processed.value*-1 : processed.value
-    })
-
-    // Pré-formatar totais por tipo
-    const totaisFormatados = Object.entries(totaisPorTipo).map(([tipo, valor]) => ({
-      tipo,
-      valor,
-      valorFormatted: formatCurrency(valor),
-      typeLabel: typeLabels[tipo] || tipo
-    }))
-
-    // Listar lançamentos
-    processedLaunches.forEach((processed, index: number) => {
       // Verificar quebra de página
       if (y > pageHeight - 40) {
         doc.addPage()
@@ -180,7 +177,7 @@ export async function GET(request: NextRequest) {
         drawTableHeader()
       }
 
-      // Zebra
+      // Zebra stripes
       if (index % 2 === 0) {
         doc.setFillColor(248, 248, 248)
         doc.rect(margin, y - 1, pageWidth - margin * 2, 7, 'F')
@@ -190,10 +187,15 @@ export async function GET(request: NextRequest) {
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(8)
 
-      doc.text(processed.launchDate, cols.data + 2, y + 4)
-      {processed.type === 'SAIDA' ? doc.text(processed.supplierName.substring(0, 45), cols.contribuinte , y + 4) : doc.text(processed.contributorName.substring(0, 45), cols.contribuinte, y + 4)}
-      doc.text(processed.typeLabel, cols.tipo, y + 4)
-      doc.text(processed.valueFormatted, cols.valor, y + 4, { align: 'right' })
+      doc.text(launchDate, cols.data + 2, y + 4)
+
+      // Nome do contribuinte ou fornecedor
+      const nameToShow = launch.type === 'SAIDA' ? supplierName : contributorName
+      // Truncar nome se muito longo (aprox 45 caracteres)
+      doc.text(nameToShow.length > 45 ? nameToShow.substring(0, 45) + '...' : nameToShow, cols.contribuinte, y + 4)
+
+      doc.text(typeLabel, cols.tipo, y + 4)
+      doc.text(valueFormatted, cols.valor, y + 4, { align: 'right' })
 
       y += 7
     })
@@ -209,6 +211,14 @@ export async function GET(request: NextRequest) {
     doc.setFontSize(9)
     doc.text('TOTAIS POR TIPO:', margin, y + 4)
     y += 8
+
+    // Calcular totais formatados para exibição
+    const totaisFormatados = Object.entries(totaisPorTipo).map(([tipo, valor]) => ({
+      tipo,
+      valor,
+      valorFormatted: formatCurrency(valor),
+      typeLabel: typeLabels[tipo] || tipo
+    }))
 
     totaisFormatados.forEach((total) => {
       if (y > pageHeight - 25) {
@@ -245,7 +255,7 @@ export async function GET(request: NextRequest) {
     //const pdfBlob = doc.output('blob')
     const pdfOutput = doc.output('arraybuffer');
     return new NextResponse(pdfOutput, {
-      headers: { 
+      headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `inline; filename="resumo-${summaryId}.pdf"`
       }

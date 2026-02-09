@@ -59,6 +59,7 @@ model User {
   historyDays        Int       @default(30)
   maxRetroactiveDays Int       @default(30)
   defaultPage        String    @default("/dashboard")
+  forceLogoutAt      DateTime? @db.DateTime(0)
 
   // relacionamento com Profile (permissões agora centralizadas em Profile)
   profileId String?
@@ -189,6 +190,7 @@ model Launch {
   value                Float?               @default(0)
   description          String?              @db.VarChar(255)
   status               LaunchStatus         @default(NORMAL)
+  attachmentUrl        String?              @db.Text
   contributorId        String?
   contributor          Contributor?         @relation(fields: [contributorId], references: [id])
   contributorName      String?

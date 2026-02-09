@@ -15,7 +15,8 @@ import {
   User,
   UserCheck,
   UserPen,
-  PieChart
+  PieChart,
+  ListCheck
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -131,7 +132,7 @@ export default function Dashboard() {
     {
       title: "Classificações",
       description: "Gerencie classificações",
-      icon: List,
+      icon: ListCheck,
       href: "/classifications",
       color: "from-cyan-700 to-sky-800",
       permission: "canCreate"

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
+import packageJson from '../../../package.json';
 import {
   Home,
   FileText,
@@ -21,38 +22,41 @@ import {
   Building2,
   List,
   User,
-  PieChart, 
+  PieChart,
   UserPen,
-  Printer
+  Printer,
+  ListCheck
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import Image from 'next/image';
 import { permission } from 'process'
 
+const SYSTEM_VERSION = packageJson.version
+
 export function Sidebar() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const pathname = usePathname()
   const { data: session } = useSession()
   const canAccessLaunches = ['canLaunchVote',
-     'canLaunchEbd', 
-     'canLaunchCampaign',
-     'canLaunchTithe',
-     'canLaunchMission',
-     'canLaunchCircle',
-     'canLaunchServiceOffer',
-     'canLaunchExpense',
-     'canLaunchCarneReviver',
-     'canApproveVote',
-     'canApproveEbd', 
-     'canApproveCampaign',
-     'canApproveTithe',
-     'canApproveMission',
-     'canApproveCircle',
-     'canApproveServiceOffer',
-     'canApproveExpense'];
+    'canLaunchEbd',
+    'canLaunchCampaign',
+    'canLaunchTithe',
+    'canLaunchMission',
+    'canLaunchCircle',
+    'canLaunchServiceOffer',
+    'canLaunchExpense',
+    'canLaunchCarneReviver',
+    'canApproveVote',
+    'canApproveEbd',
+    'canApproveCampaign',
+    'canApproveTithe',
+    'canApproveMission',
+    'canApproveCircle',
+    'canApproveServiceOffer',
+    'canApproveExpense'];
   const canAccesSummary = ['canListSummary', 'canGenerateSummary'];
-  const canGenerateReport = ['canReportLaunches', 'canReportContributors', 'canReportMonthlySummary','canReportHistoryContribSynthetic','canReportHistoryContribAnalytic'];
+  const canGenerateReport = ['canReportLaunches', 'canReportContributors', 'canReportMonthlySummary', 'canReportHistoryContribSynthetic', 'canReportHistoryContribAnalytic'];
   const hasLaunchPermission = Boolean(canAccessLaunches.find(perm => session?.user?.[perm]));
   const hasSummaryPermission = Boolean(canAccesSummary.find(perm => session?.user?.[perm]));
   const hasGenerateReport = Boolean(canGenerateReport.find(perm => session?.user?.[perm]));
@@ -64,7 +68,7 @@ export function Sidebar() {
   const canReportMonthlySummary = Boolean(session?.user?.canReportMonthlySummary)
   const canReportHistoryContribSynthetic = Boolean(session?.user?.canReportHistoryContribSynthetic)
   const canReportHistoryContribAnalytic = Boolean(session?.user?.canReportHistoryContribAnalytic)
-  
+
   const [openTesouraria, setOpenTesouraria] = useState(true)
   const [openCadastros, setOpenCadastros] = useState(false)
   const [openSeguranca, setOpenSeguranca] = useState(false)
@@ -102,7 +106,7 @@ export function Sidebar() {
               {/* <h2 className="text-center text-2xl font-extrabold text-gray-900 mb-6">
                 Agilize
               </h2> */}
-              <Image 
+              <Image
                 src="/images/Logo_Agilize_Azul.png"
                 alt="Logo do Agilize"
                 width={100}
@@ -131,7 +135,7 @@ export function Sidebar() {
                     <div className="mt-1 space-y-1 pl-8">
                       {hasLaunchPermission && (<Link href="/launches" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/launches' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><List className="mr-3 h-5 w-5 shrink-0" />Lançamentos</Link>)}
                       {hasSummaryPermission && (<Link href="/congregation-summary" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/congregation-summary' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><PieChart className="mr-3 h-5 w-5 shrink-0" />Resumo Diário</Link>)}
-                      
+
                       {/* Submenu Relatórios */}
                       {hasGenerateReport && (
                         <div className="mt-1">
@@ -150,7 +154,7 @@ export function Sidebar() {
                           )}
                         </div>
                       )}
-                      
+
                       {session?.user?.canExport && (<Link href="/export" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/export' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Download className="mr-3 h-5 w-5 shrink-0" />Exportar Dados</Link>)}
                       {session?.user?.canDelete && (<Link href="/delete-history" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/delete-history' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Trash2 className="mr-3 h-5 w-5 shrink-0" />Excluir Histórico</Link>)}
                     </div>
@@ -170,7 +174,7 @@ export function Sidebar() {
                       <Link href="/contributors" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/contributors' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><User className="mr-3 h-5 w-5 shrink-0" />Contribuintes</Link>
                       <Link href="/congregations" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/congregations' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Building2 className="mr-3 h-5 w-5 shrink-0" />Congregações</Link>
                       <Link href="/suppliers" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/suppliers' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Building className="mr-3 h-5 w-5 shrink-0" />Fornecedores</Link>
-                      <Link href="/classifications" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/classifications' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><List className="mr-3 h-5 w-5 shrink-0" />Classificações</Link>
+                      <Link href="/classifications" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/classifications' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><ListCheck className="mr-3 h-5 w-5 shrink-0" />Classificações</Link>
                     </div>
                   )}
                 </div>
@@ -198,17 +202,46 @@ export function Sidebar() {
             </nav>
           </div>
           <div className="flex shrink-0 border-t border-gray-200 p-4">
-            <Button
-              variant="ghost"
-              className="w-full justify-center font-bold text-white bg-red-600"
-              onClick={handleSignOut}
-            >
-              <LogOut className="mr-3 h-5 w-5" />
-              Sair
-            </Button>
+            <div className="group block w-full shrink-0">
+              <div className="flex items-center gap-3">
+                {session?.user?.image ? (
+                  <Image
+                    src={session.user.image}
+                    alt="Foto do perfil"
+                    width={40}
+                    height={40}
+                    className="rounded-full object-cover h-10 w-10 border border-gray-200"
+                  />
+                ) : (
+                  <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center border border-gray-200">
+                    <User className="h-6 w-6 text-gray-400" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    {session?.user?.name}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate">
+                    {(session?.user as any)?.profile?.name || 'Perfil'}
+                  </p>
+                  <p className="text-[10px] text-gray-400">
+                    {SYSTEM_VERSION}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleSignOut}
+                  className="shrink-0 text-gray-500 hover:text-red-600 hover:bg-red-50"
+                  title="Sair"
+                >
+                  <LogOut className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
-        
+
         {/* Adicione esta seção para o link de registro */}
         {/* {session?.user?.canDelete && (
           <div className="mt-4 pt-4 border-t border-gray-200">
@@ -228,7 +261,7 @@ export function Sidebar() {
         <div className="flex min-h-0 flex-1 flex-col border-r border-gray-200 bg-white">
           <div className="flex h-16 shrink-0 items-center px-4 mt-3">
             {/* <h1 className="text-xl font-bold">Lance Fácil</h1> */}
-            <Image 
+            <Image
               src="/images/LogoDashboard.png" // Caminho relativo a partir da pasta `public`
               alt="Logo Dashboard do Agilize"
               width={400} // Largura da imagem
@@ -253,7 +286,7 @@ export function Sidebar() {
                     <div className="mt-1 space-y-1 pl-8">
                       {hasLaunchPermission && (<Link href="/launches" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/launches' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><List className="mr-3 h-5 w-5 shrink-0" />Lançamentos</Link>)}
                       {hasSummaryPermission && (<Link href="/congregation-summary" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/congregation-summary' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><PieChart className="mr-3 h-5 w-5 shrink-0" />Resumo Diário</Link>)}
-                      
+
                       {/* Submenu Relatórios */}
                       {hasGenerateReport && (
                         <div className="mt-1">
@@ -272,9 +305,9 @@ export function Sidebar() {
                           )}
                         </div>
                       )}
-                      
+
                       {session?.user?.canExport && (<Link href="/export" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/export' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><Download className="mr-3 h-5 w-5 shrink-0" />Exportar Dados</Link>)}
-                      {session?.user?.canDelete && (<Link href="/delete-history" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/delete-history' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><Trash2 className="mr-3 h-5 w-5 shrink-0" />Excluir Histórico</Link>)}                      
+                      {session?.user?.canDelete && (<Link href="/delete-history" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/delete-history' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><Trash2 className="mr-3 h-5 w-5 shrink-0" />Excluir Histórico</Link>)}
                     </div>
                   )}
                 </div>
@@ -292,7 +325,7 @@ export function Sidebar() {
                       <Link href="/contributors" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/contributors' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><User className="mr-3 h-5 w-5 shrink-0" />Contribuintes</Link>
                       <Link href="/congregations" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/congregations' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><Building2 className="mr-3 h-5 w-5 shrink-0" />Congregações</Link>
                       <Link href="/suppliers" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/suppliers' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><Building className="mr-3 h-5 w-5 shrink-0" />Fornecedores</Link>
-                      <Link href="/classifications" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/classifications' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><List className="mr-3 h-5 w-5 shrink-0" />Classificações</Link>
+                      <Link href="/classifications" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/classifications' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><ListCheck className="mr-3 h-5 w-5 shrink-0" />Classificações</Link>
                     </div>
                   )}
                 </div>
@@ -320,20 +353,37 @@ export function Sidebar() {
           </div>
           <div className="flex shrink-0 border-t border-gray-200 p-4">
             <div className="group block w-full shrink-0">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="ml-3 flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-700 truncate">
+              <div className="flex items-center gap-3">
+                {session?.user?.image ? (
+                  <Image
+                    src={session.user.image}
+                    alt="Foto do perfil"
+                    width={40}
+                    height={40}
+                    className="rounded-full object-cover h-10 w-10 border border-gray-200"
+                  />
+                ) : (
+                  <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center border border-gray-200">
+                    <User className="h-6 w-6 text-gray-400" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">
                     {session?.user?.name}
                   </p>
                   <p className="text-xs text-gray-500 truncate">
-                    {session?.user?.email}
+                    {(session?.user as any)?.profile?.name || 'Perfil'}
+                  </p>
+                  <p className="text-[10px] text-gray-400">
+                    {SYSTEM_VERSION}
                   </p>
                 </div>
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="icon"
                   onClick={handleSignOut}
-                  className="shrink-0"
+                  className="shrink-0 text-gray-500 hover:text-red-600 hover:bg-red-50"
+                  title="Sair"
                 >
                   <LogOut className="h-5 w-5" />
                 </Button>
@@ -354,7 +404,7 @@ export function Sidebar() {
             {/* <h2 className="text-center text-2xl font-extrabold text-gray-900 mb-6">
               Agilize
             </h2> */}
-            <Image 
+            <Image
               src="/images/Logo_Agilize_Azul.png"
               alt="Logo do Agilize"
               width={100}
@@ -362,7 +412,22 @@ export function Sidebar() {
               priority
             />
           </div>
-          <div></div> {/* Spacer */}
+          <div className="flex items-center gap-3">
+            {session?.user?.image ? (
+              <Image
+                src={session.user.image}
+                alt="Foto do perfil"
+                width={40}
+                height={40}
+                className="rounded-full object-cover h-10 w-10 border border-gray-200"
+              />
+            ) : (
+              <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center border border-gray-200">
+                <User className="h-6 w-6 text-gray-400" />
+              </div>
+            )}
+            <div></div> {/* Spacer */}
+          </div>
         </div>
       </div>
     </>

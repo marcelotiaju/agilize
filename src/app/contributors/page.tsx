@@ -33,7 +33,7 @@ interface Contributor {
     id: string
     name: string
   },
-    photoUrl: string
+  photoUrl: string
 }
 
 interface Congregation {
@@ -97,14 +97,14 @@ export default function Contributors() {
   const filteredContributors = useMemo(() => {
     if (!searchTerm) return contributors
     const normalizedSearchTerm = removeAccents(searchTerm.toLowerCase())
-    
+
     return contributors.filter(contributor => {
       const normalizedName = removeAccents(contributor.name.toLowerCase())
       const normalizedCpf = contributor.cpf ? removeAccents(contributor.cpf.toLowerCase()) : ''
       const normalizedCode = removeAccents(contributor.code.toLowerCase())
       return normalizedName.includes(normalizedSearchTerm) ||
-             (contributor.cpf && normalizedCpf.includes(normalizedSearchTerm)) ||
-             normalizedCode.includes(normalizedSearchTerm)
+        (contributor.cpf && normalizedCpf.includes(normalizedSearchTerm)) ||
+        normalizedCode.includes(normalizedSearchTerm)
     })
   }, [contributors, searchTerm])
 
@@ -134,6 +134,14 @@ export default function Contributors() {
     const file = e.target.files[0]
     if (!file) return
 
+    // Validar tamanho do arquivo (2MB = 2,097,152 bytes)
+    const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+    if (file.size > MAX_FILE_SIZE) {
+      alert("O arquivo excede o tamanho máximo permitido de 2MB. Por favor, selecione um arquivo menor.");
+      e.target.value = ''; // Limpar o input
+      return;
+    }
+
     // Mostrar preview
     const reader = new FileReader()
     reader.onload = (e) => {
@@ -151,7 +159,7 @@ export default function Contributors() {
         method: 'POST',
         body: formData
       })
-      
+
       if (response.ok) {
         const data = await response.json()
         setFormData(prev => ({ ...prev, photoUrl: data.url }))
@@ -169,11 +177,11 @@ export default function Contributors() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     try {
       const url = '/api/contributors'
       const method = editingContributor ? 'PUT' : 'POST'
-      
+
       const response = await fetch(url, {
         method,
         headers: {
@@ -214,22 +222,22 @@ export default function Contributors() {
 
   const handleCancel = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir este contribuinte?')) {
-    try {
-      const response = await fetch(`/api/contributors?id=${id}`, {
-        method: 'DELETE',
-      })
+      try {
+        const response = await fetch(`/api/contributors?id=${id}`, {
+          method: 'DELETE',
+        })
 
-      if (response.ok) {
-        fetchContributors()
-      } else {
-        const error = await response.json()
-        alert(error.error || 'Erro ao deletar contribuinte')
+        if (response.ok) {
+          fetchContributors()
+        } else {
+          const error = await response.json()
+          alert(error.error || 'Erro ao deletar contribuinte')
+        }
+      } catch (error) {
+        console.error('Erro ao deletar contribuinte:', error)
+        alert('Erro ao deletar contribuinte')
       }
-    } catch (error) {
-      console.error('Erro ao deletar contribuinte:', error)
-      alert('Erro ao deletar contribuinte')
     }
-  }
   }
 
   const resetForm = () => {
@@ -316,322 +324,322 @@ export default function Contributors() {
   }
 
   return (
-    <PermissionGuard 
+    <PermissionGuard
       requiredPermissions={{
         canCreate: true,
         canEdit: true,
         canExclude: true
       }}
     >
-    <div className="min-h-screen bg-gray-50">
-      <Sidebar />
-      
-      <div className="lg:pl-64">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Contribuintes</h1>
-              {/* <p className="text-gray-600">Gerencie os registros de contribuintes</p> */}
-            </div>
-            
-            <div className="flex space-x-2">
-              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button onClick={resetForm}
-                    disabled={!canCreate}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Novo Contribuinte
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
-                  <DialogHeader>
-                    <DialogTitle>
-                      {editingContributor ? 'Editar Contribuinte' : 'Novo Contribuinte'}
-                    </DialogTitle>
-                    <DialogDescription>
-                      Preencha os dados do contribuinte
-                    </DialogDescription>
-                  </DialogHeader>
-                  <form onSubmit={handleSubmit}>
+      <div className="min-h-screen bg-gray-50">
+        <Sidebar />
+
+        <div className="lg:pl-64">
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Contribuintes</h1>
+                {/* <p className="text-gray-600">Gerencie os registros de contribuintes</p> */}
+              </div>
+
+              <div className="flex space-x-2">
+                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button onClick={resetForm}
+                      disabled={!canCreate}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Novo Contribuinte
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle>
+                        {editingContributor ? 'Editar Contribuinte' : 'Novo Contribuinte'}
+                      </DialogTitle>
+                      <DialogDescription>
+                        Preencha os dados do contribuinte
+                      </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleSubmit}>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="congregationId" className="text-right">
+                            Congregação
+                          </Label>
+                          <Select
+                            value={formData.congregationId}
+                            onValueChange={(value) => handleSelectChange('congregationId', value)}
+                          >
+                            <SelectTrigger className="col-span-3">
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {congregations.map((congregation) => (
+                                <SelectItem key={congregation.id} value={congregation.id}>
+                                  {congregation.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="talonNumber" className="text-right">
+                            Código
+                          </Label>
+                          <Input
+                            id="code"
+                            name="code"
+                            value={formData.code}
+                            onChange={handleInputChange}
+                            className="col-span-3"
+                            required
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="name" className="text-right">
+                            Nome
+                          </Label>
+                          <Input
+                            id="name"
+                            name="name"
+                            value={formData.name}
+                            onChange={handleInputChange}
+                            className="col-span-3"
+                            required
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="cpf" className="text-right">
+                            CPF
+                          </Label>
+                          <Input
+                            id="cpf"
+                            name="cpf"
+                            value={formData.cpf}
+                            onChange={handleInputChange}
+                            className="col-span-3"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="ecclesiasticalPosition" className="text-right">
+                            Cargo Eclesiástico
+                          </Label>
+                          <Input
+                            id="ecclesiasticalPosition"
+                            name="ecclesiasticalPosition"
+                            value={formData.ecclesiasticalPosition}
+                            onChange={handleInputChange}
+                            className="col-span-3"
+                            placeholder="Ex: Pastor, Diácono, etc."
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="tipo">Tipo</Label>
+                          <Select
+                            value={formData.tipo}
+                            onValueChange={(value) => handleSelectChange('tipo', value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="CONGREGADO">Congregado</SelectItem>
+                              <SelectItem value="MEMBRO">Membro</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="isActive" className="text-right">
+                            Ativo
+                          </Label>
+                          <input
+                            type="checkbox"
+                            id="isActive"
+                            name="isActive"
+                            checked={(formData as any).isActive}
+                            onChange={handleInputChange}
+                            className="h-4 w-4"
+                          />
+                        </div>
+
+                        {/* Campo de Foto */}
+                        <div className="space-y-2">
+                          <Label htmlFor="photo">Foto</Label>
+                          <div className="flex items-center space-x-4">
+                            <div className="flex-shrink-0">
+                              {photoPreview ? (
+                                <img
+                                  src={photoPreview}
+                                  alt="Preview"
+                                  className="h-16 w-16 rounded-full object-cover border"
+                                />
+                              ) : (
+                                <div className="h-16 w-16 rounded-full bg-gray-200 flex items-center justify-center">
+                                  <User className="h-8 w-8 text-gray-400" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handlePhotoChange}
+                                accept="image/*"
+                                className="hidden"
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={isUploading}
+                              >
+                                {isUploading ? 'Enviando...' : 'Selecionar Foto'}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button type="submit">
+                          {editingContributor ? 'Atualizar' : 'Salvar'}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+
+                <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" onClick={resetImportForm}>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Importar CSV
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[600px]">
+                    <DialogHeader>
+                      <DialogTitle>Importar Contribuintes via CSV</DialogTitle>
+                      <DialogDescription>
+                        Faça upload de um arquivo CSV com os contribuintes. O arquivo deve ter as colunas: Codigo,Nome,CPF,CargoEclesiastico,CodCongregação,Tipo,Foto
+                      </DialogDescription>
+                    </DialogHeader>
                     <div className="grid gap-4 py-4">
                       <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="congregationId" className="text-right">
-                          Congregação
-                        </Label>
-                        <Select
-                          value={formData.congregationId}
-                          onValueChange={(value) => handleSelectChange('congregationId', value)}
-                        >
-                          <SelectTrigger className="col-span-3">
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {congregations.map((congregation) => (
-                              <SelectItem key={congregation.id} value={congregation.id}>
-                                {congregation.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="talonNumber" className="text-right">
-                          Código
+                        <Label htmlFor="csvFile" className="text-right">
+                          Arquivo CSV
                         </Label>
                         <Input
-                          id="code"
-                          name="code"
-                          value={formData.code}
-                          onChange={handleInputChange}
+                          id="csvFile"
+                          type="file"
+                          accept=".csv"
+                          onChange={handleFileChange}
                           className="col-span-3"
                           required
                         />
                       </div>
 
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="name" className="text-right">
-                          Nome
-                        </Label>
-                        <Input
-                          id="name"
-                          name="name"
-                          value={formData.name}
-                          onChange={handleInputChange}
-                          className="col-span-3"
-                          required
-                        />
-                      </div>
-                      
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="cpf" className="text-right">
-                          CPF
-                        </Label>
-                        <Input
-                          id="cpf"
-                          name="cpf"
-                          value={formData.cpf}
-                          onChange={handleInputChange}
-                          className="col-span-3"
-                        />
-                      </div>
-                      
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="ecclesiasticalPosition" className="text-right">
-                          Cargo Eclesiástico
-                        </Label>
-                        <Input
-                          id="ecclesiasticalPosition"
-                          name="ecclesiasticalPosition"
-                          value={formData.ecclesiasticalPosition}
-                          onChange={handleInputChange}
-                          className="col-span-3"
-                          placeholder="Ex: Pastor, Diácono, etc."
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="tipo">Tipo</Label>
-                        <Select
-                          value={formData.tipo}
-                          onValueChange={(value) => handleSelectChange('tipo', value)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="CONGREGADO">Congregado</SelectItem>
-                            <SelectItem value="MEMBRO">Membro</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="isActive" className="text-right">
-                          Ativo
-                        </Label>
-                        <input
-                          type="checkbox"
-                          id="isActive"
-                          name="isActive"
-                          checked={(formData as any).isActive}
-                          onChange={handleInputChange}
-                          className="h-4 w-4"
-                        />
-                      </div>
-
-                      {/* Campo de Foto */}
-                      <div className="space-y-2">
-                        <Label htmlFor="photo">Foto</Label>
-                        <div className="flex items-center space-x-4">
-                          <div className="flex-shrink-0">
-                            {photoPreview ? (
-                              <img 
-                                src={photoPreview} 
-                                alt="Preview" 
-                                className="h-16 w-16 rounded-full object-cover border"
-                              />
-                            ) : (
-                              <div className="h-16 w-16 rounded-full bg-gray-200 flex items-center justify-center">
-                                <User className="h-8 w-8 text-gray-400" />
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <input
-                              type="file"
-                              ref={fileInputRef}
-                              onChange={handlePhotoChange}
-                              accept="image/*"
-                              className="hidden"
-                            />
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => fileInputRef.current?.click()}
-                              disabled={isUploading}
-                            >
-                              {isUploading ? 'Enviando...' : 'Selecionar Foto'}
-                            </Button>
-                          </div>
+                      <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
+                        <p className="font-medium mb-2">Formato esperado do CSV:</p>
+                        <p className="text-xs font-mono">Codigo,Nome,CPF,CargoEclesiastico,CodCongregação,Tipo,Foto</p>
+                        <p className="text-xs font-mono">1,João Silva,12345678901,Pastor,1,Congregado,foto.jpg</p>
+                        <p className="text-xs font-mono">2,Maria Santos,98765432100,Diácono,2,Membro,foto.jpg</p>
+                        <div className="mt-3 pt-3 border-t border-gray-200">
+                          <a
+                            href="/exemplo-contribuintes.csv"
+                            download
+                            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                          >
+                            📥 Baixar arquivo de exemplo
+                          </a>
                         </div>
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button type="submit">
-                        {editingContributor ? 'Atualizar' : 'Salvar'}
+                      <Button
+                        type="button"
+                        onClick={handleImportCSV}
+                        disabled={!csvFile || importing}
+                      >
+                        {importing ? 'Importando...' : 'Importar'}
                       </Button>
                     </DialogFooter>
-                  </form>
-                </DialogContent>
-              </Dialog>
-              
-              <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" onClick={resetImportForm}>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Importar CSV
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[600px]">
-                  <DialogHeader>
-                    <DialogTitle>Importar Contribuintes via CSV</DialogTitle>
-                    <DialogDescription>
-                      Faça upload de um arquivo CSV com os contribuintes. O arquivo deve ter as colunas: Codigo,Nome,CPF,CargoEclesiastico,CodCongregação,Tipo,Foto
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="csvFile" className="text-right">
-                        Arquivo CSV
-                      </Label>
-                      <Input
-                        id="csvFile"
-                        type="file"
-                        accept=".csv"
-                        onChange={handleFileChange}
-                        className="col-span-3"
-                        required
-                      />
-                    </div>
-                    
-                    <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
-                      <p className="font-medium mb-2">Formato esperado do CSV:</p>
-                      <p className="text-xs font-mono">Codigo,Nome,CPF,CargoEclesiastico,CodCongregação,Tipo,Foto</p>
-                      <p className="text-xs font-mono">1,João Silva,12345678901,Pastor,1,Congregado,foto.jpg</p>
-                      <p className="text-xs font-mono">2,Maria Santos,98765432100,Diácono,2,Membro,foto.jpg</p>
-                      <div className="mt-3 pt-3 border-t border-gray-200">
-                        <a 
-                          href="/exemplo-contribuintes.csv" 
-                          download
-                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                        >
-                          📥 Baixar arquivo de exemplo
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button 
-                      type="button" 
-                      onClick={handleImportCSV}
-                      disabled={!csvFile || importing}
-                    >
-                      {importing ? 'Importando...' : 'Importar'}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </div>
-          </div> 
 
-          {/* Campo de pesquisa */}
-          <div className="mb-6">
-            <SearchInput
-              placeholder="Pesquisar contribuintes por Codigo, nome ou CPF..."
-              value={searchTerm}
-              onChange={setSearchTerm}
-              className="max-w-md"
-            />
-          </div>
+            {/* Campo de pesquisa */}
+            <div className="mb-6">
+              <SearchInput
+                placeholder="Pesquisar contribuintes por Codigo, nome ou CPF..."
+                value={searchTerm}
+                onChange={setSearchTerm}
+                className="max-w-md"
+              />
+            </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Contribuintes</CardTitle>
-              {/* <CardDescription>Lista de contribuintes registrados</CardDescription> */}
-              <CardDescription>
-                {filteredContributors.length} contribuintes encontrados
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Codigo</TableHead>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>CPF</TableHead>
-                    <TableHead>Cargo Eclesiástico</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredContributors.map((contributor) => (
-                    <TableRow key={contributor.id}>
-                      <TableCell>{contributor.code}</TableCell>
-                      <TableCell>{contributor.name}</TableCell>
-                      <TableCell>{contributor.cpf || '-'}</TableCell>
-                      <TableCell>{contributor.ecclesiasticalPosition || '-'}</TableCell>
-                      <TableCell>{contributor.tipo || '-'}</TableCell>
-                      <TableCell>
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(contributor)}
-                            disabled={!canEdit}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleCancel(contributor.id)}
-                            disabled={!canExclude}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+            <Card>
+              <CardHeader>
+                <CardTitle>Contribuintes</CardTitle>
+                {/* <CardDescription>Lista de contribuintes registrados</CardDescription> */}
+                <CardDescription>
+                  {filteredContributors.length} contribuintes encontrados
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Codigo</TableHead>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>CPF</TableHead>
+                      <TableHead>Cargo Eclesiástico</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Ações</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredContributors.map((contributor) => (
+                      <TableRow key={contributor.id}>
+                        <TableCell>{contributor.code}</TableCell>
+                        <TableCell>{contributor.name}</TableCell>
+                        <TableCell>{contributor.cpf || '-'}</TableCell>
+                        <TableCell>{contributor.ecclesiasticalPosition || '-'}</TableCell>
+                        <TableCell>{contributor.tipo || '-'}</TableCell>
+                        <TableCell>
+                          <div className="flex space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleCancel(contributor.id)}
+                              disabled={!canExclude}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEdit(contributor)}
+                              disabled={!canEdit}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
-    </div>
     </PermissionGuard>
   )
 }

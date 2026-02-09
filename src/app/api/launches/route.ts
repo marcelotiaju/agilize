@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
-import{ authOptions }from "../auth/[...nextauth]/route";
+import { authOptions } from "../auth/[...nextauth]/route";
 import { getServerSession } from "next-auth/next";
 import { zonedTimeToUtc, utcToZonedTime } from 'date-fns-tz';
 import { startOfDay, endOfDay } from 'date-fns';
@@ -85,22 +85,22 @@ export async function GET(request: NextRequest) {
     if (allowedTypes.length === 0) {
       return NextResponse.json({ launches: [], totalCount: 0, totalPages: 0 });
     }
-console.log(typeFilter)
+    console.log(typeFilter)
     // 2. Aplicar o filtro de tipos
     if (typeFilter && typeFilter !== 'all') {
       // Verificar se o usuário tem permissão para este tipo
       if (allowedTypes.includes(typeFilter)) {
         where.type = typeFilter;
-      } 
+      }
     } else {
       // Se não filtrou por tipo, mostra todos os tipos permitidos
       where.type = { in: allowedTypes };
     }
-    
+
     const userCongregations = await prisma.userCongregation.findMany({
       where: {
         userId: session.user.id
-      },select: {
+      }, select: {
         congregationId: true
       }
     })
@@ -177,24 +177,24 @@ console.log(typeFilter)
 
 
     // Handle date filtering with proper timezone awareness
-//     if (startDate && endDate) {
-//       // Convert the dates to the user's timezone and get start/end of day
-//       const startZoned = utcToZonedTime(new Date(startDate), timezone)
-//       const endZoned = utcToZonedTime(new Date(endDate), timezone)
-      
-//       // Get start of day and end of day in the user's timezone
-//       const startOfDayZoned = startOfDay(startZoned)
-//       const endOfDayZoned = endOfDay(endZoned)
-      
-//       // Convert back to UTC for database query
-//       const startUtc = zonedTimeToUtc(startOfDayZoned, timezone)
-//       const endUtc = zonedTimeToUtc(endOfDayZoned, timezone)
-// //console.log(startUtc,endUtc)
-//       where.date = {
-//         gte: startUtc,
-//         lte: endUtc
-//       }
-//      }
+    //     if (startDate && endDate) {
+    //       // Convert the dates to the user's timezone and get start/end of day
+    //       const startZoned = utcToZonedTime(new Date(startDate), timezone)
+    //       const endZoned = utcToZonedTime(new Date(endDate), timezone)
+
+    //       // Get start of day and end of day in the user's timezone
+    //       const startOfDayZoned = startOfDay(startZoned)
+    //       const endOfDayZoned = endOfDay(endZoned)
+
+    //       // Convert back to UTC for database query
+    //       const startUtc = zonedTimeToUtc(startOfDayZoned, timezone)
+    //       const endUtc = zonedTimeToUtc(endOfDayZoned, timezone)
+    // //console.log(startUtc,endUtc)
+    //       where.date = {
+    //         gte: startUtc,
+    //         lte: endUtc
+    //       }
+    //      }
 
     //1. Adiciona o filtro de data
     // if (startDate && endDate)  {
@@ -209,24 +209,24 @@ console.log(typeFilter)
     // const dia = dataObjeto.getDate();
     // const mes = dataObjeto.getMonth() + 1; // getMonth() é de 0 a 11
     // const ano = dataObjeto.getFullYear();
-        where.date = {
-          gte: startDate ? startOfDay(utcToZonedTime(new Date(startDate), timezone)) : undefined,
-          lte: endDate ? endOfDay(utcToZonedTime(new Date(endDate), timezone)) : undefined
-        }
-        //console.log(where.date)
-      //where.date.gte;
-      // where.date.gte.setHours(0, 0, 0, 0);
-      // where.date.lte.setHours(20, 59, 0, 0);
-      //console.log(launchDateStart,launchDateEnd)
-      //} 
+    where.date = {
+      gte: startDate ? startOfDay(utcToZonedTime(new Date(startDate), timezone)) : undefined,
+      lte: endDate ? endOfDay(utcToZonedTime(new Date(endDate), timezone)) : undefined
+    }
+    //console.log(where.date)
+    //where.date.gte;
+    // where.date.gte.setHours(0, 0, 0, 0);
+    // where.date.lte.setHours(20, 59, 0, 0);
+    //console.log(launchDateStart,launchDateEnd)
+    //} 
 
-      // const dataStringUTC = startDate.replace(' ', 'T') + 'Z';
-      // const dataObjeto = new Date(dataStringUTC);
+    // const dataStringUTC = startDate.replace(' ', 'T') + 'Z';
+    // const dataObjeto = new Date(dataStringUTC);
 
     // Se houver termo de busca, aplicar filtro normalizado
     if (searchTerm) {
       const normalizedSearchTerm = removeAccents(searchTerm.toLowerCase())
-      
+
       // Buscar todos os lançamentos que atendem aos filtros (data, congregação, etc)
       // sem paginação para poder filtrar por texto normalizado
       const allLaunches = await prisma.launch.findMany({
@@ -243,14 +243,14 @@ console.log(typeFilter)
           { createdAt: 'desc' }
         ]
       })
-      
+
       // Sort by congregation name with custom extraction in memory
       allLaunches.sort((a, b) => {
         const nameA = extractAfterColon(a.congregation?.name)
         const nameB = extractAfterColon(b.congregation?.name)
         return nameA.localeCompare(nameB)
       })
-      
+
       // Filtrar resultados normalizando os textos
       const filteredLaunches = allLaunches.filter(launch => {
         const fieldsToSearch = [
@@ -261,18 +261,18 @@ console.log(typeFilter)
           launch.contributor?.name || '',
           launch.supplier?.razaoSocial || ''
         ]
-        
+
         return fieldsToSearch.some(field => {
           const normalizedField = removeAccents(field.toLowerCase())
           return normalizedField.includes(normalizedSearchTerm)
         })
       })
-      
+
       // Aplicar paginação manualmente
       const paginatedLaunches = filteredLaunches.slice(skip, skip + limit)
       const totalCount = filteredLaunches.length
       const totalPages = Math.ceil(totalCount / limit)
-      
+
       return NextResponse.json({
         launches: paginatedLaunches,
         pagination: {
@@ -283,7 +283,7 @@ console.log(typeFilter)
         }
       })
     }
- //console.log(`SearchTerm ${searchTerm}`)
+    //console.log(`SearchTerm ${searchTerm}`)
 
     // Adicionar filtro de pesquisa
     // if (searchTerm) {
@@ -315,7 +315,7 @@ console.log(typeFilter)
       }),
       prisma.launch.count({ where })
     ])
-    
+
     launches.sort((a, b) => {
       const nameA = extractAfterColon(a.congregation?.name)
       const nameB = extractAfterColon(b.congregation?.name)
@@ -362,7 +362,8 @@ export async function POST(request: NextRequest) {
       supplierName,
       classificationId,
       isContributorRegistered,
-      isSupplierRegistered
+      isSupplierRegistered,
+      attachmentUrl
     } = body
 
     // Verificar permissões de lançamento
@@ -401,7 +402,8 @@ export async function POST(request: NextRequest) {
       where: {
         userId: session.user.id,
       },
-        select: { congregationId: true
+      select: {
+        congregationId: true
       }
     })
 
@@ -410,7 +412,7 @@ export async function POST(request: NextRequest) {
     }
 
     const timezone = 'America/Sao_Paulo'
-    
+
     const launchDate = parseDateToUtcInstant(date, timezone, false)
     // 1. Criar um ponto no tempo seguro (Meio-dia local) para a data escolhida.
     //const localDateTimeString = `${date}T12:00:00`; 
@@ -418,7 +420,7 @@ export async function POST(request: NextRequest) {
     //const launchDate = zonedTimeToUtc(dateZoned, timezone)
     //launchDate.setHours(launchDate.getHours() + 3) // Ajuste para UTC
     //let launchDate = zonedTimeToUtc(localDateTimeString, timezone); 
-//console.log(launchDate)
+    //console.log(launchDate)
     // 2. Verificação de Data Futura (usando apenas o dia para comparação)
 
     // const dataStringUTC = date.replace(' ', 'T') + 'Z';
@@ -440,7 +442,7 @@ export async function POST(request: NextRequest) {
     //   return NextResponse.json({ error: "Não é permitido lançar com data futura" }, { status: 400 })
     // }
 
-        // Validação para classificação obrigatória em saídas
+    // Validação para classificação obrigatória em saídas
     if (type === "SAIDA" && !classificationId) {
       return NextResponse.json({ error: "Classificação é obrigatória para lançamentos do tipo Saída" }, { status: 400 })
     }
@@ -457,7 +459,7 @@ export async function POST(request: NextRequest) {
 
     // Validação de duplicidade baseada no tipo de lançamento
     const numericValue = parseFloat(value) || 0
-    
+
     // Para DÍZIMO e CARNE_REVIVER: verificar Congregação + Data + Valor + Contribuinte apenas se contributorId estiver preenchido
     if (type === "DIZIMO" || type === "CARNE_REVIVER") {
       // Validação de duplicidade apenas se o contribuinte estiver registrado (contributorId preenchido)
@@ -470,14 +472,14 @@ export async function POST(request: NextRequest) {
           contributorId,
           status: { in: ["NORMAL", "APPROVED"] }
         }
-        
+
         const existingLaunch = await prisma.launch.findFirst({
           where: whereClause
         })
-        
+
         if (existingLaunch) {
-          return NextResponse.json({ 
-            error: `Já existe um lançamento de ${type === "DIZIMO" ? "Dízimo" : "Carne Reviver"} com a mesma congregação, data, valor e contribuinte` 
+          return NextResponse.json({
+            error: `Já existe um lançamento de ${type === "DIZIMO" ? "Dízimo" : "Carne Reviver"} com a mesma congregação, data, valor e contribuinte`
           }, { status: 400 })
         }
       }
@@ -495,14 +497,14 @@ export async function POST(request: NextRequest) {
           supplierId,
           status: { in: ["NORMAL", "APPROVED"] }
         }
-        
+
         const existingLaunch = await prisma.launch.findFirst({
           where: whereClause
         })
-        
+
         if (existingLaunch) {
-          return NextResponse.json({ 
-            error: "Já existe um lançamento de saída com a mesma congregação, data, valor e fornecedor" 
+          return NextResponse.json({
+            error: "Já existe um lançamento de saída com a mesma congregação, data, valor e fornecedor"
           }, { status: 400 })
         }
       }
@@ -519,10 +521,10 @@ export async function POST(request: NextRequest) {
           status: { in: ["NORMAL", "APPROVED"] }
         }
       })
-      
+
       if (existingLaunch) {
-        return NextResponse.json({ 
-          error: `Já existe um lançamento do tipo ${type === "VOTO" ? "Voto" : type === "EBD" ? "EBD" : type === "CAMPANHA" ? "Campanha" : type === "MISSAO" ? "Missão" : type === "CIRCULO" ? "Círculo de Oração" : "Oferta do Culto"} com a mesma congregação, data e valor` 
+        return NextResponse.json({
+          error: `Já existe um lançamento do tipo ${type === "VOTO" ? "Voto" : type === "EBD" ? "EBD" : type === "CAMPANHA" ? "Campanha" : type === "MISSAO" ? "Missão" : type === "CIRCULO" ? "Círculo de Oração" : "Oferta do Culto"} com a mesma congregação, data e valor`
         }, { status: 400 })
       }
     }
@@ -553,7 +555,7 @@ export async function POST(request: NextRequest) {
     //   })
     //   finalSupplierId = newSupplier.id
     // }
-        
+
     const launch = await prisma.launch.create({
       data: {
         congregationId: congregationId,
@@ -564,13 +566,14 @@ export async function POST(request: NextRequest) {
         description,
         status: "NORMAL",
         // Lógica ajustada para o Dízimo e Carne Reviver
-        contributorId: (type === "DIZIMO" || type === "CARNE_REVIVER") && isContributorRegistered ?  contributorId : null,
+        contributorId: (type === "DIZIMO" || type === "CARNE_REVIVER") && isContributorRegistered ? contributorId : null,
         contributorName: (type === "DIZIMO" || type === "CARNE_REVIVER") && !isContributorRegistered ? contributorName : null,
         // Lógica ajustada para a Saída
         supplierName: type === "SAIDA" && !isSupplierRegistered ? supplierName : null,
         supplierId: type === "SAIDA" && isSupplierRegistered ? supplierId : null,
         classificationId: type === "SAIDA" ? classificationId : null, // Apenas para saída
         createdBy: session.user.name,
+        attachmentUrl
       },
       include: {
         congregation: true,
@@ -660,19 +663,19 @@ export async function PUT(request: NextRequest) {
     if (updateData.value !== undefined) {
       // 1. Garantir que é string e trata a vírgula para decimal
       const cleanValueString = String(updateData.value).replace('.', '').replace(',', '.')
-      
+
       // 2. Tentar parsear para float
       const parsedValue = parseFloat(cleanValueString)
-      
+
       // 3. Se for NaN (valor inválido ou vazio), define para 0 (se o campo for NOT NULL)
       //    Se for nullable, 'null' é a opção mais limpa, mas '0' é mais seguro contra 500.
       if (Number.isNaN(parsedValue)) {
-          // SE `value` for NOT NULL no seu schema do Prisma, USE 0
-          dataToUpdate.value = 0; 
-          // SE `value` for NULLABLE no seu schema do Prisma, USE null (mas verifique o front-end)
-          // dataToUpdate.value = null;
+        // SE `value` for NOT NULL no seu schema do Prisma, USE 0
+        dataToUpdate.value = 0;
+        // SE `value` for NULLABLE no seu schema do Prisma, USE null (mas verifique o front-end)
+        // dataToUpdate.value = null;
       } else {
-          dataToUpdate.value = parsedValue
+        dataToUpdate.value = parsedValue
       }
     }
     if (updateData.supplierId !== undefined) {
@@ -701,6 +704,9 @@ export async function PUT(request: NextRequest) {
     }
     if (updateData.supplierName !== undefined) {
       dataToUpdate.supplierName = updateData.supplierName || null
+    }
+    if (updateData.attachmentUrl !== undefined) {
+      dataToUpdate.attachmentUrl = updateData.attachmentUrl || null
     }
 
     // Validação de duplicidade na atualização (excluindo o próprio registro)
@@ -731,21 +737,21 @@ export async function PUT(request: NextRequest) {
         status: { in: ["NORMAL", "APPROVED"] },
         id: { not: id } // Excluir o próprio registro
       }
-      
+
       if (finalContributorId) {
         whereClause.contributorId = finalContributorId
       } else if (finalContributorName) {
         whereClause.contributorName = finalContributorName
         whereClause.contributorId = null
       }
-      
+
       const existingLaunch = await prisma.launch.findFirst({
         where: whereClause
       })
-      
+
       if (existingLaunch) {
-        return NextResponse.json({ 
-          error: `Já existe um lançamento de ${finalType === "DIZIMO" ? "dízimo" : "carne reviver"} com a mesma congregação, data, valor e contribuinte` 
+        return NextResponse.json({
+          error: `Já existe um lançamento de ${finalType === "DIZIMO" ? "dízimo" : "carne reviver"} com a mesma congregação, data, valor e contribuinte`
         }, { status: 400 })
       }
     }
@@ -759,21 +765,21 @@ export async function PUT(request: NextRequest) {
         status: { in: ["NORMAL", "APPROVED"] },
         id: { not: id }
       }
-      
+
       if (finalSupplierId) {
         whereClause.supplierId = finalSupplierId
       } else if (finalSupplierName) {
         whereClause.supplierName = finalSupplierName
         whereClause.supplierId = null
       }
-      
+
       const existingLaunch = await prisma.launch.findFirst({
         where: whereClause
       })
-      
+
       if (existingLaunch) {
-        return NextResponse.json({ 
-          error: "Já existe um lançamento de saída com a mesma congregação, data, valor e fornecedor" 
+        return NextResponse.json({
+          error: "Já existe um lançamento de saída com a mesma congregação, data, valor e fornecedor"
         }, { status: 400 })
       }
     }
@@ -789,10 +795,10 @@ export async function PUT(request: NextRequest) {
           id: { not: id }
         }
       })
-      
+
       if (existingLaunch) {
-        return NextResponse.json({ 
-          error: `Já existe um lançamento do tipo ${finalType} com a mesma congregação, data e valor` 
+        return NextResponse.json({
+          error: `Já existe um lançamento do tipo ${finalType} com a mesma congregação, data e valor`
         }, { status: 400 })
       }
     }
@@ -810,12 +816,12 @@ export async function PUT(request: NextRequest) {
   } catch (error) {
     console.error("Erro ao atualizar lançamento:", error ?? error, { stack: (error as any)?.stack })
     // Se for um erro do Prisma (ex: falha de constraint)
-      if ((error as any).code) {
-          console.error("Código do erro Prisma:", (error as any).code);
-          console.error("Meta do erro Prisma:", (error as any).meta);
-          // Você pode até retornar um 400 se for um erro de validação de dados:
-          // return NextResponse.json({ error: "Dados inválidos ou faltando (DB Constraint Error)" }, { status: 400 });
-      }    
+    if ((error as any).code) {
+      console.error("Código do erro Prisma:", (error as any).code);
+      console.error("Meta do erro Prisma:", (error as any).meta);
+      // Você pode até retornar um 400 se for um erro de validação de dados:
+      // return NextResponse.json({ error: "Dados inválidos ou faltando (DB Constraint Error)" }, { status: 400 });
+    }
     return NextResponse.json({ error: "Erro ao atualizar lançamento..." }, { status: 500 })
   }
 }

@@ -6,7 +6,7 @@ import bcrypt from "bcrypt"
 import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz'
 
 
-export const authOptions : NextAuthOptions = {
+export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -74,9 +74,9 @@ export const authOptions : NextAuthOptions = {
           canReportHistoryContribSynthetic: !!p?.canReportHistoryContribSynthetic,
           canReportHistoryContribAnalytic: !!p?.canReportHistoryContribAnalytic,
           canReportSummary: !!p?.canReportSummary,
-          canDeleteLaunch : !!p?.canDeleteLaunch,
-          canImportLaunch : !!p?.canImportLaunch,
-          canDeleteSummary : !!p?.canDeleteSummary,
+          canDeleteLaunch: !!p?.canDeleteLaunch,
+          canImportLaunch: !!p?.canImportLaunch,
+          canDeleteSummary: !!p?.canDeleteSummary,
           defaultLaunchType: p?.defaultLaunchType ?? 'DIZIMO',
           canTechnicalIntervention: !!p?.canTechnicalIntervention,
         }
@@ -92,7 +92,8 @@ export const authOptions : NextAuthOptions = {
           historyDays: user.historyDays,
           defaultPage: user.defaultPage,
           profile: user.profile ? { id: user.profile.id, name: user.profile.name } : null,
-          ...resolved
+          ...resolved,
+          image: user.image ?? undefined,
         }
       }
     })
@@ -160,13 +161,34 @@ export const authOptions : NextAuthOptions = {
           canReportHistoryContribSynthetic: (user as any).canReportHistoryContribSynthetic,
           canReportHistoryContribAnalytic: (user as any).canReportHistoryContribAnalytic,
           canReportSummary: (user as any).canReportSummary,
-          canDeleteLaunch : (user as any).canDeleteLaunch,
-          canImportLaunch : (user as any).canImportLaunch,
-          canDeleteSummary : (user as any).canDeleteSummary,
+          canDeleteLaunch: (user as any).canDeleteLaunch,
+          canImportLaunch: (user as any).canImportLaunch,
+          canDeleteSummary: (user as any).canDeleteSummary,
           defaultLaunchType: (user as any).defaultLaunchType ?? 'DIZIMO',
           canTechnicalIntervention: (user as any).canTechnicalIntervention,
+          image: (user as any).image,
+          forceLogoutAt: (user as any).forceLogoutAt ? new Date((user as any).forceLogoutAt).getTime() : null
         }
       }
+
+      // Check for forced logout on subsequent requests
+      if (token.sub) {
+        const currentUser = await prisma.user.findUnique({
+          where: { id: token.sub },
+          select: { forceLogoutAt: true }
+        })
+
+        if (currentUser?.forceLogoutAt) {
+          const forceLogoutTime = new Date(currentUser.forceLogoutAt).getTime()
+          const tokenIssuedAt = (token.iat as number) * 1000
+
+          // If global logout happened after token was issued, invalidate token
+          if (forceLogoutTime > tokenIssuedAt) {
+            return { ...token, error: "ForceLogout" } // We'll handle this error in session callback or middleware
+          }
+        }
+      }
+
       return token
     },
     async session({ session, token }) {
@@ -175,6 +197,8 @@ export const authOptions : NextAuthOptions = {
         ...session.user,
         id: token.sub,
         login: token.login as string | undefined,
+        image: token.image as string | undefined,
+        profile: token.profile as { id: string, name: string } | null,
         phone: token.phone as string | undefined,
         validFrom: typeof token.validFrom === "string" || typeof token.validFrom === "number"
           ? new Date(token.validFrom)
@@ -194,7 +218,7 @@ export const authOptions : NextAuthOptions = {
         canLaunchCircle: typeof token.canLaunchCircle === "boolean" ? token.canLaunchCircle : undefined,
         canLaunchServiceOffer: typeof token.canLaunchServiceOffer === "boolean" ? token.canLaunchServiceOffer : undefined,
         canLaunchCarneReviver: typeof token.canLaunchCarneReviver === "boolean" ? token.canLaunchCarneReviver : undefined,
-        canApproveVote: typeof token.canApproveVote === "boolean" ?  token.canApproveVote : undefined,
+        canApproveVote: typeof token.canApproveVote === "boolean" ? token.canApproveVote : undefined,
         canApproveEbd: typeof token.canApproveEbd === "boolean" ? token.canApproveEbd : undefined,
         canApproveCampaign: typeof token.canApproveCampaign === "boolean" ? token.canApproveCampaign : undefined,
         canApproveTithe: typeof token.canApproveTithe === "boolean" ? token.canApproveTithe : undefined,
@@ -205,7 +229,7 @@ export const authOptions : NextAuthOptions = {
         canApproveCarneReviver: typeof token.canApproveCarneReviver === "boolean" ? token.canApproveCarneReviver : undefined,
         canCreate: typeof token.canCreate === "boolean" ? token.canCreate : undefined,
         canEdit: typeof token.canEdit === "boolean" ? token.canEdit : undefined,
-        canExclude: typeof token.canExclude === "boolean" ?  token.canExclude : undefined,
+        canExclude: typeof token.canExclude === "boolean" ? token.canExclude : undefined,
         canManageUsers: typeof token.canManageUsers === "boolean" ? token.canManageUsers : undefined,
         defaultPage: typeof token.defaultPage === "string" ? token.defaultPage : undefined,
         canListSummary: typeof token.canListSummary === "boolean" ? token.canListSummary : undefined,
@@ -219,9 +243,9 @@ export const authOptions : NextAuthOptions = {
         canReportHistoryContribSynthetic: typeof token.canReportHistoryContribSynthetic === "boolean" ? token.canReportHistoryContribSynthetic : undefined,
         canReportHistoryContribAnalytic: typeof token.canReportHistoryContribAnalytic === "boolean" ? token.canReportHistoryContribAnalytic : undefined,
         canReportSummary: typeof token.canReportSummary === "boolean" ? token.canReportSummary : undefined,
-        canDeleteLaunch : typeof token.canDeleteLaunch === "boolean" ? token.canDeleteLaunch : undefined,
-        canImportLaunch : typeof token.canImportLaunch === "boolean" ? token.canImportLaunch : undefined,
-        canDeleteSummary : typeof token.canDeleteSummary === "boolean" ? token.canDeleteSummary : undefined,
+        canDeleteLaunch: typeof token.canDeleteLaunch === "boolean" ? token.canDeleteLaunch : undefined,
+        canImportLaunch: typeof token.canImportLaunch === "boolean" ? token.canImportLaunch : undefined,
+        canDeleteSummary: typeof token.canDeleteSummary === "boolean" ? token.canDeleteSummary : undefined,
         defaultLaunchType: typeof token.defaultLaunchType === "string" ? token.defaultLaunchType : 'DIZIMO',
         canTechnicalIntervention: typeof token.canTechnicalIntervention === "boolean" ? token.canTechnicalIntervention : undefined,
       }

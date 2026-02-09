@@ -17,6 +17,7 @@ import { ptBR } from 'date-fns/locale'
 import { PermissionGuard } from '@/components/auth/PermissionGuard'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { SearchInput } from '@/components/ui/search-input'
+import { ImageUpload } from '@/components/ui/image-upload'
 
 interface UserData {
   id: string
@@ -43,6 +44,7 @@ interface UserData {
     // permissões centralizadas estarão disponíveis via backend (consumir user.profile.* quando necessário)
     [key: string]: any
   } | null
+  image?: string | null
 }
 
 interface Congregation {
@@ -94,7 +96,8 @@ export default function Users() {
     historyDays: 30,
     maxRetroactiveDays: 30,
     profileId: '',
-    defaultPage: '/dashboard'
+    defaultPage: '/dashboard',
+    image: ''
   })
   const [associationData, setAssociationData] = useState({
     congregationIds: [] as string[]
@@ -234,7 +237,8 @@ export default function Users() {
       historyDays: user.historyDays || 30,
       maxRetroactiveDays: user.maxRetroactiveDays || 30,
       profileId: user.profile?.id || '',
-      defaultPage: user.defaultPage || '/dashboard'
+      defaultPage: user.defaultPage || '/dashboard',
+      image: user.image || ''
     })
     setIsDialogOpen(true)
   }
@@ -311,7 +315,8 @@ export default function Users() {
       historyDays: 30,
       maxRetroactiveDays: 30,
       profileId: '',
-      defaultPage: '/dashboard'
+      defaultPage: '/dashboard',
+      image: ''
     })
   }
 
@@ -525,6 +530,14 @@ export default function Users() {
 
                   <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                     {/* Seção: Dados Pessoais */}
+                    <div className="flex justify-center mb-4">
+                      <ImageUpload
+                        value={(formData as any).image}
+                        onChange={(url) => setFormData(prev => ({ ...prev, image: url }))}
+                        onRemove={() => setFormData(prev => ({ ...prev, image: '' }))}
+                        folder="user"
+                      />
+                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 overflow-y-auto">
                       <div className="space-y-2">
                         <Label htmlFor="name">Nome Completo</Label>
@@ -680,7 +693,7 @@ export default function Users() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value=" ">-- Sem Perfil --</SelectItem>
-                            {profiles.map(p => <SelectItem key={p.id} value={p.id}>{truncateString(p.name,30)}</SelectItem>)}
+                            {profiles.map(p => <SelectItem key={p.id} value={p.id}>{truncateString(p.name, 30)}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       </div>
@@ -826,9 +839,9 @@ export default function Users() {
                             </TableCell>
                             <TableCell>
                               <div className="flex space-x-2">
-                                <Button variant="outline" size="sm" onClick={() => handleEdit(user)}><Edit className="h-4 w-4" /></Button>
                                 <Button variant="outline" size="sm" onClick={() => handleAssociation(user)}><Building className="h-4 w-4" /></Button>
                                 <Button variant="outline" size="sm" onClick={() => handleDelete(user.id)}><Trash2 className="h-4 w-4" /></Button>
+                                <Button variant="outline" size="sm" onClick={() => handleEdit(user)}><Edit className="h-4 w-4" /></Button>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -849,7 +862,7 @@ export default function Users() {
                           <div>
                             <p className="text-xs text-gray-600">Dias Histórico</p>
                             <p className="font-semibold text-gray-900">{user.historyDays}</p>
-                          </div>                          
+                          </div>
                           <div>
                             <p className="text-xs text-gray-600">Email</p>
                             <p className="text-sm text-gray-900 break-words">{user.email}</p>
@@ -865,9 +878,9 @@ export default function Users() {
                             </div>
                           </div>
                           <div className="flex gap-2 pt-2">
-                            <Button variant="outline" size="sm" onClick={() => handleEdit(user)} className="flex-1 text-xs"><Edit className="h-3 w-3 mr-1" />Editar</Button>
                             <Button variant="outline" size="sm" onClick={() => handleAssociation(user)} className="flex-1 text-xs"><Building className="h-3 w-3 mr-1" />Assoc.</Button>
                             <Button variant="outline" size="sm" onClick={() => handleDelete(user.id)} className="flex-1"><Trash2 className="h-3 w-3" /></Button>
+                            <Button variant="outline" size="sm" onClick={() => handleEdit(user)} className="flex-1 text-xs"><Edit className="h-3 w-3 mr-1" />Editar</Button>
                           </div>
                         </div>
                       </div>

@@ -63,9 +63,9 @@ export default function Profiles() {
     canApproveTreasury: false,
     canApproveAccountant: false,
     canApproveDirector: false,
-    canDeleteLaunch : false,
-    canImportLaunch : false,
-    canReportLaunches : false,
+    canDeleteLaunch: false,
+    canImportLaunch: false,
+    canReportLaunches: false,
     canReportContributors: false,
     canReportSummary: false,
     canReportHistoryContribSynthetic: false,
@@ -127,9 +127,9 @@ export default function Profiles() {
       canApproveTreasury: false,
       canApproveAccountant: false,
       canApproveDirector: false,
-      canDeleteLaunch : false,
-      canImportLaunch : false,
-      canReportLaunches : false,
+      canDeleteLaunch: false,
+      canImportLaunch: false,
+      canReportLaunches: false,
       canReportContributors: false,
       canReportMonthlySummary: false,
       canReportSummary: false,
@@ -198,10 +198,10 @@ export default function Profiles() {
     }
   }
 
-  const filteredProfiles = profiles.filter(p => 
-  p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-  (p.description || '').toLowerCase().includes(searchTerm.toLowerCase())
-)
+  const filteredProfiles = profiles.filter(p =>
+    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.description || '').toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
   const canManageUsers = Boolean((session as any)?.user?.canManageUsers)
 
@@ -258,9 +258,9 @@ export default function Profiles() {
 
                     <div className="space-y-2">
                       <Label htmlFor="defaultLaunchType">Tipo de Lançamento Padrão</Label>
-                      <Select 
-                        value={profileForm.defaultLaunchType} 
-                        onValueChange={(value) => setProfileForm({...profileForm, defaultLaunchType: value})}
+                      <Select
+                        value={profileForm.defaultLaunchType}
+                        onValueChange={(value) => setProfileForm({ ...profileForm, defaultLaunchType: value })}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione o padrão" />
@@ -314,23 +314,23 @@ export default function Profiles() {
                           <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canLaunchCarneReviver} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchCarneReviver: v as boolean }))} />
                             <Label>Lançar Carnê Reviver</Label>
-                          </div>                            
+                          </div>
                           <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canLaunchExpense} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchExpense: v as boolean }))} />
                             <Label>Lançar Saída</Label>
                           </div>
-                            <div className="flex items-center space-x-2">
-                              <Checkbox checked={profileForm.canDeleteLaunch} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canDeleteLaunch: v as boolean }))} />
-                              <Label>Deletar Lançamento</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Checkbox checked={profileForm.canImportLaunch} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canImportLaunch: v as boolean }))} />
-                              <Label>Importar Lançamento</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Checkbox checked={profileForm.canTechnicalIntervention} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canTechnicalIntervention: v as boolean }))} />
-                              <Label>Intervenção Técnica</Label>
-                            </div>                            
+                          <div className="flex items-center space-x-2">
+                            <Checkbox checked={profileForm.canDeleteLaunch} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canDeleteLaunch: v as boolean }))} />
+                            <Label>Deletar Lançamento</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox checked={profileForm.canImportLaunch} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canImportLaunch: v as boolean }))} />
+                            <Label>Importar Lançamento</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox checked={profileForm.canTechnicalIntervention} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canTechnicalIntervention: v as boolean }))} />
+                            <Label>Intervenção Técnica</Label>
+                          </div>
                         </div>
                       </div>
 
@@ -368,7 +368,7 @@ export default function Profiles() {
                           <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canApproveCarneReviver} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveCarneReviver: v as boolean }))} />
                             <Label>Aprovar Carnê Reviver</Label>
-                          </div>                          
+                          </div>
                           <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canApproveExpense} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveExpense: v as boolean }))} />
                             <Label>Aprovar Saída</Label>
@@ -436,7 +436,7 @@ export default function Profiles() {
                           <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canApproveDirector} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveDirector: v as boolean }))} />
                             <Label>Aprovar como Dirigente</Label>
-                          </div>                          
+                          </div>
                         </div>
                       </div>
 
@@ -458,15 +458,15 @@ export default function Profiles() {
                           <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canReportMonthlySummary} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canReportMonthlySummary: v as boolean }))} />
                             <Label>Relatório de Resumo Mensal</Label>
-                          </div>     
+                          </div>
                           <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canReportHistoryContribSynthetic} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canReportHistoryContribSynthetic: v as boolean }))} />
                             <Label>Histórico de Contribuições Sintético</Label>
-                          </div>          
+                          </div>
                           <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canReportHistoryContribAnalytic} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canReportHistoryContribAnalytic: v as boolean }))} />
                             <Label>Histórico de Contribuições Analítico</Label>
-                          </div>                                           
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -518,14 +518,14 @@ export default function Profiles() {
                         <TableCell>{p.description || '-'}</TableCell>
                         <TableCell>
                           <div className="flex space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => handleProfileEdit(p)}>
-                              <Edit className="h-4 w-4" />
-                            </Button>
                             <Button variant="outline" size="sm" onClick={() => handleCopyProfile(p)}>
                               <Copy className="h-4 w-4" />
                             </Button>
                             <Button variant="outline" size="sm" onClick={() => handleProfileDelete(p)}>
                               <Trash2 className="h-4 w-4 text-red-600" />
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleProfileEdit(p)}>
+                              <Edit className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>
