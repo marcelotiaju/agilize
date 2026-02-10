@@ -1151,7 +1151,7 @@ export default function Launches() {
                         <TabsList className="grid w-full grid-cols-3 px-4 sm:px-0">
                           <TabsTrigger value="dados">Dados</TabsTrigger>
                           <TabsTrigger value="logs">Logs</TabsTrigger>
-                          <TabsTrigger value="comprovantes">Comprovantes</TabsTrigger>
+                          <TabsTrigger value="comprovantes">Anexos</TabsTrigger>
                         </TabsList>
                         <TabsContent value="dados" className="max-w-[calc(105vw-3rem)] p-2 sm:p-0 overflow-x-hidden">
                           <div className="space-y-2">
