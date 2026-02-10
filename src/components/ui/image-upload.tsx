@@ -118,13 +118,17 @@ export function ImageUpload({ value, onChange, onRemove, folder, className = "" 
                 body: formData,
             })
 
-            if (!res.ok) throw new Error("Falha no upload")
+            if (!res.ok) {
+                const errorData = await res.json()
+                throw new Error(errorData.error || "Falha no upload")
+            }
 
             const data = await res.json()
             onChange(data.url)
         } catch (error) {
             console.error(error)
-            alert("Erro ao fazer upload da imagem")
+            const errorMessage = error instanceof Error ? error.message : "Erro ao fazer upload da imagem"
+            alert(errorMessage)
         } finally {
             setIsUploading(false)
         }
@@ -135,10 +139,9 @@ export function ImageUpload({ value, onChange, onRemove, folder, className = "" 
             <div className="flex items-center gap-4">
                 {value ? (
                     <div className="relative w-40 h-40 rounded-md overflow-hidden border border-gray-200 group">
-                        <Image
+                        <img
                             src={value}
                             alt="Upload preview"
-                            fill
                             className="object-cover"
                         />
                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">

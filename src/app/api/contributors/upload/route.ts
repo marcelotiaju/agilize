@@ -25,7 +25,10 @@ export async function POST(request: NextRequest) {
 
     // Validar tamanho do arquivo (2MB = 2,097,152 bytes)
     const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+    console.log(`Contributor upload - File: ${file.name}, Size: ${file.size} bytes, Max: ${MAX_FILE_SIZE} bytes`);
+
     if (file.size > MAX_FILE_SIZE) {
+      console.log(`File rejected - Size ${file.size} exceeds maximum ${MAX_FILE_SIZE}`);
       return NextResponse.json({
         error: "O arquivo excede o tamanho máximo permitido de 2MB"
       }, { status: 400 })
