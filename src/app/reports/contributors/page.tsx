@@ -248,7 +248,7 @@ export default function ReportsPage() {
         const worksheetData: any[] = [];
 
         previewData.congregations.forEach(cong => {
-                cong.contributors.forEach(contributor => {
+            cong.contributors.forEach(contributor => {
 
                 const row: any = {
                     'Congregação': cong.name,
@@ -262,21 +262,21 @@ export default function ReportsPage() {
                 row['Total Anual'] = formatCurrency(contributor.total);
                 worksheetData.push(row);
 
-                })
+            })
             // Linha de TOTAL da Congregação
-                    const totalRow: any = {
-                        'Congregação': cong.name,
-                        'Contribuinte': `TOTAL ${cong.name}`,
-                        'Cargo': '',
-                    };
-                    MONTHS.forEach((month, index) => {
-                        totalRow[month] = formatCurrency(cong.monthTotals[index] || 0);
-                    });
-                    totalRow['Total Anual'] = formatCurrency(cong.grandTotal);
-                    
-                    worksheetData.push(totalRow);
-                    worksheetData.push({}); // Linha vazia para separar congregações
-                });
+            const totalRow: any = {
+                'Congregação': cong.name,
+                'Contribuinte': `TOTAL ${cong.name}`,
+                'Cargo': '',
+            };
+            MONTHS.forEach((month, index) => {
+                totalRow[month] = formatCurrency(cong.monthTotals[index] || 0);
+            });
+            totalRow['Total Anual'] = formatCurrency(cong.grandTotal);
+
+            worksheetData.push(totalRow);
+            worksheetData.push({}); // Linha vazia para separar congregações
+        });
 
         setIsGeneratingExcel(false)
         const ws = XLSX.utils.json_to_sheet(worksheetData, { header: ['Congregação', 'Contribuinte', 'Cargo', ...MONTHS, 'Total'] })
@@ -358,6 +358,25 @@ export default function ReportsPage() {
                                         <Label htmlFor="show-vals" className="cursor-pointer">Exibir Valores (R$)</Label>
                                         <Switch id="show-vals" checked={showValues} onCheckedChange={setShowValues} />
                                     </div>
+                                </div>
+
+                                {/* Novo Filtro de Contribuição */}
+                                <div className="space-y-2">
+                                    <Label>Filtro de Contribuição</Label>
+                                    <Select value={contributionFilter} onValueChange={setContributionFilter}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Selecione o tipo de visualização" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="BOTH">Ambos (Mostrar todos)</SelectItem>
+                                            <SelectItem value="WITH_LAUNCH">Com Lançamento (Apenas quem contribuiu)</SelectItem>
+                                            <SelectItem value="WITHOUT_LAUNCH">Sem Lançamento (Apenas quem não contribuiu)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <p className="text-[12px] text-gray-500 mt-2 italic">
+                                        {contributionFilter === 'WITH_LAUNCH' && "* Filtrando apenas registros com valor maior que zero em algum mês."}
+                                        {contributionFilter === 'WITHOUT_LAUNCH' && "* Filtrando apenas registros sem nenhuma contribuição no período."}
+                                    </p>
                                 </div>
 
                             </div>
@@ -457,25 +476,6 @@ export default function ReportsPage() {
                                         ))}
                                     </div>
                                 </div>
-
-                                {/* Novo Filtro de Contribuição */}
-                                <div className="space-y-2">
-                                    <Label>Filtro de Contribuição</Label>
-                                    <Select value={contributionFilter} onValueChange={setContributionFilter}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Selecione o tipo de visualização" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="BOTH">Ambos (Mostrar todos)</SelectItem>
-                                            <SelectItem value="WITH_LAUNCH">Com Lançamento (Apenas quem contribuiu)</SelectItem>
-                                            <SelectItem value="WITHOUT_LAUNCH">Sem Lançamento (Apenas quem não contribuiu)</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <p className="text-[12px] text-gray-500 mt-2 italic">
-                                        {contributionFilter === 'WITH_LAUNCH' && "* Filtrando apenas registros com valor maior que zero em algum mês."}
-                                        {contributionFilter === 'WITHOUT_LAUNCH' && "* Filtrando apenas registros sem nenhuma contribuição no período."}
-                                    </p>
-                                </div>
                             </div>
                         </CardContent>
                     </Card>
@@ -569,22 +569,22 @@ export default function ReportsPage() {
 
                     <div className="flex gap-2">
                         <Button
-                        onClick={handleExportExcel}
-                        disabled={!previewData}
-                        className="flex-1 bg-green-600 hover:bg-green-700"
-                        size="lg"
+                            onClick={handleExportExcel}
+                            disabled={!previewData}
+                            className="flex-1 bg-green-600 hover:bg-green-700"
+                            size="lg"
                         >
-                        {isGeneratingExcel ? (
-                            <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Gerando Excel...
-                            </>
-                        ) : (
-                            <>
-                            <FileText className="mr-2 h-4 w-4" />
-                            Gerar Excel
-                            </>
-                        )}
+                            {isGeneratingExcel ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Gerando Excel...
+                                </>
+                            ) : (
+                                <>
+                                    <FileText className="mr-2 h-4 w-4" />
+                                    Gerar Excel
+                                </>
+                            )}
                         </Button>
                         <Button
                             onClick={handleGenerateReport}

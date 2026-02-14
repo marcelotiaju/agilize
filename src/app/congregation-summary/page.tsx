@@ -491,6 +491,111 @@ export default function CongregationSummary() {
     }
   }
 
+  // Handle approval toggle directly from listing
+  const handleApprovalToggle = async (summary: Summary, approvalType: 'treasurer' | 'accountant' | 'director') => {
+    const user = session?.user as any
+
+    // Determine current state and new state
+    let isCurrentlyApproved = false
+    let approvedByField = ''
+    let canApprove = false
+
+    if (approvalType === 'treasurer') {
+      isCurrentlyApproved = summary.treasurerApproved ?? false
+      approvedByField = summary.approvedByTreasury || ''
+      canApprove = user?.canApproveTreasury
+    } else if (approvalType === 'accountant') {
+      isCurrentlyApproved = summary.accountantApproved ?? false
+      approvedByField = summary.approvedByAccountant || ''
+      canApprove = user?.canApproveAccountant
+    } else if (approvalType === 'director') {
+      isCurrentlyApproved = summary.directorApproved ?? false
+      approvedByField = summary.approvedByDirector || ''
+      canApprove = user?.canApproveDirector
+    }
+
+    // Check permissions
+    if (!canApprove) {
+      alert('Você não tem permissão para esta aprovação.')
+      return
+    }
+
+    // If trying to unapprove, check if current user was the one who approved
+    if (isCurrentlyApproved && approvedByField && approvedByField !== session?.user?.name) {
+      alert('Apenas o usuário que aprovou pode desmarcar a aprovação.')
+      return
+    }
+
+    // Check for dual permission conflict
+    const hasBothPermissions = user?.canApproveTreasury && user?.canApproveAccountant
+    if (hasBothPermissions) {
+      if (approvalType === 'treasurer' && summary.accountantApproved && summary.approvedByAccountant === session?.user?.name) {
+        alert('Você já aprovou como Contador. Não pode aprovar como Tesoureiro.')
+        return
+      }
+      if (approvalType === 'accountant' && summary.treasurerApproved && summary.approvedByTreasury === session?.user?.name) {
+        alert('Você já aprovou como Tesoureiro. Não pode aprovar como Contador.')
+        return
+      }
+    }
+
+    // Prepare update data
+    const isApproving = !isCurrentlyApproved
+    const updateData: any = {
+      id: summary.id,
+      congregationId: (summary as any).congregationId,
+      startDate: summary.startDate,
+      endDate: summary.endDate,
+      talonNumber: summary.talonNumber,
+      depositValue: summary.depositValue ?? 0,
+      cashValue: summary.cashValue ?? 0,
+      treasurerApproved: summary.treasurerApproved ?? false,
+      accountantApproved: summary.accountantApproved ?? false,
+      directorApproved: summary.directorApproved ?? false,
+      approvedByTreasury: summary.approvedByTreasury || '',
+      approvedAtTreasury: summary.approvedAtTreasury || '',
+      approvedByAccountant: summary.approvedByAccountant || '',
+      approvedAtAccountant: summary.approvedAtAccountant || '',
+      approvedByDirector: summary.approvedByDirector || '',
+      approvedAtDirector: summary.approvedAtDirector || '',
+    }
+
+    // Update the specific approval
+    if (approvalType === 'treasurer') {
+      updateData.treasurerApproved = isApproving
+      updateData.approvedByTreasury = isApproving ? (session?.user?.name || '') : ''
+      updateData.approvedAtTreasury = isApproving ? new Date().toISOString() : ''
+    } else if (approvalType === 'accountant') {
+      updateData.accountantApproved = isApproving
+      updateData.approvedByAccountant = isApproving ? (session?.user?.name || '') : ''
+      updateData.approvedAtAccountant = isApproving ? new Date().toISOString() : ''
+    } else if (approvalType === 'director') {
+      updateData.directorApproved = isApproving
+      updateData.approvedByDirector = isApproving ? (session?.user?.name || '') : ''
+      updateData.approvedAtDirector = isApproving ? new Date().toISOString() : ''
+    }
+
+    // Send update request
+    try {
+      const response = await fetch('/api/congregation-summaries', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData)
+      })
+
+      if (response.ok) {
+        // Refresh the summaries list
+        fetchSummaries(selectedCongregations)
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Erro ao atualizar aprovação')
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar aprovação:', error)
+      alert('Erro ao atualizar aprovação')
+    }
+  }
+
   // MUDANÇA: Lógica para gerenciar a seleção múltipla
   const handleCongregationSelection = (id: string, isChecked: boolean) => {
     if (isChecked) {
@@ -709,53 +814,54 @@ export default function CongregationSummary() {
                     </CardDescription>
 
                     {/* Data Inicial */}
-                    <div className="w-full sm:w-44">
-                      <Label className="sr-only">Data Inicial</Label>
-                      <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className="w-full justify-start text-left font-normal">
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {startSummaryDate ? formatDate(startSummaryDate, 'dd/MM/yyyy') : 'Data Inicial'}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={startSummaryDate}
-                            onSelect={(d) => {
-                              setStartSummaryDate(d);
-                              setStartDateOpen(false);
-                            }}
-                            locale={ptBR}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
+                    <div className="w-full flex items-center justify-between gap-2">
+                      <div className="w-full sm:w-44">
+                        <Label className="sr-only">Data Inicial</Label>
+                        <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="w-full justify-start text-left font-normal">
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {startSummaryDate ? formatDate(startSummaryDate, 'dd/MM/yyyy') : 'Data Inicial'}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={startSummaryDate}
+                              onSelect={(d) => {
+                                setStartSummaryDate(d);
+                                setStartDateOpen(false);
+                              }}
+                              locale={ptBR}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
 
-                    {/* Data Final */}
-                    <div className="w-full sm:w-44">
-                      <Label className="sr-only">Data Final</Label>
-                      <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className="w-full justify-start text-left font-normal">
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {endSummaryDate ? formatDate(endSummaryDate, 'dd/MM/yyyy') : 'Data Final'}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={endSummaryDate}
-                            onSelect={(d) => {
-                              setEndSummaryDate(d);
-                              setEndDateOpen(false);
-                            }}
-                            locale={ptBR}
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      {/* Data Final */}
+                      <div className="w-full sm:w-44">
+                        <Label className="sr-only">Data Final</Label>
+                        <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="w-full justify-start text-left font-normal">
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {endSummaryDate ? formatDate(endSummaryDate, 'dd/MM/yyyy') : 'Data Final'}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={endSummaryDate}
+                              onSelect={(d) => {
+                                setEndSummaryDate(d);
+                                setEndDateOpen(false);
+                              }}
+                              locale={ptBR}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
                     </div>
-
                   </CardHeader>
                   <CardContent>
                     {summaries.length === 0 && !isLoading ? (
@@ -811,19 +917,78 @@ export default function CongregationSummary() {
                             <TableCell>R$ {(summary.circleTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>                            
                             <TableCell>R$ {(summary.exitTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell> */}
                                   <TableCell>
-                                    <div className="space-y-1">
-                                      <div className="flex items-center space-x-2">
-                                        <Checkbox checked={summary.treasurerApproved} disabled />
-                                        <span className="text-sm">Tesoureiro</span>
-                                      </div>
-                                      <div className="flex items-center space-x-2">
-                                        <Checkbox checked={summary.accountantApproved} disabled />
-                                        <span className="text-sm">Contador</span>
-                                      </div>
-                                      <div className="flex items-center space-x-2">
-                                        <Checkbox checked={summary.directorApproved} disabled />
-                                        <span className="text-sm">Dirigente</span>
-                                      </div>
+                                    <div className="flex flex-row gap-1">
+                                      {/* Botão Tesoureiro */}
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant={summary.treasurerApproved ? "default" : "outline"}
+                                        className={cn(
+                                          "flex-1 text-xs transition-all px-2",
+                                          summary.treasurerApproved && "bg-green-600 hover:bg-green-700 text-white border-green-700"
+                                        )}
+                                        disabled={(() => {
+                                          const user = session?.user as any
+                                          const hasBothPermissions = user?.canApproveTreasury && user?.canApproveAccountant
+                                          const approvedByOther = summary.approvedByTreasury && summary.approvedByTreasury !== session?.user?.name
+                                          const alreadyApprovedAsAccountant = hasBothPermissions && summary.accountantApproved && summary.approvedByAccountant === session?.user?.name
+                                          return !user?.canApproveTreasury || alreadyApprovedAsAccountant || approvedByOther
+                                        })()}
+                                        onClick={() => handleApprovalToggle(summary, 'treasurer')}
+                                        title="Tesoureiro"
+                                      >
+                                        {summary.treasurerApproved ? (
+                                          <><Check className="h-3 w-3" />Tesoureiro</>
+                                        ) : (
+                                          "Tesoureiro"
+                                        )}
+                                      </Button>
+
+                                      {/* Botão Contador */}
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant={summary.accountantApproved ? "default" : "outline"}
+                                        className={cn(
+                                          "flex-1 text-xs transition-all px-2",
+                                          summary.accountantApproved && "bg-green-600 hover:bg-green-700 text-white border-green-700"
+                                        )}
+                                        disabled={(() => {
+                                          const user = session?.user as any
+                                          const hasBothPermissions = user?.canApproveTreasury && user?.canApproveAccountant
+                                          const approvedByOther = summary.approvedByAccountant && summary.approvedByAccountant !== session?.user?.name
+                                          const alreadyApprovedAsTreasurer = hasBothPermissions && summary.treasurerApproved && summary.approvedByTreasury === session?.user?.name
+                                          return !user?.canApproveAccountant || alreadyApprovedAsTreasurer || approvedByOther
+                                        })()}
+                                        onClick={() => handleApprovalToggle(summary, 'accountant')}
+                                        title="Contador"
+                                      >
+                                        {summary.accountantApproved ? (
+                                          <><Check className="h-3 w-3" /> Contador</>
+                                        ) : (
+                                          "Contador"
+                                        )}
+                                      </Button>
+
+                                      {/* Botão Dirigente */}
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant={summary.directorApproved ? "default" : "outline"}
+                                        className={cn(
+                                          "flex-1 text-xs transition-all px-2",
+                                          summary.directorApproved && "bg-green-600 hover:bg-green-700 text-white border-green-700"
+                                        )}
+                                        disabled={!session?.user?.canApproveDirector}
+                                        onClick={() => handleApprovalToggle(summary, 'director')}
+                                        title="Dirigente"
+                                      >
+                                        {summary.directorApproved ? (
+                                          <><Check className="h-3 w-3" />Dirigente</>
+                                        ) : (
+                                          "Dirigente"
+                                        )}
+                                      </Button>
                                     </div>
                                   </TableCell>
                                   <TableCell>
@@ -867,7 +1032,7 @@ export default function CongregationSummary() {
                         <div className="md:hidden space-y-4">
                           {summaries.map((summary) => (
                             <Card key={summary.id} className="border-l-4">
-                              <CardHeader className="py-3">
+                              <CardHeader className="py-1">
                                 <CardTitle className="text-base flex justify-between items-center">
                                   {/* Nome da Congregação (assumindo que você adicione esta informação ao tipo Summary) */}
                                   <span className="text-gray-700 font-semibold">
@@ -878,12 +1043,12 @@ export default function CongregationSummary() {
                                     {summary.status === 'APPROVED' ? 'Aprovado' : 'Pendente'}
                                   </Badge>
                                 </CardTitle>
-                                <CardDescription className="text-sm">
+                                <CardDescription className="text-sm mb-[-20]">
                                   {formatDate(new Date(summary.startDate), 'dd/MM/yyyy', { locale: ptBR })} - {' '}
                                   {formatDate(new Date(summary.endDate), 'dd/MM/yyyy', { locale: ptBR })}
                                 </CardDescription>
                               </CardHeader>
-                              <CardContent className="space-y-2 text-sm">
+                              <CardContent className="space-y-1 text-sm">
                                 <div className="flex justify-between">
                                   <span>Dízimo:</span>
                                   <span className="font-medium text-blue-600">
@@ -941,16 +1106,78 @@ export default function CongregationSummary() {
 
                                 <div className="pt-2 border-t">
                                   <h4 className="font-medium mb-1">Aprovações:</h4>
-                                  <div className="grid grid-cols-3 gap-2 text-xs">
-                                    <Badge variant={summary.treasurerApproved ? 'default' : 'secondary'} className="justify-center">
-                                      {summary.treasurerApproved ? <Check className='h-3 w-3 mr-1' /> : ''} Tesoureiro
-                                    </Badge>
-                                    <Badge variant={summary.accountantApproved ? 'default' : 'secondary'} className="justify-center">
-                                      {summary.accountantApproved ? <Check className='h-3 w-3 mr-1' /> : ''} Contador
-                                    </Badge>
-                                    <Badge variant={summary.directorApproved ? 'default' : 'secondary'} className="justify-center">
-                                      {summary.directorApproved ? <Check className='h-3 w-3 mr-1' /> : ''} Dirigente
-                                    </Badge>
+                                  <div className="flex flex-row gap-1 mb-4">
+                                    {/* Botão Tesoureiro */}
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant={summary.treasurerApproved ? "default" : "outline"}
+                                      className={cn(
+                                        "flex-1 text-xs transition-all px-2",
+                                        summary.treasurerApproved && "bg-green-600 hover:bg-green-700 text-white border-green-700"
+                                      )}
+                                      disabled={(() => {
+                                        const user = session?.user as any
+                                        const hasBothPermissions = user?.canApproveTreasury && user?.canApproveAccountant
+                                        const approvedByOther = summary.approvedByTreasury && summary.approvedByTreasury !== session?.user?.name
+                                        const alreadyApprovedAsAccountant = hasBothPermissions && summary.accountantApproved && summary.approvedByAccountant === session?.user?.name
+                                        return !user?.canApproveTreasury || alreadyApprovedAsAccountant || approvedByOther
+                                      })()}
+                                      onClick={() => handleApprovalToggle(summary, 'treasurer')}
+                                      title="Tesoureiro"
+                                    >
+                                      {summary.treasurerApproved ? (
+                                        <><Check className="h-3 w-3" />Tesoureiro</>
+                                      ) : (
+                                        "Tesoureiro"
+                                      )}
+                                    </Button>
+
+                                    {/* Botão Contador */}
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant={summary.accountantApproved ? "default" : "outline"}
+                                      className={cn(
+                                        "flex-1 text-xs transition-all px-2",
+                                        summary.accountantApproved && "bg-green-600 hover:bg-green-700 text-white border-green-700"
+                                      )}
+                                      disabled={(() => {
+                                        const user = session?.user as any
+                                        const hasBothPermissions = user?.canApproveTreasury && user?.canApproveAccountant
+                                        const approvedByOther = summary.approvedByAccountant && summary.approvedByAccountant !== session?.user?.name
+                                        const alreadyApprovedAsTreasurer = hasBothPermissions && summary.treasurerApproved && summary.approvedByTreasury === session?.user?.name
+                                        return !user?.canApproveAccountant || alreadyApprovedAsTreasurer || approvedByOther
+                                      })()}
+                                      onClick={() => handleApprovalToggle(summary, 'accountant')}
+                                      title="Contador"
+                                    >
+                                      {summary.accountantApproved ? (
+                                        <><Check className="h-3 w-3" />Contador</>
+                                      ) : (
+                                        "Contador"
+                                      )}
+                                    </Button>
+
+                                    {/* Botão Dirigente */}
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant={summary.directorApproved ? "default" : "outline"}
+                                      className={cn(
+                                        "flex-1 text-xs transition-all px-2",
+                                        summary.directorApproved && "bg-green-600 hover:bg-green-700 text-white border-green-700"
+                                      )}
+                                      disabled={!session?.user?.canApproveDirector}
+                                      onClick={() => handleApprovalToggle(summary, 'director')}
+                                      title="Dirigente"
+                                    >
+                                      {summary.directorApproved ? (
+                                        <><Check className="h-3 w-3" />Dirigente</>
+                                      ) : (
+                                        "Dirigente"
+                                      )}
+                                    </Button>
                                   </div>
                                 </div>
 
