@@ -134,22 +134,71 @@ export function ImageUpload({ value, onChange, onRemove, folder, className = "" 
         }
     }
 
+    const getFileName = (url: string) => {
+        if (!url) return "imagem-download";
+        try {
+            return url.split('/').pop() || "imagem-download";
+        } catch (e) {
+            return "imagem-download";
+        }
+    }
+
     return (
         <div className={`space-y-4 ${className}`}>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-center gap-4">
                 {value ? (
-                    <div className="relative w-40 h-40 rounded-md overflow-hidden border border-gray-200 group">
-                        <img
-                            src={value}
-                            alt="Upload preview"
-                            className="object-cover"
-                        />
-                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex flex-col gap-2">
+                        <div className="relative w-40 h-40 rounded-md overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center">
+                            <img
+                                src={value}
+                                alt="Upload preview"
+                                className="w-full h-full object-contain"
+                            />
+                        </div>
+                        <div className="flex gap-1 justify-center w-40">
+                            <a
+                                href={value}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-1"
+                                download={getFileName(value)}
+                            >
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full h-8 px-2"
+                                    type="button"
+                                    title="Baixar Imagem"
+                                >
+                                    <Upload className="h-4 w-4 rotate-180" />
+                                </Button>
+                            </a>
+
+                            {/* Visualizar em nova aba (sem download forçado) */}
+                            <a
+                                href={value}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-1"
+                            >
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full h-8 px-2"
+                                    type="button"
+                                    title="Visualizar em nova aba"
+                                >
+                                    <ImageIcon className="h-4 w-4" />
+                                </Button>
+                            </a>
+
                             <Button
                                 variant="destructive"
-                                size="icon"
+                                size="sm"
                                 onClick={onRemove}
                                 type="button"
+                                className="flex-1 h-8 px-2"
+                                title="Excluir Imagem"
                             >
                                 <X className="h-4 w-4" />
                             </Button>
@@ -162,7 +211,7 @@ export function ImageUpload({ value, onChange, onRemove, folder, className = "" 
                     </div>
                 )}
 
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 w-full sm:w-auto">
                     <input
                         type="file"
                         accept="image/*"
@@ -191,6 +240,7 @@ export function ImageUpload({ value, onChange, onRemove, folder, className = "" 
                         onClick={() => fileInputRef.current?.click()}
                         disabled={isUploading}
                         type="button"
+                        className="w-full sm:w-auto justify-center"
                     >
                         <Upload className="mr-2 h-4 w-4" />
                         {isUploading ? "Enviando..." : "Buscar Arquivo"}
@@ -201,6 +251,7 @@ export function ImageUpload({ value, onChange, onRemove, folder, className = "" 
                         type="button"
                         disabled={isUploading}
                         onClick={handleCameraClick}
+                        className="w-full sm:w-auto justify-center"
                     >
                         <Camera className="mr-2 h-4 w-4" />
                         Tirar Foto

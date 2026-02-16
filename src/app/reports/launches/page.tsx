@@ -190,47 +190,47 @@ export default function Reports() {
   }
 
   const handleExportExcel = () => {
-      if (!previewData) return;
+    if (!previewData) return;
 
-      setIsGeneratingExcel(true)
+    setIsGeneratingExcel(true)
 
-      const worksheetData: any[] = [];
+    const worksheetData: any[] = [];
 
-      previewData.congregations.forEach(cong => {
-                cong.launches.forEach(launch => {
-                  worksheetData.push({
-                      'Congregação': cong.name,
-                      'Contribuinte': cong.name,
-                      'Data': format(new Date(launch.date), 'dd/MM/yyyy'),
-                      'Tipo': launch.type === 'DIZIMO' ? 'Dízimo' : launch.type === 'CARNE_REVIVER' ? 'Carnê Reviver' : launch.type,
-                      'Valor': formatCurrency(launch.value)
-                  })
-              })
-              // Add Contributor Total Row
-              worksheetData.push({
-                  'Congregação': cong.name,
-                  'Contribuinte': `${cong.name} (TOTAL)`,
-                  'Data': '',
-                  'Tipo': 'TOTAL',
-                  'Valor': formatCurrency(cong.entrada - cong.saida)
-              })
-              
-              // Add empty row for separation
-              worksheetData.push({
-                  'Congregação': '',
-                  'Contribuinte': '',
-                  'Data': '',
-                  'Tipo': '',
-                  'Valor': ''
-              })
-          })
-      setIsGeneratingExcel(false)
-      const ws = XLSX.utils.json_to_sheet(worksheetData, { header: ['Congregação', 'Contribuinte', 'Data', 'Tipo', 'Valor'] });
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Relatório");
-      XLSX.writeFile(wb, `Relatorio_Lançamentos_${formatDate(startDate, 'dd-MM-yyyy')}_${formatDate(endDate, 'dd-MM-yyyy')}.xlsx`);
+    previewData.congregations.forEach(cong => {
+      cong.launches.forEach(launch => {
+        worksheetData.push({
+          'Congregação': cong.name,
+          'Contribuinte': cong.name,
+          'Data': format(new Date(launch.date), 'dd/MM/yyyy'),
+          'Tipo': launch.type === 'DIZIMO' ? 'Dízimo' : launch.type === 'CARNE_REVIVER' ? 'Carnê Reviver' : launch.type,
+          'Valor': formatCurrency(launch.value)
+        })
+      })
+      // Add Contributor Total Row
+      worksheetData.push({
+        'Congregação': cong.name,
+        'Contribuinte': `${cong.name} (TOTAL)`,
+        'Data': '',
+        'Tipo': 'TOTAL',
+        'Valor': formatCurrency(cong.entrada - cong.saida)
+      })
+
+      // Add empty row for separation
+      worksheetData.push({
+        'Congregação': '',
+        'Contribuinte': '',
+        'Data': '',
+        'Tipo': '',
+        'Valor': ''
+      })
+    })
+    setIsGeneratingExcel(false)
+    const ws = XLSX.utils.json_to_sheet(worksheetData, { header: ['Congregação', 'Contribuinte', 'Data', 'Tipo', 'Valor'] });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Relatório");
+    XLSX.writeFile(wb, `Relatorio_Lançamentos_${formatDate(startDate, 'dd-MM-yyyy')}_${formatDate(endDate, 'dd-MM-yyyy')}.xlsx`);
   };
-  
+
   const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   }
@@ -590,7 +590,7 @@ export default function Reports() {
               ) : (
                 <>
                   <FileText className="mr-2 h-4 w-4" />
-                  Gerar Relatório PDF
+                  Gerar PDF
                 </>
               )}
             </Button>

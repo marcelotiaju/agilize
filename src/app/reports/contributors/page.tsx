@@ -368,15 +368,15 @@ export default function ReportsPage() {
                                             <SelectValue placeholder="Selecione o tipo de visualização" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="BOTH">Ambos (Mostrar todos)</SelectItem>
-                                            <SelectItem value="WITH_LAUNCH">Com Lançamento (Apenas quem contribuiu)</SelectItem>
-                                            <SelectItem value="WITHOUT_LAUNCH">Sem Lançamento (Apenas quem não contribuiu)</SelectItem>
+                                            <SelectItem value="BOTH">Ambos</SelectItem>
+                                            <SelectItem value="WITH_LAUNCH">Com Lançamento</SelectItem>
+                                            <SelectItem value="WITHOUT_LAUNCH">Sem Lançamento</SelectItem>
                                         </SelectContent>
                                     </Select>
-                                    <p className="text-[12px] text-gray-500 mt-2 italic">
+                                    {/* <p className="text-[12px] text-gray-500 mt-2 italic">
                                         {contributionFilter === 'WITH_LAUNCH' && "* Filtrando apenas registros com valor maior que zero em algum mês."}
                                         {contributionFilter === 'WITHOUT_LAUNCH' && "* Filtrando apenas registros sem nenhuma contribuição no período."}
-                                    </p>
+                                    </p> */}
                                 </div>
 
                             </div>
@@ -600,7 +600,7 @@ export default function ReportsPage() {
                             ) : (
                                 <>
                                     <FileText className="mr-2 h-4 w-4" />
-                                    Gerar Relatório PDF
+                                    Gerar PDF
                                 </>
                             )}
                         </Button>

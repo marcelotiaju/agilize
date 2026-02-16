@@ -645,7 +645,7 @@ export default function CongregationSummary() {
       <Sidebar />
 
       <div className="lg:pl-64">
-        <div className="p-6">
+        <div className="p-4">
           <div className="flex mb-6">
             <h1 className="text-2xl font-bold text-gray-900">Resumo Diário</h1>
             {/* <p className="text-gray-600">Gerencie os resumos financeiros das congregações</p> */}
@@ -741,12 +741,12 @@ export default function CongregationSummary() {
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="w-full">
-                          <Label htmlFor="startDate">Data Início</Label>
+                          <Label htmlFor="startDate">Data</Label>
                           <Popover>
                             <PopoverTrigger asChild>
                               <Button variant="outline" className="w-full justify-start text-left font-normal">
                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                {editFormData.startDate ? formatDate(new Date(`${editFormData.startDate}T00:00:00`), 'dd/MM/yyyy') : 'Data Início'}
+                                {editFormData.startDate ? formatDate(new Date(`${editFormData.startDate}T00:00:00`), 'dd/MM/yyyy') : 'Data'}
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start">
@@ -755,7 +755,12 @@ export default function CongregationSummary() {
                                 selected={editFormData.startDate ? new Date(`${editFormData.startDate}T00:00:00`) : undefined}
                                 onSelect={(d) => {
                                   if (d) {
-                                    setEditFormData({ ...editFormData, startDate: formatDate(d, 'yyyy-MM-dd') })
+                                    const dateStr = formatDate(d, 'yyyy-MM-dd')
+                                    setEditFormData({
+                                      ...editFormData,
+                                      startDate: dateStr,
+                                      endDate: dateStr // Define data final igual a inicial
+                                    })
                                   }
                                 }}
                                 locale={ptBR}
@@ -764,29 +769,7 @@ export default function CongregationSummary() {
                           </Popover>
                         </div>
 
-                        <div className="w-full">
-                          <Label htmlFor="endDate">Data Fim</Label>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button variant="outline" className="w-full justify-start text-left font-normal">
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {editFormData.endDate ? formatDate(new Date(`${editFormData.endDate}T00:00:00`), 'dd/MM/yyyy') : 'Data Fim'}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={editFormData.endDate ? new Date(`${editFormData.endDate}T00:00:00`) : undefined}
-                                onSelect={(d) => {
-                                  if (d) {
-                                    setEditFormData({ ...editFormData, endDate: formatDate(d, 'yyyy-MM-dd') })
-                                  }
-                                }}
-                                locale={ptBR}
-                              />
-                            </PopoverContent>
-                          </Popover>
-                        </div>
+                        {/* Data Fim oculta - mantida a lógica via state */}
 
                         <div className="flex items-end pt-2">
                           <Button onClick={handleCreateSummary} disabled={isLoading || !summaryType} className="w-full bg-amber-700 text-white">
@@ -814,7 +797,7 @@ export default function CongregationSummary() {
                     </CardDescription>
 
                     {/* Data Inicial */}
-                    <div className="w-full flex items-center justify-between gap-2">
+                    <div className="w-full flex items-center justify-start gap-2">
                       <div className="w-full sm:w-44">
                         <Label className="sr-only">Data Inicial</Label>
                         <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
@@ -903,8 +886,8 @@ export default function CongregationSummary() {
                                       {congregations.find(c => c.id === (summary as any).congregationId)?.name || "Resumo"}
                                     </span>
                                     <div>
-                                      {formatDate(new Date(summary.startDate), 'dd/MM/yyyy', { locale: ptBR })} - {' '}
-                                      {formatDate(new Date(summary.endDate), 'dd/MM/yyyy', { locale: ptBR })}
+                                      {formatDate(new Date(summary.startDate), 'dd/MM/yyyy', { locale: ptBR })}
+                                      {/* {formatDate(new Date(summary.endDate), 'dd/MM/yyyy', { locale: ptBR })} */}
                                     </div>
                                   </TableCell>
                                   {/* <TableCell>R$ {(summary.titheTotal ?? 0.00).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
@@ -1029,9 +1012,9 @@ export default function CongregationSummary() {
                         </div>
 
                         {/* MUDANÇA 3: Cards para Mobile */}
-                        <div className="md:hidden space-y-4">
+                        <div className="md:hidden space-y-2">
                           {summaries.map((summary) => (
-                            <Card key={summary.id} className="border-l-4">
+                            <Card key={summary.id} className="border-l-1">
                               <CardHeader className="py-1">
                                 <CardTitle className="text-base flex justify-between items-center">
                                   {/* Nome da Congregação (assumindo que você adicione esta informação ao tipo Summary) */}
@@ -1124,12 +1107,12 @@ export default function CongregationSummary() {
                                         return !user?.canApproveTreasury || alreadyApprovedAsAccountant || approvedByOther
                                       })()}
                                       onClick={() => handleApprovalToggle(summary, 'treasurer')}
-                                      title="Tesoureiro"
+                                      title="Tes"
                                     >
                                       {summary.treasurerApproved ? (
-                                        <><Check className="h-3 w-3" />Tesoureiro</>
+                                        <><Check className="h-3 w-3" />Tes</>
                                       ) : (
-                                        "Tesoureiro"
+                                        "Tes"
                                       )}
                                     </Button>
 
@@ -1150,12 +1133,12 @@ export default function CongregationSummary() {
                                         return !user?.canApproveAccountant || alreadyApprovedAsTreasurer || approvedByOther
                                       })()}
                                       onClick={() => handleApprovalToggle(summary, 'accountant')}
-                                      title="Contador"
+                                      title="Cont"
                                     >
                                       {summary.accountantApproved ? (
-                                        <><Check className="h-3 w-3" />Contador</>
+                                        <><Check className="h-3 w-3" />Cont</>
                                       ) : (
-                                        "Contador"
+                                        "Cont"
                                       )}
                                     </Button>
 
@@ -1170,12 +1153,12 @@ export default function CongregationSummary() {
                                       )}
                                       disabled={!session?.user?.canApproveDirector}
                                       onClick={() => handleApprovalToggle(summary, 'director')}
-                                      title="Dirigente"
+                                      title="Dir"
                                     >
                                       {summary.directorApproved ? (
-                                        <><Check className="h-3 w-3" />Dirigente</>
+                                        <><Check className="h-3 w-3" />Dir</>
                                       ) : (
-                                        "Dirigente"
+                                        "Dir"
                                       )}
                                     </Button>
                                   </div>
@@ -1720,11 +1703,11 @@ export default function CongregationSummary() {
                               {congregations.find(c => c.id === editFormData.congregationId)?.name || 'N/A'}
                             </span>
                           </div>
-                          <div className="flex justify-between items-center">
+                          <div className="flex justify-start items-center">
                             <span className="font-small text-gray-700">Período:</span>
                             <span className="text-gray-900 font-semibold">
                               {editFormData.startDate && editFormData.endDate
-                                ? `${editFormData.startDate.substring(8, 10)}/${editFormData.startDate.substring(5, 7)}/${editFormData.startDate.substring(0, 4)} - ${editFormData.endDate.substring(8, 10)}/${editFormData.endDate.substring(5, 7)}/${editFormData.endDate.substring(0, 4)}`
+                                ? `${editFormData.startDate.substring(8, 10)}/${editFormData.startDate.substring(5, 7)}/${editFormData.startDate.substring(0, 4)}`
                                 : 'N/A'
                               }
                             </span>

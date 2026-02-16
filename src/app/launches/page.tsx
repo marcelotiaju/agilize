@@ -1317,28 +1317,30 @@ export default function Launches() {
                               {(formData.type === 'DIZIMO' || formData.type === 'CARNE_REVIVER') && (
                                 <div className="w-full">
                                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
-                                    <div className="flex items-center space-x-2 w-full sm:w-auto">
-                                      <Button
-                                        type="button"
-                                        variant={formData.isContributorRegistered ? "default" : "outline"}
-                                        size="sm"
-                                        disabled={isFieldDisabledDuringEdit() || !formData.congregationId}
-                                        className={cn(
-                                          "h-9 px-3 transition-all flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start",
-                                          formData.isContributorRegistered
-                                            ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-800 shadow-sm"
-                                            : "text-gray-600 border-gray-300 hover:bg-gray-50"
-                                        )}
-                                        onClick={() => toggleField('isContributorRegistered')}
-                                      >
-                                        {formData.isContributorRegistered ? (
-                                          <Check className="h-4 w-4 animate-in zoom-in duration-200 shrink-0" />
-                                        ) : (
-                                          <Users className="h-4 w-4 shrink-0" />
-                                        )}
-                                        <span className="text-sm sm:text-base">Contribuinte Cadastrado</span>
-                                      </Button>
-                                    </div>
+                                    {!formData.isAnonymous && (
+                                      <div className="flex items-center space-x-2 w-full sm:w-auto">
+                                        <Button
+                                          type="button"
+                                          variant={formData.isContributorRegistered ? "default" : "outline"}
+                                          size="sm"
+                                          disabled={isFieldDisabledDuringEdit() || !formData.congregationId}
+                                          className={cn(
+                                            "h-9 px-3 transition-all flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start",
+                                            formData.isContributorRegistered
+                                              ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-800 shadow-sm"
+                                              : "text-gray-600 border-gray-300 hover:bg-gray-50"
+                                          )}
+                                          onClick={() => toggleField('isContributorRegistered')}
+                                        >
+                                          {formData.isContributorRegistered ? (
+                                            <Check className="h-4 w-4 animate-in zoom-in duration-200 shrink-0" />
+                                          ) : (
+                                            <Users className="h-4 w-4 shrink-0" />
+                                          )}
+                                          <span className="text-sm sm:text-base">Contribuinte Cadastrado</span>
+                                        </Button>
+                                      </div>
+                                    )}
 
                                     {!formData.isContributorRegistered && (
                                       <div className="flex items-center space-x-2 w-full sm:w-auto">
