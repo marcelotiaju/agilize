@@ -907,7 +907,7 @@ export default function CongregationSummary() {
                                         size="sm"
                                         variant={summary.treasurerApproved ? "default" : "outline"}
                                         className={cn(
-                                          "flex-1 text-xs transition-all px-2",
+                                          "flex-1 text-sm transition-all px-2 w-0",
                                           summary.treasurerApproved && "bg-green-600 hover:bg-green-700 text-white border-green-700"
                                         )}
                                         disabled={(() => {
@@ -921,7 +921,7 @@ export default function CongregationSummary() {
                                         title="Tesoureiro"
                                       >
                                         {summary.treasurerApproved ? (
-                                          <><Check className="h-3 w-3" />Tesoureiro</>
+                                          <>Tesoureiro</>
                                         ) : (
                                           "Tesoureiro"
                                         )}
@@ -933,7 +933,7 @@ export default function CongregationSummary() {
                                         size="sm"
                                         variant={summary.accountantApproved ? "default" : "outline"}
                                         className={cn(
-                                          "flex-1 text-xs transition-all px-2",
+                                          "flex-1 text-sm transition-all px-2",
                                           summary.accountantApproved && "bg-green-600 hover:bg-green-700 text-white border-green-700"
                                         )}
                                         disabled={(() => {
@@ -947,7 +947,7 @@ export default function CongregationSummary() {
                                         title="Contador"
                                       >
                                         {summary.accountantApproved ? (
-                                          <><Check className="h-3 w-3" /> Contador</>
+                                          <>Contador</>
                                         ) : (
                                           "Contador"
                                         )}
@@ -959,7 +959,7 @@ export default function CongregationSummary() {
                                         size="sm"
                                         variant={summary.directorApproved ? "default" : "outline"}
                                         className={cn(
-                                          "flex-1 text-xs transition-all px-2",
+                                          "flex-1 text-sm transition-all px-2",
                                           summary.directorApproved && "bg-green-600 hover:bg-green-700 text-white border-green-700"
                                         )}
                                         disabled={!session?.user?.canApproveDirector}
@@ -967,7 +967,7 @@ export default function CongregationSummary() {
                                         title="Dirigente"
                                       >
                                         {summary.directorApproved ? (
-                                          <><Check className="h-3 w-3" />Dirigente</>
+                                          <>Dirigente</>
                                         ) : (
                                           "Dirigente"
                                         )}
@@ -1027,8 +1027,8 @@ export default function CongregationSummary() {
                                   </Badge>
                                 </CardTitle>
                                 <CardDescription className="text-sm mb-[-20]">
-                                  {formatDate(new Date(summary.startDate), 'dd/MM/yyyy', { locale: ptBR })} - {' '}
-                                  {formatDate(new Date(summary.endDate), 'dd/MM/yyyy', { locale: ptBR })}
+                                  {formatDate(new Date(summary.startDate), 'dd/MM/yyyy', { locale: ptBR })}
+                                  {/* {formatDate(new Date(summary.endDate), 'dd/MM/yyyy', { locale: ptBR })} */}
                                 </CardDescription>
                               </CardHeader>
                               <CardContent className="space-y-1 text-sm">
@@ -1096,7 +1096,7 @@ export default function CongregationSummary() {
                                       size="sm"
                                       variant={summary.treasurerApproved ? "default" : "outline"}
                                       className={cn(
-                                        "flex-1 text-xs transition-all px-2",
+                                        "flex-1 text-xs transition-all px-1 font-size-1",
                                         summary.treasurerApproved && "bg-green-600 hover:bg-green-700 text-white border-green-700"
                                       )}
                                       disabled={(() => {
@@ -1107,12 +1107,12 @@ export default function CongregationSummary() {
                                         return !user?.canApproveTreasury || alreadyApprovedAsAccountant || approvedByOther
                                       })()}
                                       onClick={() => handleApprovalToggle(summary, 'treasurer')}
-                                      title="Tes"
+                                      title="Tesoureiro"
                                     >
                                       {summary.treasurerApproved ? (
-                                        <><Check className="h-3 w-3" />Tes</>
+                                        <>Tesoureiro</>
                                       ) : (
-                                        "Tes"
+                                        "Tesoureiro"
                                       )}
                                     </Button>
 
@@ -1122,7 +1122,7 @@ export default function CongregationSummary() {
                                       size="sm"
                                       variant={summary.accountantApproved ? "default" : "outline"}
                                       className={cn(
-                                        "flex-1 text-xs transition-all px-2",
+                                        "flex-1 text-xs transition-all px-0",
                                         summary.accountantApproved && "bg-green-600 hover:bg-green-700 text-white border-green-700"
                                       )}
                                       disabled={(() => {
@@ -1133,12 +1133,12 @@ export default function CongregationSummary() {
                                         return !user?.canApproveAccountant || alreadyApprovedAsTreasurer || approvedByOther
                                       })()}
                                       onClick={() => handleApprovalToggle(summary, 'accountant')}
-                                      title="Cont"
+                                      title="Contador"
                                     >
                                       {summary.accountantApproved ? (
-                                        <><Check className="h-3 w-3" />Cont</>
+                                        <>Contador</>
                                       ) : (
-                                        "Cont"
+                                        "Contador"
                                       )}
                                     </Button>
 
@@ -1153,12 +1153,12 @@ export default function CongregationSummary() {
                                       )}
                                       disabled={!session?.user?.canApproveDirector}
                                       onClick={() => handleApprovalToggle(summary, 'director')}
-                                      title="Dir"
+                                      title="Dirigente"
                                     >
                                       {summary.directorApproved ? (
-                                        <><Check className="h-3 w-3" />Dir</>
+                                        <>Dirigente</>
                                       ) : (
-                                        "Dir"
+                                        "Dirigente"
                                       )}
                                     </Button>
                                   </div>
@@ -1726,22 +1726,22 @@ export default function CongregationSummary() {
                             </TableHeader>
                             <TableBody>
                               <TableRow>
-                                <TableCell className="font-medium">Inclusão</TableCell>
+                                <TableCell className="font-small">Inclusão</TableCell>
                                 <TableCell>{editFormData?.createdBy || 'N/A'}</TableCell>
                                 <TableCell>{editFormData?.createdAt ? formatDate(utcToZonedTime(new Date(editFormData.createdAt), USER_TIMEZONE), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
                               </TableRow>
                               <TableRow>
-                                <TableCell className="font-medium">Tesoureiro</TableCell>
+                                <TableCell className="font-small">Tesoureiro</TableCell>
                                 <TableCell>{editFormData?.approvedByTreasury || '-'}</TableCell>
                                 <TableCell>{editFormData?.approvedAtTreasury ? formatDate(utcToZonedTime(new Date(editFormData.approvedAtTreasury), USER_TIMEZONE), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
                               </TableRow>
                               <TableRow>
-                                <TableCell className="font-medium">Contador</TableCell>
+                                <TableCell className="font-small">Contador</TableCell>
                                 <TableCell>{editFormData?.approvedByAccountant || '-'}</TableCell>
                                 <TableCell>{editFormData?.approvedAtAccountant ? formatDate(utcToZonedTime(new Date(editFormData.approvedAtAccountant), USER_TIMEZONE), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
                               </TableRow>
                               <TableRow>
-                                <TableCell className="font-medium">Dirigente</TableCell>
+                                <TableCell className="font-small">Dirigente</TableCell>
                                 <TableCell>{editFormData?.approvedByDirector || '-'}</TableCell>
                                 <TableCell>{editFormData?.approvedAtDirector ? formatDate(utcToZonedTime(new Date(editFormData.approvedAtDirector), USER_TIMEZONE), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
                               </TableRow>
