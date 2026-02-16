@@ -933,7 +933,7 @@ export default function CongregationSummary() {
                                         size="sm"
                                         variant={summary.accountantApproved ? "default" : "outline"}
                                         className={cn(
-                                          "flex-1 text-sm transition-all px-2",
+                                          "flex-1 text-sm transition-all px-2 w-0",
                                           summary.accountantApproved && "bg-green-600 hover:bg-green-700 text-white border-green-700"
                                         )}
                                         disabled={(() => {
@@ -959,7 +959,7 @@ export default function CongregationSummary() {
                                         size="sm"
                                         variant={summary.directorApproved ? "default" : "outline"}
                                         className={cn(
-                                          "flex-1 text-sm transition-all px-2",
+                                          "flex-1 text-sm transition-all px-2 w-0",
                                           summary.directorApproved && "bg-green-600 hover:bg-green-700 text-white border-green-700"
                                         )}
                                         disabled={!session?.user?.canApproveDirector}
