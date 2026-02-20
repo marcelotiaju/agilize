@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     // Salvar o arquivo
     await writeFile(path, buffer)
 
-    // Retornar a URL do arquivo
+    // Retornar a URL do arquivo (exibição usa getUploadUrl() para servir via /api/uploads/ em produção)
     const fileUrl = `/uploads/${fileName}`
 
     return NextResponse.json({ url: fileUrl })

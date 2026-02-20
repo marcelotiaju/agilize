@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, Search, Check, X, AlertCircle, CalendarIcon, User, Users, Ghost, List, ArrowUp, Upload, FileText, Building, Loader2, Camera } from 'lucide-react'
+import { Plus, Edit, Trash2, Search, Check, X, AlertCircle, CalendarIcon, User, Users, Ghost, List, ArrowUp, Upload, FileText, Building, Loader2, Camera, Paperclip } from 'lucide-react'
 import { format, startOfDay } from 'date-fns'
 import { zonedTimeToUtc } from 'date-fns-tz'
 import { ptBR } from 'date-fns/locale'
@@ -201,17 +201,17 @@ export default function Launches() {
   // Função helper para verificar se um lançamento pode ser editado
   const isEditDisabled = (launch: Launch | null) => {
     if (!launch) return false;
-    // Se tem canTechnicalIntervention, permite editar qualquer lançamento
-    if (canTechnicalIntervention) return false;
-    // Caso contrário, desabilita se: não é NORMAL/IMPORTED OU faz parte de um resumo
-    return !(launch.status === 'NORMAL' || launch.status === 'IMPORTED') || launch.summaryId != null;
+    // Se tem canTechnicalIntervention E o modo está ativo, permite editar qualquer lançamento
+    if (canTechnicalIntervention && isTechnicalIntervention) return false;
+    // Caso contrário, desabilita se: não é NORMAL ou faz parte de um resumo
+    return launch.status !== 'NORMAL' || launch.summaryId != null;
   }
 
   // Função helper para verificar se um campo específico deve ser desabilitado durante edição
   const isFieldDisabledDuringEdit = () => {
     if (!editingLaunch) return false;
-    // Se tem canTechnicalIntervention, permite editar todos os campos
-    if (canTechnicalIntervention) return false;
+    // Se tem canTechnicalIntervention E o modo está ativo, permite editar todos os campos
+    if (canTechnicalIntervention && isTechnicalIntervention) return false;
     // Caso contrário, desabilita se o status não é NORMAL ou tem resumo vinculado
     return editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null;
   }
@@ -806,193 +806,275 @@ export default function Launches() {
   }
 
   const filteredContributors = contributors.filter(c =>
-    !formData.congregationId || c.congregationId === formData.congregationId || (editingLaunch?.status === 'IMPORTED')
+    !formData.congregationId || c.congregationId === formData.congregationId || c.id === formData.contributorId || (editingLaunch?.status === 'IMPORTED')
   )
+
+  // Função helper para obter a cor da borda baseada no tipo de lançamento
+  const getLaunchTypeBorderColor = (type: string) => {
+    switch (type) {
+      case 'DIZIMO':
+        return 'border-l-blue-500'
+      case 'OFERTA_CULTO':
+        return 'border-l-green-500'
+      case 'VOTO':
+        return 'border-l-green-500'
+      case 'EBD':
+        return 'border-l-green-500'
+      case 'CAMPANHA':
+        return 'border-l-green-500'
+      case 'CARNE_REVIVER':
+        return 'border-l-amber-800'
+      case 'SAIDA':
+        return 'border-l-red-500'
+      case 'MISSAO':
+        return 'border-l-green-500'
+      case 'CIRCULO':
+        return 'border-l-pink-500'
+      default:
+        return 'border-l-gray-300'
+    }
+  }
+
   // Mobile
-  const LaunchCard = ({ launch }) => (
-    <Card key={launch.id} className="mb-2 shadow-sm hover:shadow-md transition-shadow">
-      <CardContent className="p-4 pt-0.5 pb-1">
-        <div className="flex justify-between items-start mb-1">
-          <div className={`px-3 py-1 rounded text-white text-sm font-medium ${launch.type === 'VOTO' ? 'bg-green-500' :
-            launch.type === 'EBD' ? 'bg-green-500' :
-              launch.type === 'CAMPANHA' ? 'bg-green-500' :
-                launch.type === 'DIZIMO' ? 'bg-blue-500' :
-                  launch.type === 'CARNE_REVIVER' ? 'bg-green-500' :
-                    launch.type === 'SAIDA' ? 'bg-red-500' :
-                      launch.type === 'MISSAO' ? 'bg-green-500' :
-                        launch.type === 'OFERTA_CULTO' ? 'bg-green-500' :
-                          launch.type === 'CIRCULO' ? 'bg-green-500' : ''
-            }`}>
-            {launch.type === 'VOTO' ? 'Voto' :
-              launch.type === 'EBD' ? 'EBD' :
-                launch.type === 'CAMPANHA' ? 'Campanha' :
-                  launch.type === 'DIZIMO' ? 'Dízimo' :
-                    launch.type === 'CARNE_REVIVER' ? 'Carnê Reviver' :
-                      launch.type === 'SAIDA' ? 'Saída' :
-                        launch.type === 'MISSAO' ? 'Missão' :
-                          launch.type === 'OFERTA_CULTO' ? 'Oferta do Culto' :
-                            launch.type === 'CIRCULO' ? 'Círculo de Oração' : ''}
+  const LaunchCard = ({ launch }: { launch: Launch }) => {
+    const borderColor = getLaunchTypeBorderColor(launch.type)
+    const showContributorPhoto = (launch.type === 'DIZIMO' || launch.type === 'CARNE_REVIVER')
+    // Anônimo: Dízimo/Carnê Reviver sem contributorId e com contributorName 'ANÔNIMO' (ou vazio)
+    const name = (launch.contributorName || '').trim().toUpperCase()
+    const isAnonymous = showContributorPhoto &&
+      !launch.contributorId &&
+      (!launch.contributor || !launch.contributor.id) &&
+      (name === 'ANÔNIMO' || name === 'ANONIMO' || name === '')
+
+    return (
+      <Card key={launch.id} className={`mb-2 shadow-sm hover:shadow-md transition-shadow border-l-4 ${borderColor} overflow-hidden`}>
+        <CardContent className="p-4 pt-0.5 pb-1 overflow-hidden">
+          <div className="flex justify-between items-start mb-1">
+            <div className={`px-3 py-1 rounded text-white text-sm font-medium ${launch.type === 'VOTO' ? 'bg-green-500' :
+              launch.type === 'EBD' ? 'bg-green-500' :
+                launch.type === 'CAMPANHA' ? 'bg-green-500' :
+                  launch.type === 'DIZIMO' ? 'bg-blue-500' :
+                    launch.type === 'CARNE_REVIVER' ? 'bg-amber-800' :
+                      launch.type === 'SAIDA' ? 'bg-red-500' :
+                        launch.type === 'MISSAO' ? 'bg-green-500' :
+                          launch.type === 'OFERTA_CULTO' ? 'bg-green-500' :
+                            launch.type === 'CIRCULO' ? 'bg-pink-500' : ''
+              }`}>
+              {launch.type === 'VOTO' ? 'Voto' :
+                launch.type === 'EBD' ? 'EBD' :
+                  launch.type === 'CAMPANHA' ? 'Campanha' :
+                    launch.type === 'DIZIMO' ? 'Dízimo' :
+                      launch.type === 'CARNE_REVIVER' ? 'Carnê Reviver' :
+                        launch.type === 'SAIDA' ? 'Saída' :
+                          launch.type === 'MISSAO' ? 'Missão' :
+                            launch.type === 'OFERTA_CULTO' ? 'Oferta do Culto' :
+                              launch.type === 'CIRCULO' ? 'Círculo de Oração' : ''}
+            </div>
+            <div className={`flex items-center space-x-2`}>
+              {launch.attachmentUrl && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Paperclip className="h-4 w-4 text-gray-500 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Lançamento possui anexo</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              {launch.summaryId && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <PieChart className="h-4 w-4 text-gray-500 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Lançamento pertence a um resumo</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              <Badge className={`${launch.status === 'IMPORTED' ? 'bg-orange-500 hover:bg-orange-600' : ''}`}
+                variant={
+                  launch.status === 'NORMAL' ? 'default' :
+                    launch.status === 'APPROVED' ? 'default' :
+                      launch.status === 'EXPORTED' ? 'secondary' :
+                        launch.status === 'IMPORTED' ? 'destructive' : 'destructive'
+                }>
+                {launch.status === 'NORMAL' ? 'Normal' :
+                  launch.status === 'APPROVED' ? 'Aprovado' :
+                    launch.status === 'EXPORTED' ? 'Exportado' :
+                      launch.status === 'IMPORTED' ? 'Importado' : 'Cancelado'}
+              </Badge>
+            </div>
           </div>
-          <div className={`flex items-center space-x-2`}>
-            <Badge className={`${launch.status === 'IMPORTED' ? 'bg-orange-500 hover:bg-orange-600' : ''}`}
-              variant={
-                launch.status === 'NORMAL' ? 'default' :
-                  launch.status === 'APPROVED' ? 'default' :
-                    launch.status === 'EXPORTED' ? 'secondary' :
-                      launch.status === 'IMPORTED' ? 'destructive' : 'destructive'
-              }>
-              {launch.status === 'NORMAL' ? 'Normal' :
-                launch.status === 'APPROVED' ? 'Aprovado' :
-                  launch.status === 'EXPORTED' ? 'Exportado' :
-                    launch.status === 'IMPORTED' ? 'Importado' : 'Cancelado'}
-            </Badge>
-            {launch.approvedBy && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="text-xs text-gray-500 cursor-help">ℹ️</div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Aprovado por: {launch.approvedBy}</p>
-                  <p>{launch.approvedAt ? format(new Date(launch.approvedAt), 'dd/MM/yyyy HH:mm') : ''}</p>
-                </TooltipContent>
-              </Tooltip>
+
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="flex-1 space-y-1 mb-1 min-w-0">
+              <div className="flex items-center text-sm font-normal">
+                <Building className="h-4 w-4 mr-1 shrink-0 text-gray-500" />
+                <span className="truncate">{extractAfterColon(launch.congregation?.name)}</span>
+              </div>
+
+              <div className="flex items-center text-sm font-normal">
+                <CalendarIcon className="h-4 w-4 mr-1 shrink-0" />
+                {format(new Date(launch.date), 'dd/MM/yyyy', { locale: ptBR })}
+              </div>
+
+              <div className="text-sm font-normal">
+                <div>{formatCurrency(launch.value)}</div>
+              </div>
+
+              {(launch.contributor?.name || launch.contributorName || launch.supplier?.razaoSocial || launch.supplierName) && (
+                <div className="flex items-center text-sm font-normal">
+                  <User className="h-4 w-4 mr-1 shrink-0 text-gray-500" />
+                  <span className="truncate">
+                    {launch.contributor?.name || launch.contributorName || launch.supplier?.razaoSocial || launch.supplierName}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {showContributorPhoto && (
+              <div className="shrink-0 flex-shrink-0 ml-2">
+                {isAnonymous ? (
+                  <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center border-2 border-gray-300 flex-shrink-0">
+                    <Ghost className="h-6 w-6 text-gray-400" />
+                  </div>
+                ) : launch.contributor?.photoUrl ? (
+                  <div className="relative h-12 w-12 flex-shrink-0">
+                    <img
+                      src={`/uploads/${launch.contributor.photoUrl}`}
+                      alt="Foto do contribuinte"
+                      className="h-12 w-12 rounded-full object-cover border-2 border-gray-300"
+                      onError={(e) => {
+                        // Se a imagem não carregar, substituir por placeholder
+                        const target = e.currentTarget as HTMLImageElement
+                        target.style.display = 'none'
+                        const placeholder = target.parentElement?.querySelector('.photo-placeholder') as HTMLElement
+                        if (placeholder) {
+                          placeholder.style.display = 'flex'
+                        }
+                      }}
+                    />
+                    <div className="photo-placeholder h-12 w-12 rounded-full bg-gray-200 hidden items-center justify-center border-2 border-gray-300 absolute inset-0">
+                      <User className="h-6 w-6 text-gray-400" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center border-2 border-gray-300 flex-shrink-0">
+                    <User className="h-6 w-6 text-gray-400" />
+                  </div>
+                )}
+              </div>
             )}
           </div>
-        </div>
 
-        <div className="space-y-1 mb-1">
-          <div className="flex items-center text-sm font-normal">
-            <Building className="h-4 w-4 mr-1 shrink-0 text-gray-500" />
-            <span className="truncate">{extractAfterColon(launch.congregation?.name)}</span>
-          </div>
-
-          <div className="flex items-center text-sm font-normal">
-            <CalendarIcon className="h-4 w-4 mr-1" />
-            {format(new Date(launch.date), 'dd/MM/yyyy', { locale: ptBR })}
-          </div>
-
-          <div className="text-sm font-normal">
-            <div>{formatCurrency(launch.value)}</div>
-          </div>
-
-          {(launch.contributor?.name || launch.contributorName || launch.supplier?.razaoSocial || launch.supplierName) && (
-            <div className="flex items-center text-sm font-normal">
-              <User className="h-4 w-4 mr-1 shrink-0 text-gray-500" />
-              <span className="truncate">
-                {launch.contributor?.name || launch.contributorName || launch.supplier?.razaoSocial || launch.supplierName}
-              </span>
+          {launch.talonNumber && launch.type !== 'CARNE_REVIVER' && launch.type !== 'MISSAO' && (
+            <div className="flex justify-start">
+              <span className="text-sm font-normal">{launch.type === 'SAIDA' ? 'Nr. Doc:' : launch.type === 'DIZIMO' ? 'Nr. Recibo:' : 'Nr. Talão:'}</span>
+              <span className="text-sm font-medium">{launch.talonNumber}</span>
             </div>
           )}
-        </div>
+          {launch.description && (
+            <div className="flex justify-start">
+              <FileText className="h-4 w-4 md:hidden" />
+              {/* <span className="text-sm font-normal">Anotações:</span> */}
+              <span className="text-sm font-medium ml-1">{launch.description}</span>
+            </div>
+          )}
+          {launch.classification && (
+            <div className="flex justify-start">
+              <List className="h-4 w-4 mr-1" />
+              {/* <span className="text-sm font-normal">Classificação:</span> */}
+              <span className="text-sm font-medium">{launch.classification.description}</span>
+            </div>
+          )}
 
-        {launch.talonNumber && launch.type !== 'CARNE_REVIVER' && launch.type !== 'MISSAO' && (
-          <div className="flex justify-start">
-            <span className="text-sm font-normal">{launch.type === 'SAIDA' ? 'Nr. Doc:' : launch.type === 'DIZIMO' ? 'Nr. Recibo:' : 'Nr. Talão:'}</span>
-            <span className="text-sm font-medium">{launch.talonNumber}</span>
-          </div>
-        )}
-        {launch.description && (
-          <div className="flex justify-start">
-            <FileText className="h-4 w-4 md:hidden" />
-            {/* <span className="text-sm font-normal">Anotações:</span> */}
-            <span className="text-sm font-medium ml-1">{launch.description}</span>
-          </div>
-        )}
-        {launch.classification && (
-          <div className="flex justify-start">
-            <List className="h-4 w-4 mr-1" />
-            {/* <span className="text-sm font-normal">Classificação:</span> */}
-            <span className="text-sm font-medium">{launch.classification.description}</span>
-          </div>
-        )}
+          <div className="flex justify-end space-x-2 pt-0">
 
-        <div className="flex justify-end space-x-2 pt-0">
+            {canTechnicalIntervention && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" onClick={() => handleTechnicalEdit(launch)} className="bg-purple-50 hover:bg-purple-100 border-purple-300">
+                    <AlertCircle className="h-4 w-4 mr-1 text-purple-600" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent><p>Intervenção Técnica - Editar Sem Restrições</p></TooltipContent>
+              </Tooltip>
+            )}
 
-          {canTechnicalIntervention && (
+            {launch.status === 'CANCELED' && launch.summaryId == null && canDeleteLaunch && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="destructive" size="sm" onClick={() => handleDelete(launch.id)}><Trash2 className="h-4 w-4" /></Button>
+                </TooltipTrigger>
+                <TooltipContent><p>Excluir</p></TooltipContent>
+              </Tooltip>
+            )}
+
+            {launch.status == 'NORMAL' && launch.summaryId == null && (canLaunchVote || canLaunchEbd || canLaunchCampaign || canLaunchExpense || canLaunchTithe || canLaunchMission || canLaunchCircle || canLaunchServiceOffer || canApproveCarneReviver) ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" onClick={() => handleCancel(launch.id)}><Trash2 className="h-4 w-4 mr-1" /></Button>
+                </TooltipTrigger>
+                <TooltipContent><p>Cancelar</p></TooltipContent>
+              </Tooltip>
+            ) : null}
+
+            {launch.status === 'NORMAL' && launch.summaryId == null && (
+              <>
+                {(launch.type === 'VOTO' && canApproveVote) ||
+                  (launch.type === 'EBD' && canApproveEbd) ||
+                  (launch.type === 'CAMPANHA' && canApproveCampaign) ||
+                  (launch.type === 'OFERTA_CULTO' && canApproveServiceOffer) ||
+                  (launch.type === 'DIZIMO' && canApproveTithe) ||
+                  (launch.type === 'CARNE_REVIVER' && canApproveCarneReviver) ||
+                  (launch.type === 'SAIDA' && canApproveExpense) ||
+                  (launch.type === 'MISSAO' && canApproveMission) ||
+                  (launch.type === 'CIRCULO' && canApproveCircle) ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="sm" onClick={() => handleApprove(launch.id)}><Check className="h-4 w-4 mr-1" /></Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>Aprovar</p></TooltipContent>
+                  </Tooltip>
+                ) : null}
+              </>
+            )}
+
+            {launch.status === 'APPROVED' && launch.summaryId == null && (
+              <>
+                {(launch.type === 'VOTO' && canApproveVote) ||
+                  (launch.type === 'EBD' && canApproveEbd) ||
+                  (launch.type === 'CAMPANHA' && canApproveCampaign) ||
+                  (launch.type === 'OFERTA_CULTO' && canApproveServiceOffer) ||
+                  (launch.type === 'DIZIMO' && canApproveTithe) ||
+                  (launch.type === 'CARNE_REVIVER' && canApproveCarneReviver) ||
+                  (launch.type === 'SAIDA' && canApproveExpense) ||
+                  (launch.type === 'MISSAO' && canApproveMission) ||
+                  (launch.type === 'CIRCULO' && canApproveCircle) ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="sm" onClick={() => handleReprove(launch.id)}><X className="h-4 w-4 mr-1" /></Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>Desaprovar</p></TooltipContent>
+                  </Tooltip>
+                ) : null}
+              </>
+            )}
+
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" size="sm" onClick={() => handleTechnicalEdit(launch)} className="bg-purple-50 hover:bg-purple-100 border-purple-300">
-                  <AlertCircle className="h-4 w-4 mr-1 text-purple-600" />
+                <Button variant="outline" size="sm" onClick={() => handleEdit(launch)}>
+                  <Edit className="h-4 w-4 mr-1" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent><p>Intervenção Técnica - Editar Sem Restrições</p></TooltipContent>
+              <TooltipContent><p>Editar</p></TooltipContent>
             </Tooltip>
-          )}
 
-          {launch.status === 'CANCELED' && launch.summaryId == null && canDeleteLaunch && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="destructive" size="sm" onClick={() => handleDelete(launch.id)}><Trash2 className="h-4 w-4" /></Button>
-              </TooltipTrigger>
-              <TooltipContent><p>Excluir</p></TooltipContent>
-            </Tooltip>
-          )}
-
-          {launch.status == 'NORMAL' && launch.summaryId == null && (canLaunchVote || canLaunchEbd || canLaunchCampaign || canLaunchExpense || canLaunchTithe || canLaunchMission || canLaunchCircle || canLaunchServiceOffer || canApproveCarneReviver) ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="sm" onClick={() => handleCancel(launch.id)}><Trash2 className="h-4 w-4 mr-1" /></Button>
-              </TooltipTrigger>
-              <TooltipContent><p>Cancelar</p></TooltipContent>
-            </Tooltip>
-          ) : null}
-
-          {launch.status === 'NORMAL' && launch.summaryId == null && (
-            <>
-              {(launch.type === 'VOTO' && canApproveVote) ||
-                (launch.type === 'EBD' && canApproveEbd) ||
-                (launch.type === 'CAMPANHA' && canApproveCampaign) ||
-                (launch.type === 'OFERTA_CULTO' && canApproveServiceOffer) ||
-                (launch.type === 'DIZIMO' && canApproveTithe) ||
-                (launch.type === 'CARNE_REVIVER' && canApproveCarneReviver) ||
-                (launch.type === 'SAIDA' && canApproveExpense) ||
-                (launch.type === 'MISSAO' && canApproveMission) ||
-                (launch.type === 'CIRCULO' && canApproveCircle) ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" size="sm" onClick={() => handleApprove(launch.id)}><Check className="h-4 w-4 mr-1" /></Button>
-                  </TooltipTrigger>
-                  <TooltipContent><p>Aprovar</p></TooltipContent>
-                </Tooltip>
-              ) : null}
-            </>
-          )}
-
-          {launch.status === 'APPROVED' && launch.summaryId == null && (
-            <>
-              {(launch.type === 'VOTO' && canApproveVote) ||
-                (launch.type === 'EBD' && canApproveEbd) ||
-                (launch.type === 'CAMPANHA' && canApproveCampaign) ||
-                (launch.type === 'OFERTA_CULTO' && canApproveServiceOffer) ||
-                (launch.type === 'DIZIMO' && canApproveTithe) ||
-                (launch.type === 'CARNE_REVIVER' && canApproveCarneReviver) ||
-                (launch.type === 'SAIDA' && canApproveExpense) ||
-                (launch.type === 'MISSAO' && canApproveMission) ||
-                (launch.type === 'CIRCULO' && canApproveCircle) ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" size="sm" onClick={() => handleReprove(launch.id)}><X className="h-4 w-4 mr-1" /></Button>
-                  </TooltipTrigger>
-                  <TooltipContent><p>Desaprovar</p></TooltipContent>
-                </Tooltip>
-              ) : null}
-            </>
-          )}
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="sm" onClick={() => handleEdit(launch)}>
-                <Edit className="h-4 w-4 mr-1" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent><p>Editar</p></TooltipContent>
-          </Tooltip>
-
-        </div>
-      </CardContent>
-    </Card>
-  )
-
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
   return (
     <PermissionGuard
       requiredPermissions={{
@@ -1379,7 +1461,7 @@ export default function Launches() {
                                         disabled={isFieldDisabledDuringEdit()}
                                         onChange={(value) => handleSelectChange('contributorId', value)}
                                         name="contributorId"
-                                        data={contributors.filter(f => (editingLaunch?.status === 'IMPORTED' || f.congregationId == formData.congregationId)).map(c => ({ key: c.id, id: c.id, name: c.name, document: c.cpf, cargo: c.ecclesiasticalPosition, photoUrl: c.photoUrl, photoExists: c.photoExists }))}
+                                        data={contributors.filter(f => (editingLaunch?.status === 'IMPORTED' || f.congregationId == formData.congregationId || f.id === formData.contributorId)).map(c => ({ key: c.id, id: c.id, name: c.name, document: c.cpf, cargo: c.ecclesiasticalPosition, photoUrl: c.photoUrl, photoExists: c.photoExists }))}
                                         searchKeys={['name', 'document']}
                                       />
                                     </div>
@@ -1408,14 +1490,14 @@ export default function Launches() {
                               {/* Fornecedor para SAIDA */}
                               {['SAIDA'].includes(formData.type) && (
                                 <>
-                                  <div className="flex items-center space-x-2">
+                                  <div className="flex items-center space-x-2 w-full sm:w-auto">
                                     <Button
                                       type="button"
                                       variant={formData.isSupplierRegistered ? "default" : "outline"}
                                       size="sm"
                                       disabled={isFieldDisabledDuringEdit()}
                                       className={cn(
-                                        "h-9 px-3 transition-all flex items-center gap-2",
+                                        "h-9 px-3 transition-all flex items-center gap-2 w-full sm:w-auto",
                                         formData.isSupplierRegistered
                                           ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-800 shadow-sm"
                                           : "text-gray-600 border-gray-300 hover:bg-gray-50"
@@ -1794,11 +1876,10 @@ export default function Launches() {
                                   launch.type === 'VOTO' ? 'bg-green-500' :
                                     launch.type === 'EBD' ? 'bg-green-500' :
                                       launch.type === 'CAMPANHA' ? 'bg-green-500' :
-                                        launch.type === 'CARNE_REVIVER' ? 'bg-green-500' :
+                                        launch.type === 'CARNE_REVIVER' ? 'bg-amber-800' :
                                           launch.type === 'SAIDA' ? 'bg-red-500' :
                                             launch.type === 'MISSAO' ? 'bg-green-500' :
-                                              launch.type === 'OFERTA_CULTO' ? 'bg-green-500' :
-                                                launch.type === 'CIRCULO' ? 'bg-green-500' : ''
+                                              launch.type === 'CIRCULO' ? 'bg-pink-500' : ''
                                 }`}>
                                 {launch.type === 'VOTO' ? 'Voto' :
                                   launch.type === 'OFERTA_CULTO' ? 'Oferta do Culto' :

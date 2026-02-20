@@ -323,7 +323,7 @@ export default function Users() {
   // CSV handlers (unchanged)
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file && file.type === 'text/csv') setCsvFile(file)
+    if (file /*&& file.type === 'text/csv'*/) setCsvFile(file)
     else { alert('Por favor, selecione um arquivo CSV válido'); e.target.value = '' }
   }
 

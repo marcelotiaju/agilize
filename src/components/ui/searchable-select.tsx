@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Church, Search, User, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, getUploadUrl } from '@/lib/utils';
 import { Card, CardContent } from './card';
 
 interface SearchableSelectProps {
@@ -176,7 +176,7 @@ export function SearchableSelect({
                     <div className="shrink-0">
                       {item.photoUrl && item.photoExists ? (
                         <img 
-                        src={`/uploads/${item.photoUrl}`} 
+                        src={getUploadUrl(`/uploads/${item.photoUrl}`)} 
                         alt="Foto"
                         className="h-12 w-12 rounded-full object-cover border"
                         />

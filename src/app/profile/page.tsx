@@ -27,6 +27,7 @@ export default function ProfilePage() {
   const [defaultPage, setDefaultPage] = useState(session?.user?.defaultPage || '/dashboard')
   const router = useRouter()
   const [userImage, setUserImage] = useState(session?.user?.image || null)
+  const [congregationDisplay, setCongregationDisplay] = useState<string>('')
   const { update } = useSession()
 
   useEffect(() => {
@@ -36,9 +37,20 @@ export default function ProfilePage() {
         if (res.ok) {
           const data = await res.json()
           if (data.image) setUserImage(data.image)
+
+          // Congregações associadas: 1 = nome, 2+ = "***"
+          const congregations = data.congregations || []
+          if (congregations.length === 0) {
+            setCongregationDisplay('Não informado')
+          } else if (congregations.length === 1) {
+            setCongregationDisplay(congregations[0]?.congregation?.name || 'Não informado')
+          } else {
+            setCongregationDisplay('***')
+          }
         }
       } catch (error) {
         console.error('Erro ao carregar perfil:', error)
+        setCongregationDisplay('Não informado')
       }
     }
     loadProfile()
@@ -170,7 +182,7 @@ export default function ProfilePage() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Congregação</p>
-                    <p className="font-medium">{session?.user?.congregation?.name || 'Não informado'}</p>
+                    <p className="font-medium">{congregationDisplay || 'Carregando...'}</p>
                   </div>
                 </CardContent>
               </Card>

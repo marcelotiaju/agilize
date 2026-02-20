@@ -332,7 +332,7 @@ export default function Congregations() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file && file.type === 'text/csv') {
+    if (file /*&& file.type === 'text/csv'*/) {
       setCsvFile(file)
     } else {
       alert('Por favor, selecione um arquivo CSV válido')

@@ -116,7 +116,7 @@ export default function Dashboard() {
     {
       title: "Contribuintes",
       description: "Gerencie Contribuintes",
-      icon: Users,
+      icon: User,
       href: "/contributors",
       color: "from-emerald-700 to-teal-800",
       permission: "canCreate"

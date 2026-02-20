@@ -5,11 +5,11 @@ import { authOptions } from "../../auth/[...nextauth]/route"
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  
+
   if (!session) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
-  
+
   try {
     const formData = await request.formData()
     const file = formData.get('file') as File
@@ -18,19 +18,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Arquivo não fornecido" }, { status: 400 })
     }
 
-    if (file.type !== 'text/csv') {
-      return NextResponse.json({ error: "Arquivo deve ser CSV" }, { status: 400 })
-    }
+    // if (file.type !== 'text/csv') {
+    //   return NextResponse.json({ error: "Arquivo deve ser CSV" }, { status: 400 })
+    // }
 
     // 1. Leia o arquivo como um ArrayBuffer
     const buffer = await file.arrayBuffer();
-    const decoder = new TextDecoder('iso-8859-1'); 
+    const decoder = new TextDecoder('iso-8859-1');
     const text = decoder.decode(buffer);
 
 
     //const text = await file.text()
     const lines = text.split('\n').filter(line => line.trim())
-    
+
     if (lines.length < 2) {
       return NextResponse.json({ error: "Arquivo CSV deve ter pelo menos um cabeçalho e uma linha de dados" }, { status: 400 })
     }
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       if (!line) continue
 
       const columns = line.split(',').map(col => col.trim())
-      
+
       if (columns.length < 3) {
         errors.push(`Linha ${i + 2}: Formato inválido - esperado Codigo, Reduzido, Descrição`)
         continue
@@ -53,10 +53,10 @@ export async function POST(request: NextRequest) {
 
       const [Codigo, Reduzido, Descricao] = columns
 
-    //   if (!Codigo || !RazãoSocial ) {
-    //     errors.push(`Linha ${i + 2}: , Codigo, Razão Social são obrigatórios`)
-    //     continue
-    //   }
+      //   if (!Codigo || !RazãoSocial ) {
+      //     errors.push(`Linha ${i + 2}: , Codigo, Razão Social são obrigatórios`)
+      //     continue
+      //   }
 
       try {
         // Busca a classificão pelo código
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-       // Cria o novo classificação
+        // Cria o novo classificação
         await prisma.classification.create({
           data: {
             code: Codigo,
@@ -85,16 +85,16 @@ export async function POST(request: NextRequest) {
     }
 
     if (errors.length > 0) {
-      return NextResponse.json({ 
-        error: "Erro na importação", 
+      return NextResponse.json({
+        error: "Erro na importação",
         details: errors,
-        imported 
+        imported
       }, { status: 400 })
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: "Importação concluída com sucesso",
-      imported 
+      imported
     })
 
   } catch (error) {

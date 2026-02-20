@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Camera, Upload, X, Image as ImageIcon, RotateCcw, Check } from "lucide-react"
 import Image from "next/image"
+import { getUploadUrl } from "@/lib/utils"
 
 interface ImageUploadProps {
     value?: string | null
@@ -143,6 +144,8 @@ export function ImageUpload({ value, onChange, onRemove, folder, className = "" 
         }
     }
 
+    const displayUrl = getUploadUrl(value ?? undefined)
+
     return (
         <div className={`space-y-4 ${className}`}>
             <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -150,14 +153,14 @@ export function ImageUpload({ value, onChange, onRemove, folder, className = "" 
                     <div className="flex flex-col gap-2">
                         <div className="relative w-40 h-40 rounded-md overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center">
                             <img
-                                src={value}
+                                src={displayUrl}
                                 alt="Upload preview"
                                 className="w-full h-full object-contain"
                             />
                         </div>
                         <div className="flex gap-1 justify-center w-40">
                             <a
-                                href={value}
+                                href={displayUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex-1"
@@ -176,7 +179,7 @@ export function ImageUpload({ value, onChange, onRemove, folder, className = "" 
 
                             {/* Visualizar em nova aba (sem download forçado) */}
                             <a
-                                href={value}
+                                href={displayUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex-1"

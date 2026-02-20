@@ -58,8 +58,9 @@ export async function POST(request: NextRequest) {
         // Salvar arquivo
         await writeFile(filePath, buffer);
 
-        // Retornar URL pública
-        const publicUrl = `/uploads/${subfolder}/${fileName}`;
+        // Retornar URL via API para que anexos funcionem em produção (servir por API evita
+        // dependência de arquivos estáticos em public/ que podem não persistir em serverless)
+        const publicUrl = `/api/uploads/${subfolder}/${fileName}`;
 
         return NextResponse.json({ url: publicUrl });
     } catch (error) {

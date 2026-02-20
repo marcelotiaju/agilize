@@ -89,8 +89,8 @@ export async function GET(request: NextRequest) {
       include: { Launch: true, congregation: true },
       orderBy: [
         { startDate: 'desc' },
-        { 
-          congregation: { 
+        {
+          congregation: {
             name: 'asc'
           }
         }
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
     let allowedTypes: string[] = []
     switch (summaryType) {
       case 'PADRAO':
-        allowedTypes = ['DIZIMO', 'OFERTA_CULTO', 'VOTO', 'EBD', 'CAMPANHA','MISSAO','SAIDA']
+        allowedTypes = ['DIZIMO', 'OFERTA_CULTO', 'VOTO', 'EBD', 'CAMPANHA', 'MISSAO', 'SAIDA']
         break
       // case 'MISSAO':
       //   allowedTypes = ['MISSAO']
@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
     const todayEndUtc = zonedTimeToUtc(todayEndZoned, timezone)
 
     if (startUtc > todayEndUtc || endUtc > todayEndUtc) {
-        return NextResponse.json({ error: "A data do resumo não pode ser futura." }, { status: 400 });
+      return NextResponse.json({ error: "A data do resumo não pode ser futura." }, { status: 400 });
     }
 
     const userCongregation = await prisma.userCongregation.findFirst({
@@ -196,12 +196,12 @@ export async function POST(request: NextRequest) {
     })
 
     if (launches.length === 0) {
-        const typeLabel = summaryType === 'PADRAO' ? 'Padrão' : 
-                        //  summaryType === 'MISSAO' ? 'Missão' :
-                        //  summaryType === 'CARNE_REVIVER' ? 'Carnê Reviver' :
-                        //  summaryType === 'CIRCULO' ? 'Círculo de Oração' : 
-                         'selecionado'
-        return NextResponse.json({ error: `Não há lançamentos do tipo ${typeLabel} no período para criar um resumo.` }, { status: 400 });
+      const typeLabel = summaryType === 'PADRAO' ? 'Padrão' :
+        //  summaryType === 'MISSAO' ? 'Missão' :
+        //  summaryType === 'CARNE_REVIVER' ? 'Carnê Reviver' :
+        //  summaryType === 'CIRCULO' ? 'Círculo de Oração' : 
+        'selecionado'
+      return NextResponse.json({ error: `Não há lançamentos do tipo ${typeLabel} no período para criar um resumo.` }, { status: 400 });
     }
 
     // Resumo
@@ -222,21 +222,21 @@ export async function POST(request: NextRequest) {
         entradaSummary.dizimo += launch.value || 0
       } else if (launch.type === "MISSAO") {
         entradaSummary.mission += launch.value || 0
-      // } else if (launch.type === "CIRCULO") {
-      //   entradaSummary.circle += launch.value || 0
-      // } else if (launch.type === "CARNE_REVIVER") {
-      //   entradaSummary.carneReviver += launch.value || 0
+        // } else if (launch.type === "CIRCULO") {
+        //   entradaSummary.circle += launch.value || 0
+        // } else if (launch.type === "CARNE_REVIVER") {
+        //   entradaSummary.carneReviver += launch.value || 0
       } else if (launch.type === "SAIDA") {
         saidaSummary.saida += launch.value || 0
         saidaSummary.total += launch.value || 0
       }
     })
-//console.log('Entrada Summary:', entradaSummary)
+    //console.log('Entrada Summary:', entradaSummary)
     // Verificar se já existe resumo para este período e tipo
     const existingSummary = await prisma.congregationSummary.findFirst({
-      where: { 
-        congregationId, 
-        startDate: startUtc, 
+      where: {
+        congregationId,
+        startDate: startUtc,
         endDate: endUtc,
         // Adicionar campo summaryType no schema se necessário, por enquanto verificar apenas período
       }
@@ -249,12 +249,12 @@ export async function POST(request: NextRequest) {
     let totalEntradas = 0
     if (summaryType === 'PADRAO') {
       totalEntradas = entradaSummary.dizimo + entradaSummary.oferta + entradaSummary.votos + entradaSummary.ebd + entradaSummary.campanha + entradaSummary.mission
-    // } else if (summaryType === 'MISSAO') {
-    //   totalEntradas = entradaSummary.mission
-    // } else if (summaryType === 'CARNE_REVIVER') {
-    //   totalEntradas = entradaSummary.carneReviver
-    // } else if (summaryType === 'CIRCULO') {
-    //   totalEntradas = entradaSummary.circle
+      // } else if (summaryType === 'MISSAO') {
+      //   totalEntradas = entradaSummary.mission
+      // } else if (summaryType === 'CARNE_REVIVER') {
+      //   totalEntradas = entradaSummary.carneReviver
+      // } else if (summaryType === 'CIRCULO') {
+      //   totalEntradas = entradaSummary.circle
     }
 
     const summary = await prisma.congregationSummary.create({
@@ -287,14 +287,14 @@ export async function POST(request: NextRequest) {
     })
 
     await prisma.launch.updateMany({
-        where: {
-            congregationId: summary.congregationId,
-            date: { gte: startUtc, lte: endUtc },
-            type: { in: allowedTypes as any },
-            summaryId: null,
-            status:  { in: ["NORMAL", "APPROVED", "EXPORTED"] },
-        },
-        data: { summaryId: summary.id },
+      where: {
+        congregationId: summary.congregationId,
+        date: { gte: startUtc, lte: endUtc },
+        type: { in: allowedTypes as any },
+        summaryId: null,
+        status: { in: ["NORMAL", "APPROVED", "EXPORTED"] },
+      },
+      data: { summaryId: summary.id },
     });
 
     return NextResponse.json({
@@ -322,13 +322,13 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { 
-      id, 
-      depositValue, 
-      cashValue, 
+    const {
+      id,
+      depositValue,
+      cashValue,
       talonNumber,
-      treasurerApproved, 
-      accountantApproved, 
+      treasurerApproved,
+      accountantApproved,
       directorApproved,
       status,
     } = body
@@ -336,7 +336,7 @@ export async function PUT(request: NextRequest) {
     if (!id) {
       return NextResponse.json({ error: "ID do resumo é obrigatório para atualização" }, { status: 400 })
     }
-    
+
     //console.log('Atualizando resumo:', body)
     const summary = await prisma.congregationSummary.findUnique({
       where: { id },
@@ -378,19 +378,19 @@ export async function PUT(request: NextRequest) {
     let approvedAtDirector = null
 
     if (treasurerApproved && session.user.canApproveTreasury) {
-          approvedByTreasury = session.user?.name
-          approvedAtTreasury = new Date()
+      approvedByTreasury = session.user?.name
+      approvedAtTreasury = new Date()
     }
     if (accountantApproved && session.user.canApproveAccountant) {
-          approvedByAccountant = session.user?.name
-          approvedAtAccountant = new Date()
+      approvedByAccountant = session.user?.name
+      approvedAtAccountant = new Date()
     }
     if (directorApproved && session.user.canApproveDirector) {
-          approvedByDirector = session.user?.name
-          approvedAtDirector = new Date()
+      approvedByDirector = session.user?.name
+      approvedAtDirector = new Date()
     }
 
-    if(treasurerApproved && session.user.canApproveTreasury) {
+    if (treasurerApproved && session.user.canApproveTreasury) {
       await prisma.launch.updateMany({
         where: {
           summaryId: id,
@@ -401,9 +401,9 @@ export async function PUT(request: NextRequest) {
           approvedAtTreasury: approvedAtTreasury || null,
         }
       })
-    } 
+    }
 
-    if(!treasurerApproved && session.user.canApproveTreasury) {
+    if (!treasurerApproved && session.user.canApproveTreasury) {
       await prisma.launch.updateMany({
         where: {
           summaryId: id,
@@ -414,9 +414,9 @@ export async function PUT(request: NextRequest) {
           approvedAtTreasury: null,
         }
       })
-    } 
+    }
 
-    if(accountantApproved && session.user.canApproveAccountant) {
+    if (accountantApproved && session.user.canApproveAccountant) {
       await prisma.launch.updateMany({
         where: {
           summaryId: id,
@@ -427,9 +427,9 @@ export async function PUT(request: NextRequest) {
           approvedAtAccountant: approvedAtAccountant || null,
         }
       })
-    } 
-    
-      if(!accountantApproved && session.user.canApproveAccountant) {
+    }
+
+    if (!accountantApproved && session.user.canApproveAccountant) {
       await prisma.launch.updateMany({
         where: {
           summaryId: id,
@@ -440,9 +440,9 @@ export async function PUT(request: NextRequest) {
           approvedAtAccountant: null,
         }
       })
-    } 
+    }
 
-    if(directorApproved && session.user.canApproveDirector) {
+    if (directorApproved && session.user.canApproveDirector) {
       await prisma.launch.updateMany({
         where: {
           summaryId: id,
@@ -455,9 +455,9 @@ export async function PUT(request: NextRequest) {
           approvedVia: 'SUMMARY'
         }
       })
-    } 
-    
-    if(!directorApproved && session.user.canApproveDirector) {
+    }
+
+    if (!directorApproved && session.user.canApproveDirector) {
       await prisma.launch.updateMany({
         where: {
           summaryId: id,
@@ -506,7 +506,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
 
-  if (!session.user.canGenerateSummary) {
+  if (!session.user.canDeleteSummary) {
     return NextResponse.json({ error: "Sem permissão para excluir resumos" }, { status: 403 })
   }
 
@@ -539,20 +539,20 @@ export async function DELETE(request: NextRequest) {
     }
 
     await prisma.launch.updateMany({
-        where: {
-          summaryId: id,
-          status: "NORMAL"
-        },
-        data: {
-          //status: "NORMAL",
-          approvedByTreasury: null,
-          approvedAtTreasury: null,
-          approvedByAccountant: null,
-          approvedAtAccountant: null,
-          approvedByDirector: null,
-          approvedAtDirector: null
-        }
-      })
+      where: {
+        summaryId: id,
+        status: "NORMAL"
+      },
+      data: {
+        //status: "NORMAL",
+        approvedByTreasury: null,
+        approvedAtTreasury: null,
+        approvedByAccountant: null,
+        approvedAtAccountant: null,
+        approvedByDirector: null,
+        approvedAtDirector: null
+      }
+    })
 
     await prisma.congregationSummary.delete({
       where: { id }

@@ -48,11 +48,11 @@ export async function POST(request: NextRequest) {
       const columns = line.split(',').map(col => col.trim())
 
       if (columns.length < 3) {
-        errors.push(`Linha ${i + 2}: Formato inválido - esperado codigo,nome,cpf,cargoEclesiástico,CodCongregação,Tipo,Foto`)
+        errors.push(`Linha ${i + 2}: Formato inválido - esperado codigo,nome,cpf,cargoEclesiástico,CodCongregação,Tipo,Foto,Ativo`)
         continue
       }
 
-      const [Codigo, Nome, cpf, cargoEclesiástico, Codcongregacao, tipo, Foto] = columns
+      const [Codigo, Nome, cpf, cargoEclesiástico, Codcongregacao, tipo, Foto, Ativo] = columns
 
       if (!Codcongregacao || !Codigo || !Nome) {
         errors.push(`Linha ${i + 2}: , codigo, nome e Congregação são obrigatórios`)
@@ -100,7 +100,8 @@ export async function POST(request: NextRequest) {
               cpf: cpf.trim() || null,
               ecclesiasticalPosition: cargoEclesiástico || null,
               tipo: tipo && tipo.toUpperCase() === 'CONGREGADO' ? 'CONGREGADO' : 'MEMBRO',
-              photoUrl: Foto || null
+              photoUrl: Foto || null,
+              isActive: Ativo === 'S' ? true : false
             }
           })
           imported++
@@ -125,7 +126,8 @@ export async function POST(request: NextRequest) {
               cpf: cpf && cpf.trim() ? cpf.trim() : null,
               ecclesiasticalPosition: cargoEclesiástico || null,
               tipo: tipo && tipo.toUpperCase() === 'CONGREGADO' ? 'CONGREGADO' : 'MEMBRO',
-              photoUrl: Foto || null
+              photoUrl: Foto || null,
+              isActive: Ativo === 'S' ? true : false
             }
           })
           imported++
@@ -138,11 +140,13 @@ export async function POST(request: NextRequest) {
     console.log(errors)
     if (errors.length > 0) {
       return NextResponse.json({
-        error: "Erro na importação",
-        details: errors,
-        imported,
-        updated,
-        created
+        error: "Resultado da importação",
+        details: {
+          imported,
+          updated,
+          created,
+          errors
+        }
       }, { status: 400 })
     }
 

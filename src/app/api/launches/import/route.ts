@@ -57,9 +57,9 @@ export async function POST(request: NextRequest) {
     //   return NextResponse.json({ error: "Acesso não autorizado a esta congregação" }, { status: 403 })
     // }
 
-    if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
-      return NextResponse.json({ error: "Arquivo deve ser CSV" }, { status: 400 })
-    }
+    // if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+    //   return NextResponse.json({ error: "Arquivo deve ser CSV" }, { status: 400 })
+    // }
 
     // Ler o arquivo
     const buffer = await file.arrayBuffer()
