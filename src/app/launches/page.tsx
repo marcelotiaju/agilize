@@ -267,15 +267,15 @@ export default function Launches() {
   }
 
   const handleImportCSV = async () => {
-    if (!csvFile) {
-      alert('Por favor, selecione um arquivo CSV')
-      return
-    }
+    // if (!csvFile) {
+    //   alert('Por favor, selecione um arquivo CSV')
+    //   return
+    // }
 
     setImporting(true)
     try {
       const formData = new FormData()
-      formData.append('file', csvFile)
+      formData.append('file', csvFile || '')
 
       const response = await fetch('/api/launches/import', {
         method: 'POST',
@@ -423,7 +423,12 @@ export default function Launches() {
 
   const fetchContributors = async () => {
     try {
-      const response = await fetch(`/api/contributors?activeOnly=true`)
+      // Para lançamentos importados, permitimos ver contribuinte de qualquer congregação
+      const url = importFilter === 'IMPORTED'
+        ? '/api/contributors?activeOnly=true&filterByUserCongregations=false'
+        : '/api/contributors?activeOnly=true'
+
+      const response = await fetch(url)
       if (response.ok) {
         const data = await response.json()
         setContributors(data)
@@ -1414,11 +1419,10 @@ export default function Launches() {
                                           )}
                                           onClick={() => toggleField('isContributorRegistered')}
                                         >
-                                          {formData.isContributorRegistered ? (
+                                          {formData.isContributorRegistered && (
                                             <Check className="h-4 w-4 animate-in zoom-in duration-200 shrink-0" />
-                                          ) : (
-                                            <Users className="h-4 w-4 shrink-0" />
                                           )}
+                                          <Users className="h-4 w-4 shrink-0" />
                                           <span className="text-sm sm:text-base">Contribuinte Cadastrado</span>
                                         </Button>
                                       </div>
@@ -1439,11 +1443,10 @@ export default function Launches() {
                                           )}
                                           onClick={() => toggleField('isAnonymous')}
                                         >
-                                          {formData.isAnonymous ? (
+                                          {formData.isAnonymous && (
                                             <Check className="h-4 w-4 animate-in zoom-in duration-200 shrink-0" />
-                                          ) : (
-                                            <Ghost className="h-4 w-4 shrink-0" />
                                           )}
+                                          <Ghost className="h-4 w-4 shrink-0" />
                                           <span className="text-sm sm:text-base">Anônimo</span>
                                         </Button>
                                       </div>
@@ -1461,7 +1464,12 @@ export default function Launches() {
                                         disabled={isFieldDisabledDuringEdit()}
                                         onChange={(value) => handleSelectChange('contributorId', value)}
                                         name="contributorId"
-                                        data={contributors.filter(f => (editingLaunch?.status === 'IMPORTED' || f.congregationId == formData.congregationId || f.id === formData.contributorId)).map(c => ({ key: c.id, id: c.id, name: c.name, document: c.cpf, cargo: c.ecclesiasticalPosition, photoUrl: c.photoUrl, photoExists: c.photoExists }))}
+                                        data={contributors.filter(f => (
+                                          editingLaunch?.status === 'IMPORTED' ||
+                                          importFilter === 'IMPORTED' ||
+                                          f.congregationId == formData.congregationId ||
+                                          f.id === formData.contributorId
+                                        )).map(c => ({ key: c.id, id: c.id, name: c.name, document: c.cpf, cargo: c.ecclesiasticalPosition, photoUrl: c.photoUrl, photoExists: c.photoExists }))}
                                         searchKeys={['name', 'document']}
                                       />
                                     </div>
@@ -1504,11 +1512,10 @@ export default function Launches() {
                                       )}
                                       onClick={() => toggleField('isSupplierRegistered')}
                                     >
-                                      {formData.isSupplierRegistered ? (
-                                        <Check className="h-4 w-4 animate-in zoom-in duration-200" />
-                                      ) : (
-                                        <User className="h-4 w-4" />
+                                      {formData.isSupplierRegistered && (
+                                        <Check className="h-4 w-4 animate-in zoom-in duration-200 shrink-0" />
                                       )}
+                                      <User className="h-4 w-4 shrink-0" />
                                       Fornecedor Cadastrado
                                     </Button>
                                   </div>

@@ -56,7 +56,7 @@ export function Sidebar() {
     'canApproveServiceOffer',
     'canApproveExpense'];
   const canAccesSummary = ['canListSummary', 'canGenerateSummary'];
-  const canGenerateReport = ['canReportLaunches', 'canReportContributors', 'canReportMonthlySummary', 'canReportHistoryContribSynthetic', 'canReportHistoryContribAnalytic'];
+  const canGenerateReport = ['canReportLaunches', 'canReportContributors', 'canReportMonthlySummary', 'canReportHistoryContribSynthetic', 'canReportHistoryContribAnalytic', 'canReportAudit'];
   const hasLaunchPermission = Boolean(canAccessLaunches.find(perm => session?.user?.[perm]));
   const hasSummaryPermission = Boolean(canAccesSummary.find(perm => session?.user?.[perm]));
   const hasGenerateReport = Boolean(canGenerateReport.find(perm => session?.user?.[perm]));
@@ -68,6 +68,7 @@ export function Sidebar() {
   const canReportMonthlySummary = Boolean(session?.user?.canReportMonthlySummary)
   const canReportHistoryContribSynthetic = Boolean(session?.user?.canReportHistoryContribSynthetic)
   const canReportHistoryContribAnalytic = Boolean(session?.user?.canReportHistoryContribAnalytic)
+  const canReportAudit = Boolean(session?.user?.canReportAudit)
 
   const [openTesouraria, setOpenTesouraria] = useState(true)
   const [openCadastros, setOpenCadastros] = useState(false)
@@ -79,7 +80,7 @@ export function Sidebar() {
     const isTesouraria = path.startsWith('/launches') || path.startsWith('/congregation-summary') || path.startsWith('/reports') || path.startsWith('/export') || path.startsWith('/delete-history')
     const isCadastros = path.startsWith('/contributors') || path.startsWith('/congregations') || path.startsWith('/suppliers') || path.startsWith('/classifications')
     const isSeguranca = path.startsWith('/users') || path.startsWith('/profiles') || path.startsWith('/profile')
-    const isReports = path.startsWith('/reports/launches') || path.startsWith('/reports/contributors') || path.startsWith('/reports/monthly-summary') || path.startsWith('/reports/history-contrib-synthetic') || path.startsWith('/reports/history-contrib-analytic')
+    const isReports = path.startsWith('/reports/launches') || path.startsWith('/reports/contributors') || path.startsWith('/reports/monthly-summary') || path.startsWith('/reports/history-contrib-synthetic') || path.startsWith('/reports/history-contrib-analytic') || path.startsWith('/reports/audit')
 
     setOpenTesouraria(isTesouraria)
     setOpenCadastros(isCadastros)
@@ -150,6 +151,7 @@ export function Sidebar() {
                               {canReportMonthlySummary && <Link href="/reports/monthly-summary" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/monthly-summary' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Printer className="mr-3 h-5 w-5 shrink-0" />Resumo Mensal</Link>}
                               {canReportHistoryContribSynthetic && <Link href="/reports/history-contrib-synthetic" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/history-contrib-synthetic' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Printer className="mr-3 h-5 w-5 shrink-0" />Histórico de Contribuições Sintético</Link>}
                               {canReportHistoryContribAnalytic && <Link href="/reports/history-contrib-analytic" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/history-contrib-analytic' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Printer className="mr-3 h-5 w-5 shrink-0" />Histórico de Contribuições Analítico</Link>}
+                              {canReportAudit && <Link href="/reports/audit" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/audit' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Printer className="mr-3 h-5 w-5 shrink-0" />Relatório de Auditoria</Link>}
                             </div>
                           )}
                         </div>
@@ -301,6 +303,7 @@ export function Sidebar() {
                               {canReportMonthlySummary && <Link href="/reports/monthly-summary" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/monthly-summary' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><Printer className="mr-3 h-5 w-5 shrink-0" />Resumo Mensal</Link>}
                               {canReportHistoryContribSynthetic && <Link href="/reports/history-contrib-synthetic" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/history-contrib-synthetic' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Printer className="mr-3 h-5 w-5 shrink-0" />Histórico de Contribuições Sintético</Link>}
                               {canReportHistoryContribAnalytic && <Link href="/reports/history-contrib-analytic" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/history-contrib-analytic' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Printer className="mr-3 h-5 w-5 shrink-0" />Histórico de Contribuições Analítico</Link>}
+                              {canReportAudit && <Link href="/reports/audit" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/audit' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Printer className="mr-3 h-5 w-5 shrink-0" />Relatório de Auditoria</Link>}
                             </div>
                           )}
                         </div>

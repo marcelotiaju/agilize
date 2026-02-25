@@ -545,9 +545,9 @@ export default function Contributors() {
 
                       <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
                         <p className="font-medium mb-2">Formato esperado do CSV:</p>
-                        <p className="text-xs font-mono">Codigo,Nome,CPF,CargoEclesiastico,CodCongregação,Tipo,Foto</p>
-                        <p className="text-xs font-mono">1,João Silva,12345678901,Pastor,1,Congregado,foto.jpg</p>
-                        <p className="text-xs font-mono">2,Maria Santos,98765432100,Diácono,2,Membro,foto.jpg</p>
+                        <p className="text-xs font-mono">Codigo,Nome,CPF,CargoEclesiastico,CodCongregação,Tipo,Foto,Ativo </p>
+                        <p className="text-xs font-mono">1,João Silva,12345678901,Pastor,1,Congregado,foto.jpg,S</p>
+                        <p className="text-xs font-mono">2,Maria Santos,98765432100,Diácono,2,Membro,foto.jpg,N</p>
                         <div className="mt-3 pt-3 border-t border-gray-200">
                           <a
                             href="/exemplo-contribuintes.csv"

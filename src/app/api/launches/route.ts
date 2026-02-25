@@ -109,9 +109,8 @@ export async function GET(request: NextRequest) {
       in: userCongregations.map(uc => uc.congregationId)
     }
 
-    // Se o status é IMPORTADO e há um searchTerm, não filtrar por congregação específica
-    // para permitir buscar contribuintes de outras congregações
-    if (congregationId && congregationId !== 'all' && !(importFilter === 'IMPORTED' && searchTerm)) {
+    // Sempre filtrar por congregação específica se selecionado
+    if (congregationId && congregationId !== 'all') {
       where.congregationId = congregationId
     }
 

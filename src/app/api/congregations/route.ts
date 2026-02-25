@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
-import{ authOptions }from "../auth/[...nextauth]/route";
+import { authOptions } from "../auth/[...nextauth]/route";
 import { getServerSession } from "next-auth";
 
 
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const activeOnly = searchParams.get('activeOnly') === 'true'
-    
+
     // Buscar apenas congregações vinculadas ao usuário
     const userCongregations = await prisma.userCongregation.findMany({
       where: {
@@ -79,6 +79,9 @@ export async function POST(request: NextRequest) {
       entradaVotesAccountPlan,
       entradaVotesFinancialEntity,
       entradaVotesPaymentMethod,
+      entradaCarneReviverAccountPlan,
+      entradaCarneReviverFinancialEntity,
+      entradaCarneReviverPaymentMethod,
       dizimoAccountPlan,
       dizimoFinancialEntity,
       dizimoPaymentMethod,
@@ -122,6 +125,9 @@ export async function POST(request: NextRequest) {
         entradaVotesAccountPlan,
         entradaVotesFinancialEntity,
         entradaVotesPaymentMethod,
+        entradaCarneReviverAccountPlan,
+        entradaCarneReviverFinancialEntity,
+        entradaCarneReviverPaymentMethod,
         dizimoAccountPlan,
         dizimoFinancialEntity,
         dizimoPaymentMethod,
@@ -135,7 +141,8 @@ export async function POST(request: NextRequest) {
         circleAccountPlan,
         circleFinancialEntity,
         circlePaymentMethod
-    }})
+      }
+    })
 
     // Associar o usuário atual à nova congregação
     // await prisma.userCongregation.create({
@@ -181,6 +188,9 @@ export async function PUT(request: NextRequest) {
       entradaVotesAccountPlan,
       entradaVotesFinancialEntity,
       entradaVotesPaymentMethod,
+      entradaCarneReviverAccountPlan,
+      entradaCarneReviverFinancialEntity,
+      entradaCarneReviverPaymentMethod,
       dizimoAccountPlan,
       dizimoFinancialEntity,
       dizimoPaymentMethod,
@@ -220,6 +230,9 @@ export async function PUT(request: NextRequest) {
         entradaVotesAccountPlan,
         entradaVotesFinancialEntity,
         entradaVotesPaymentMethod,
+        entradaCarneReviverAccountPlan,
+        entradaCarneReviverFinancialEntity,
+        entradaCarneReviverPaymentMethod,
         dizimoAccountPlan,
         dizimoFinancialEntity,
         dizimoPaymentMethod,
@@ -269,8 +282,8 @@ export async function DELETE(request: NextRequest) {
     }
 
     if (congregation.contributors.length > 0 || congregation.launches.length > 0) {
-      return NextResponse.json({ 
-        error: "Não é possível excluir uma congregação que possui contribuintes ou lançamentos" 
+      return NextResponse.json({
+        error: "Não é possível excluir uma congregação que possui contribuintes ou lançamentos"
       }, { status: 400 })
     }
 

@@ -407,7 +407,7 @@ export async function PUT(request: NextRequest) {
       await prisma.launch.updateMany({
         where: {
           summaryId: id,
-          status: "NORMAL"
+          status: { in: ["NORMAL", "APPROVED"] }
         },
         data: {
           approvedByTreasury: null,
@@ -433,7 +433,7 @@ export async function PUT(request: NextRequest) {
       await prisma.launch.updateMany({
         where: {
           summaryId: id,
-          status: "NORMAL"
+          status: { in: ["NORMAL", "APPROVED"] }
         },
         data: {
           approvedByAccountant: null,
@@ -540,17 +540,18 @@ export async function DELETE(request: NextRequest) {
 
     await prisma.launch.updateMany({
       where: {
-        summaryId: id,
-        status: "NORMAL"
+        summaryId: id
       },
       data: {
-        //status: "NORMAL",
+        status: "NORMAL",
+        summaryId: null,
         approvedByTreasury: null,
         approvedAtTreasury: null,
         approvedByAccountant: null,
         approvedAtAccountant: null,
         approvedByDirector: null,
-        approvedAtDirector: null
+        approvedAtDirector: null,
+        approvedVia: null
       }
     })
 

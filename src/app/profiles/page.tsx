@@ -71,6 +71,7 @@ export default function Profiles() {
     canReportHistoryContribSynthetic: false,
     canReportHistoryContribAnalytic: false,
     canDeleteSummary: false,
+    canReportAudit: false,
     canTechinicalIntervention: false
   })
 
@@ -135,6 +136,7 @@ export default function Profiles() {
       canReportSummary: false,
       canReportHistoryContribSynthetic: false,
       canReportHistoryContribAnalytic: false,
+      canReportAudit: false,
       canDeleteSummary: false,
       canTechinicalIntervention: false
     })
@@ -466,6 +468,10 @@ export default function Profiles() {
                           <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canReportHistoryContribAnalytic} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canReportHistoryContribAnalytic: v as boolean }))} />
                             <Label>Histórico de Contribuições Analítico</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox checked={profileForm.canReportAudit} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canReportAudit: v as boolean }))} />
+                            <Label>Relatório de Auditoria</Label>
                           </div>
                         </div>
                       </div>
