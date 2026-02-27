@@ -8,18 +8,20 @@ import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { zonedTimeToUtc, utcToZonedTime } from 'date-fns-tz'
 import { Footer } from "react-day-picker"
+import path from "path"
+
 const fs = require('fs');
 //const imagePath = path.join(process.cwd(), '../Logo.png');
 
 // Cache de imagem para evitar leitura repetida
-let cachedBase64String: string | null = null;
-function getBase64Logo(): string {
-  if (!cachedBase64String) {
-    const imageFile = fs.readFileSync('../agilize/public/images/Logo.png');
-    cachedBase64String = Buffer.from(imageFile).toString('base64');
-  }
-  return cachedBase64String;
-}
+// let cachedBase64String: string | null = null;
+// function getBase64Logo(): string {
+//   if (!cachedBase64String) {
+//     const imageFile = fs.readFileSync('../agilize/public/images/Logo.png');
+//     cachedBase64String = Buffer.from(imageFile).toString('base64');
+//   }
+//   return cachedBase64String;
+// }
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -126,7 +128,14 @@ export async function GET(request: NextRequest) {
     // Substitua o retângulo abaixo por: doc.addImage(base64String, 'PNG', margin, yPos, 20, 20)
     doc.setFillColor(200, 200, 200)
     //doc.rect(margin, yPos, 20, 20, 'F') 
-    doc.addImage(getBase64Logo(), 'PNG', margin, y, 20, 20)
+    try {
+      const imgPath = path.join(process.cwd(), 'public', 'images', 'Logo.png')
+      if (fs.existsSync(imgPath)) {
+        const imgData = fs.readFileSync(imgPath).toString('base64')
+        doc.addImage(imgData, 'PNG', margin, y, 20, 20)
+      }
+    } catch {/* ignore */ }
+    //doc.addImage(getBase64Logo(), 'PNG', margin, y, 20, 20)
 
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')

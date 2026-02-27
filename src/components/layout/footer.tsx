@@ -32,24 +32,24 @@ export function Footer() {
   }
 
   const canAccessLaunches = ['canLaunchVote',
-     'canLaunchEbd', 
-     'canLaunchCampaign',
-     'canLaunchTithe',
-     'canLaunchMission',
-     'canLaunchCircle',
-     'canLaunchServiceOffer',
-     'canLaunchExpense',
-     'canLaunchCarneReviver',
-     'canApproveVote',
-     'canApproveEbd', 
-     'canApproveCampaign',
-     'canApproveTithe',
-     'canApproveMission',
-     'canApproveCircle',
-     'canApproveServiceOffer',
-     'canApproveExpense'];
+    'canLaunchEbd',
+    'canLaunchCampaign',
+    'canLaunchTithe',
+    'canLaunchMission',
+    'canLaunchCircle',
+    'canLaunchServiceOffer',
+    'canLaunchExpense',
+    'canLaunchCarneReviver',
+    'canApproveVote',
+    'canApproveEbd',
+    'canApproveCampaign',
+    'canApproveTithe',
+    'canApproveMission',
+    'canApproveCircle',
+    'canApproveServiceOffer',
+    'canApproveExpense'];
   const canAccesSummary = ['canListSummary', 'canGenerateSummary'];
-  const canGenerateReport = ['canReportLaunches', 'canReportContributors', 'canReportMonthlySummary','canReportHistoryContribSynthetic','canReportHistoryContribAnalytic'];
+  const canGenerateReport = ['canReportLaunches', 'canReportContributors', 'canReportMonthlySummary', 'canReportHistoryContribSynthetic', 'canReportHistoryContribAnalytic', 'canReportAudit'];
 
   const hasLaunchPermission = Boolean(canAccessLaunches.find(perm => session?.user?.[perm]));
   const hasSummaryPermission = Boolean(canAccesSummary.find(perm => session?.user?.[perm]));
@@ -60,6 +60,7 @@ export function Footer() {
   const canReportMonthlySummary = Boolean(session?.user?.canReportMonthlySummary)
   const canReportHistoryContribSynthetic = Boolean(session?.user?.canReportHistoryContribSynthetic)
   const canReportHistoryContribAnalytic = Boolean(session?.user?.canReportHistoryContribAnalytic)
+  const canReportAudit = Boolean(session?.user?.canReportAudit)
 
   const handleSignOut = () => {
     signOut({ callbackUrl: '/' })
@@ -150,8 +151,8 @@ export function Footer() {
                 <span className="text-xs font-medium">Relatórios</span>
               </button>
             </PopoverTrigger>
-            <PopoverContent 
-              align="center" 
+            <PopoverContent
+              align="center"
               side="top"
               className="w-48 p-0 mb-2"
             >
@@ -204,6 +205,16 @@ export function Footer() {
                   >
                     <Printer className="h-4 w-4" />
                     <span>Histórico Analítico</span>
+                  </Link>
+                )}
+                {canReportAudit && (
+                  <Link
+                    href="/reports/audit"
+                    className="px-3 py-2 text-sm hover:bg-indigo-50 flex items-center gap-2 transition-colors"
+                    onClick={() => setIsReportsOpen(false)}
+                  >
+                    <Printer className="h-4 w-4" />
+                    <span>Relatório de Auditoria</span>
                   </Link>
                 )}
               </div>

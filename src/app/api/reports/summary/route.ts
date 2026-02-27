@@ -6,13 +6,13 @@ import { jsPDF } from "jspdf"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { utcToZonedTime } from 'date-fns-tz'
-import path from "path/win32"
+import path from "path"
 
 const fs = require('fs');
 //const imagePath = path.join(process.cwd(), '../Logo.png');
 
-const imageFile = fs.readFileSync('../agilize/public/images/Logo.png');
-const base64String = Buffer.from(imageFile).toString('base64');
+//const imageFile = fs.readFileSync('../agilize/public/images/Logo.png');
+//const base64String = Buffer.from(imageFile).toString('base64');
 
 const formatCurrency = (val: number) => {
   if (val === 0) return '-'
@@ -96,7 +96,14 @@ export async function GET(request: NextRequest) {
     const pageHeight = doc.internal.pageSize.getHeight()
 
     // Cabeçalho com logo
-    doc.addImage(base64String, 'PNG', margin, y, 18, 18)
+    try {
+      const imgPath = path.join(process.cwd(), 'public', 'images', 'Logo.png')
+      if (fs.existsSync(imgPath)) {
+        const imgData = fs.readFileSync(imgPath).toString('base64')
+        doc.addImage(imgData, 'PNG', margin, y, 20, 20)
+      }
+    } catch {/* ignore */ }
+    //doc.addImage(base64String, 'PNG', margin, y, 18, 18)
 
     doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')

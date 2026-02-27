@@ -66,13 +66,17 @@ export async function PUT(request: NextRequest, props: any) {
     //   return NextResponse.json({ error: "Acesso não autorizado a esta congregação" }, { status: 403 })
     // }
 
-    if (body.status !== undefined && existingLaunch.status === "EXPORTED") {
-      return NextResponse.json({ error: "Lançamento já exportado não pode ser alterado" }, { status: 400 })
-    }
+    const canTechnicalIntervention = session.user.canTechnicalIntervention;
 
-    // Verificação para reverter status
-    if (body.status === "CANCELED" && body.status === "NORMAL") {
-      return NextResponse.json({ error: "Não é possível reverter um lançamento cancelado" }, { status: 400 });
+    if (!canTechnicalIntervention) {
+      if (body.status !== undefined && existingLaunch.status === "EXPORTED") {
+        return NextResponse.json({ error: "Lançamento já exportado não pode ser alterado" }, { status: 400 })
+      }
+
+      // Verificação para reverter status
+      if (body.status === "CANCELED" && body.status === "NORMAL") {
+        return NextResponse.json({ error: "Não é possível reverter um lançamento cancelado" }, { status: 400 });
+      }
     }
 
 
@@ -100,6 +104,10 @@ export async function PUT(request: NextRequest, props: any) {
 
     // Preparar dados de atualização
     const dataToUpdate: any = {}
+
+    if (body.status !== undefined && canTechnicalIntervention) {
+      dataToUpdate.status = body.status
+    }
 
     if (body.value !== undefined) {
       dataToUpdate.value = body.value ? parseFloat(body.value) : null

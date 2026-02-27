@@ -515,20 +515,20 @@ export default function CongregationSummary() {
     }
 
     // Check permissions
-    if (!canApprove) {
+    if (!canApprove && !user?.canTechnicalIntervention) {
       alert('Você não tem permissão para esta aprovação.')
       return
     }
 
     // If trying to unapprove, check if current user was the one who approved
-    if (isCurrentlyApproved && approvedByField && approvedByField !== session?.user?.name) {
+    if (isCurrentlyApproved && approvedByField && approvedByField !== session?.user?.name && !user?.canTechnicalIntervention) {
       alert('Apenas o usuário que aprovou pode desmarcar a aprovação.')
       return
     }
 
     // Check for dual permission conflict
     const hasBothPermissions = user?.canApproveTreasury && user?.canApproveAccountant
-    if (hasBothPermissions) {
+    if (hasBothPermissions && !user?.canTechnicalIntervention) {
       if (approvalType === 'treasurer' && summary.accountantApproved && summary.approvedByAccountant === session?.user?.name) {
         alert('Você já aprovou como Contador. Não pode aprovar como Tesoureiro.')
         return
@@ -912,6 +912,7 @@ export default function CongregationSummary() {
                                         )}
                                         disabled={(() => {
                                           const user = session?.user as any
+                                          if (user?.canTechnicalIntervention) return false;
                                           const hasBothPermissions = user?.canApproveTreasury && user?.canApproveAccountant
                                           const approvedByOther = summary.approvedByTreasury && summary.approvedByTreasury !== session?.user?.name
                                           const alreadyApprovedAsAccountant = hasBothPermissions && summary.accountantApproved && summary.approvedByAccountant === session?.user?.name
@@ -938,6 +939,7 @@ export default function CongregationSummary() {
                                         )}
                                         disabled={(() => {
                                           const user = session?.user as any
+                                          if (user?.canTechnicalIntervention) return false;
                                           const hasBothPermissions = user?.canApproveTreasury && user?.canApproveAccountant
                                           const approvedByOther = summary.approvedByAccountant && summary.approvedByAccountant !== session?.user?.name
                                           const alreadyApprovedAsTreasurer = hasBothPermissions && summary.treasurerApproved && summary.approvedByTreasury === session?.user?.name
@@ -962,7 +964,7 @@ export default function CongregationSummary() {
                                           "flex-1 text-sm transition-all px-2 w-0",
                                           summary.directorApproved && "bg-green-600 hover:bg-green-700 text-white border-green-700"
                                         )}
-                                        disabled={!session?.user?.canApproveDirector}
+                                        disabled={!session?.user?.canApproveDirector && !(session?.user as any)?.canTechnicalIntervention}
                                         onClick={() => handleApprovalToggle(summary, 'director')}
                                         title="Dirigente"
                                       >
@@ -1101,6 +1103,7 @@ export default function CongregationSummary() {
                                       )}
                                       disabled={(() => {
                                         const user = session?.user as any
+                                        if (user?.canTechnicalIntervention) return false;
                                         const hasBothPermissions = user?.canApproveTreasury && user?.canApproveAccountant
                                         const approvedByOther = summary.approvedByTreasury && summary.approvedByTreasury !== session?.user?.name
                                         const alreadyApprovedAsAccountant = hasBothPermissions && summary.accountantApproved && summary.approvedByAccountant === session?.user?.name
@@ -1127,6 +1130,7 @@ export default function CongregationSummary() {
                                       )}
                                       disabled={(() => {
                                         const user = session?.user as any
+                                        if (user?.canTechnicalIntervention) return false;
                                         const hasBothPermissions = user?.canApproveTreasury && user?.canApproveAccountant
                                         const approvedByOther = summary.approvedByAccountant && summary.approvedByAccountant !== session?.user?.name
                                         const alreadyApprovedAsTreasurer = hasBothPermissions && summary.treasurerApproved && summary.approvedByTreasury === session?.user?.name
@@ -1151,7 +1155,7 @@ export default function CongregationSummary() {
                                         "flex-1 text-xs transition-all px-2",
                                         summary.directorApproved && "bg-green-600 hover:bg-green-700 text-white border-green-700"
                                       )}
-                                      disabled={!session?.user?.canApproveDirector}
+                                      disabled={!session?.user?.canApproveDirector && !(session?.user as any)?.canTechnicalIntervention}
                                       onClick={() => handleApprovalToggle(summary, 'director')}
                                       title="Dirigente"
                                     >
@@ -1518,6 +1522,7 @@ export default function CongregationSummary() {
                               // - tesoureiro já está aprovado por outro usuário (só o próprio pode desmarcar)
                               disabled={(() => {
                                 const user = session?.user as any
+                                if (user?.canTechnicalIntervention) return false;
                                 const hasBothPermissions = user?.canApproveTreasury && user?.canApproveAccountant
                                 const approvedByOther = editFormData.approvedByTreasury && editFormData.approvedByTreasury !== session?.user?.name
                                 const alreadyApprovedAsAccountant = hasBothPermissions && editFormData.accountantApproved && editFormData.approvedByAccountant === session?.user?.name
@@ -1527,7 +1532,7 @@ export default function CongregationSummary() {
                               onClick={() => {
                                 const isApproving = !editFormData.treasurerApproved;
                                 // Se está desaprovando e não foi o próprio usuário que aprovou, não permitir
-                                if (!isApproving && editFormData.approvedByTreasury && editFormData.approvedByTreasury !== session?.user?.name) {
+                                if (!isApproving && editFormData.approvedByTreasury && editFormData.approvedByTreasury !== session?.user?.name && !(session?.user as any)?.canTechnicalIntervention) {
                                   alert('Apenas o usuário que aprovou pode desmarcar a aprovação.');
                                   return;
                                 }
@@ -1563,6 +1568,7 @@ export default function CongregationSummary() {
                               // - contador já está aprovado por outro usuário (só o próprio pode desmarcar)
                               disabled={(() => {
                                 const user = session?.user as any
+                                if (user?.canTechnicalIntervention) return false;
                                 const hasBothPermissions = user?.canApproveTreasury && user?.canApproveAccountant
                                 const approvedByOther = editFormData.approvedByAccountant && editFormData.approvedByAccountant !== session?.user?.name
                                 const alreadyApprovedAsTreasurer = hasBothPermissions && editFormData.treasurerApproved && editFormData.approvedByTreasury === session?.user?.name
@@ -1572,7 +1578,7 @@ export default function CongregationSummary() {
                               onClick={() => {
                                 const isApproving = !editFormData.accountantApproved;
                                 // Se está desaprovando e não foi o próprio usuário que aprovou, não permitir
-                                if (!isApproving && editFormData.approvedByAccountant && editFormData.approvedByAccountant !== session?.user?.name) {
+                                if (!isApproving && editFormData.approvedByAccountant && editFormData.approvedByAccountant !== session?.user?.name && !(session?.user as any)?.canTechnicalIntervention) {
                                   alert('Apenas o usuário que aprovou pode desmarcar a aprovação.');
                                   return;
                                 }
@@ -1602,9 +1608,13 @@ export default function CongregationSummary() {
                                 "w-full transition-all",
                                 editFormData.directorApproved && "bg-green-600 hover:bg-green-700 text-white border-green-700"
                               )}
-                              disabled={!session?.user?.canApproveDirector}
+                              disabled={!session?.user?.canApproveDirector && !(session?.user as any)?.canTechnicalIntervention}
                               onClick={() => {
                                 const isApproving = !editFormData.directorApproved;
+                                if (!isApproving && editFormData.approvedByDirector && editFormData.approvedByDirector !== session?.user?.name && !(session?.user as any)?.canTechnicalIntervention) {
+                                  alert('Apenas o usuário que aprovou pode desmarcar a aprovação.');
+                                  return;
+                                }
                                 setEditFormData(prev => ({
                                   ...prev, // Mantém todos os outros dados (incluindo aprovação do tesoureiro)
                                   directorApproved: isApproving,

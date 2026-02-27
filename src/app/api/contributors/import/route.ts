@@ -140,11 +140,11 @@ export async function POST(request: NextRequest) {
     console.log(errors)
     if (errors.length > 0) {
       return NextResponse.json({
-        error: "Resultado da importação",
+        error: "A importação foi finalizada (com alguns avisos/erros)",
+        imported,
+        updated,
+        created,
         details: {
-          imported,
-          updated,
-          created,
           errors
         }
       }, { status: 400 })

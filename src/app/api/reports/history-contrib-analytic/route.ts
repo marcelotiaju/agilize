@@ -7,11 +7,12 @@ import autoTable from "jspdf-autotable"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { utcToZonedTime } from 'date-fns-tz'
+import path from "path"
 
 const fs = require('fs');
 
-const imageFile = fs.readFileSync('../agilize/public/images/Logo.png');
-const base64String = Buffer.from(imageFile).toString('base64');
+//const imageFile = fs.readFileSync('../agilize/public/images/Logo.png');
+//const base64String = Buffer.from(imageFile).toString('base64');
 
 interface LaunchDetail {
   date: Date;
@@ -144,21 +145,21 @@ async function handleRequest(request: NextRequest) {
     // Convert to grouped structure with one entry per contributor
     // Group by congregations that the contributors belong to
     const congregationMapByContributor = new Map<string, ContributorData[]>();
-    
+
     for (const [contribName, entry] of contributorMap.entries()) {
       // For each contributor, determine which congregation(s) to associate them with
       // We'll create one entry per congregation the contributor has launches in
       const congregationList = Array.from(entry.congregations).sort();
-      
+
       for (const cong of congregationList) {
         if (!congregationMapByContributor.has(cong)) {
           congregationMapByContributor.set(cong, []);
         }
-        
+
         // Filter launches for this specific congregation
         const congSpecificLaunches = entry.launches.filter(l => l.congregationName === cong);
         const totalValue = congSpecificLaunches.reduce((acc, l) => acc + l.value, 0);
-        
+
         congregationMapByContributor.get(cong)!.push({
           code: entry.code,
           name: contribName,
@@ -203,7 +204,14 @@ async function handleRequest(request: NextRequest) {
 
         // Header
         doc.setFillColor(200, 200, 200);
-        doc.addImage(base64String, 'PNG', margin, y, 20, 20);
+        try {
+          const imgPath = path.join(process.cwd(), 'public', 'images', 'Logo.png')
+          if (fs.existsSync(imgPath)) {
+            const imgData = fs.readFileSync(imgPath).toString('base64')
+            doc.addImage(imgData, 'PNG', margin, y, 20, 20)
+          }
+        } catch {/* ignore */ }
+        //doc.addImage(base64String, 'PNG', margin, y, 20, 20);
 
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');

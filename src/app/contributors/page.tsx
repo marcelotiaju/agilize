@@ -525,7 +525,7 @@ export default function Contributors() {
                     <DialogHeader>
                       <DialogTitle>Importar Contribuintes via CSV</DialogTitle>
                       <DialogDescription>
-                        Faça upload de um arquivo CSV com os contribuintes. O arquivo deve ter as colunas: Codigo,Nome,CPF,CargoEclesiastico,CodCongregação,Tipo,Foto
+                        Faça upload de um arquivo CSV com os contribuintes. O arquivo deve ter as colunas: Codigo,Nome,CPF,CargoEclesiastico,CodCongregação,Tipo,Foto,Ativo
                       </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">

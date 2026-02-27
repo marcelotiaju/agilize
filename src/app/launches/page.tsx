@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, Search, Check, X, AlertCircle, CalendarIcon, User, Users, Ghost, List, ArrowUp, Upload, FileText, Building, Loader2, Camera, Paperclip } from 'lucide-react'
+import { Plus, Edit, Trash2, Search, Check, X, AlertCircle, CalendarIcon, User, Users, Ghost, List, ArrowUp, Upload, FileText, Building, Loader2, Camera, Paperclip, Star } from 'lucide-react'
 import { format, startOfDay } from 'date-fns'
 import { zonedTimeToUtc } from 'date-fns-tz'
 import { ptBR } from 'date-fns/locale'
@@ -685,7 +685,7 @@ export default function Launches() {
       try {
         const launch = launches.find(l => l.id === id)
 
-        if (launch?.status !== 'NORMAL') {
+        if (launch?.status !== 'NORMAL' && (!canTechnicalIntervention || !isTechnicalIntervention)) {
           setError(`Apenas lançamentos com status Normal podem ser cancelados. Status atual: ${launch?.status}`)
           return
         }
@@ -876,6 +876,17 @@ export default function Launches() {
                               launch.type === 'CIRCULO' ? 'Círculo de Oração' : ''}
             </div>
             <div className={`flex items-center space-x-2`}>
+              {launch.contributor?.ecclesiasticalPosition &&
+                !['membro', 'congregado'].includes(launch.contributor.ecclesiasticalPosition.toLowerCase()) && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Star className="h-4 w-4 text-gray-500 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{launch.contributor.ecclesiasticalPosition}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
               {launch.attachmentUrl && (
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -1015,7 +1026,7 @@ export default function Launches() {
               </Tooltip>
             )}
 
-            {launch.status == 'NORMAL' && launch.summaryId == null && (canLaunchVote || canLaunchEbd || canLaunchCampaign || canLaunchExpense || canLaunchTithe || canLaunchMission || canLaunchCircle || canLaunchServiceOffer || canApproveCarneReviver) ? (
+            {(launch.status === 'NORMAL' && launch.summaryId == null && (canLaunchVote || canLaunchEbd || canLaunchCampaign || canLaunchExpense || canLaunchTithe || canLaunchMission || canLaunchCircle || canLaunchServiceOffer || canApproveCarneReviver)) || (canTechnicalIntervention && isTechnicalIntervention && launch.status !== 'CANCELED') ? (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="outline" size="sm" onClick={() => handleCancel(launch.id)}><Trash2 className="h-4 w-4 mr-1" /></Button>
