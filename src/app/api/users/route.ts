@@ -67,11 +67,13 @@ export async function GET(request: NextRequest) {
         validTo: user.validTo,
         historyDays: user.historyDays,
         maxRetroactiveDays: user.maxRetroactiveDays,
+        maxRetroactiveDaysEdit: user.maxRetroactiveDaysEdit,
         defaultPage: user.defaultPage ?? '/dashboard',
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
         congregations: user.congregations.map(uc => uc.congregation),
         profile: user.profile ? { id: user.profile.id, name: user.profile.name } : null,
+        isActive: user.isActive,
         // permissões resolvidas a partir do profile
         ...resolvedPermissions
       }
@@ -89,7 +91,7 @@ export async function POST(request: NextRequest) {
     const payload = await request.json()
     const {
       login, name, email, phone, password, validFrom, validTo, historyDays, maxRetroactiveDays,
-      profileId, defaultPage, image
+      maxRetroactiveDaysEdit, profileId, defaultPage, image, isActive
     } = payload
 
     if (!email || !password) {
@@ -116,9 +118,11 @@ export async function POST(request: NextRequest) {
         validTo: new Date(validTo),
         historyDays: parseInt(historyDays || '30'),
         maxRetroactiveDays: parseInt(maxRetroactiveDays || '30'),
+        maxRetroactiveDaysEdit: parseInt(maxRetroactiveDaysEdit || '30'),
         profile: profileId ? { connect: { id: profileId } } : undefined,
         defaultPage: defaultPage || '/dashboard',
-        image
+        image,
+        isActive: isActive !== undefined ? isActive : true
       }
     })
 
@@ -134,7 +138,7 @@ export async function PUT(request: NextRequest) {
     const payload = await request.json()
     const {
       id, login, name, email, phone, password, validFrom, validTo, historyDays, maxRetroactiveDays,
-      profileId, defaultPage, image
+      maxRetroactiveDaysEdit, profileId, defaultPage, image, isActive
     } = payload
 
     if (!id) return NextResponse.json({ error: "ID do usuário é obrigatório" }, { status: 400 })
@@ -152,7 +156,6 @@ export async function PUT(request: NextRequest) {
       if (existingEmail) return NextResponse.json({ error: "Email já cadastrado" }, { status: 400 })
     }
 
-
     const updated = await prisma.user.update({
       where: { id },
       data: {
@@ -165,9 +168,11 @@ export async function PUT(request: NextRequest) {
         validTo: new Date(validTo),
         historyDays: parseInt(historyDays || `${existingUser.historyDays}`),
         maxRetroactiveDays: parseInt(maxRetroactiveDays || `${existingUser.maxRetroactiveDays}`),
+        maxRetroactiveDaysEdit: parseInt(maxRetroactiveDaysEdit || `${existingUser.maxRetroactiveDaysEdit}`),
         profile: typeof profileId === 'string' && profileId.trim() !== '' ? { connect: { id: profileId } } : { disconnect: true },
         defaultPage: defaultPage || '/dashboard',
-        image
+        image,
+        isActive: isActive !== undefined ? isActive : existingUser.isActive
       }
     })
 

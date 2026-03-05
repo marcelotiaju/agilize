@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma"
 import { authOptions } from "../auth/[...nextauth]/route";
 import { getServerSession } from "next-auth/next";
 import { zonedTimeToUtc, utcToZonedTime } from 'date-fns-tz';
-import { startOfDay, endOfDay } from 'date-fns';
+import { startOfDay, endOfDay, startOfWeek, endOfWeek } from 'date-fns';
 
 // Função para remover acentos (normalizar texto)
 function removeAccents(str: string): string {
@@ -362,7 +362,8 @@ export async function POST(request: NextRequest) {
       classificationId,
       isContributorRegistered,
       isSupplierRegistered,
-      attachmentUrl
+      attachmentUrl,
+      isRateio
     } = body
 
     // Verificar permissões de lançamento
@@ -434,7 +435,7 @@ export async function POST(request: NextRequest) {
     const today = new Date();
     // Comparar apenas a data (ignorando a hora) usando a data já parseada
     const todayStart = startOfDay(new Date())
-    if (startOfDay(launchDate) > todayStart) {
+    if (!isRateio && startOfDay(launchDate) > todayStart) {
       return NextResponse.json({ error: "Não é permitido lançar com data futura" }, { status: 400 })
     }
     // if (launchDate > today) {
@@ -511,6 +512,30 @@ export async function POST(request: NextRequest) {
     }
     // Para os demais tipos (VOTO, EBD, CAMPANHA, MISSAO, CIRCULO, OFERTA_CULTO): verificar Congregação + Data + Valor
     else {
+      // Validação específica para Círculo de Oração: 1 por semana por congregação
+      if (type === 'CIRCULO') {
+        const weekStart = startOfWeek(launchDate, { weekStartsOn: 0 }); // Domingo
+        const weekEnd = endOfWeek(launchDate, { weekStartsOn: 0 }); // Sábado
+
+        const existingWeeklyLaunch = await prisma.launch.findFirst({
+          where: {
+            congregationId,
+            type: 'CIRCULO',
+            date: {
+              gte: weekStart,
+              lte: weekEnd
+            },
+            status: { in: ["NORMAL", "APPROVED"] }
+          }
+        });
+
+        if (existingWeeklyLaunch) {
+          return NextResponse.json({
+            error: "Já existe um lançamento de Círculo de Oração para esta congregação nesta semana. É permitido apenas um por semana."
+          }, { status: 400 });
+        }
+      }
+
       const existingLaunch = await prisma.launch.findFirst({
         where: {
           congregationId,
@@ -572,7 +597,8 @@ export async function POST(request: NextRequest) {
         supplierId: type === "SAIDA" && isSupplierRegistered ? supplierId : null,
         classificationId: type === "SAIDA" ? classificationId : null, // Apenas para saída
         createdBy: session.user.name,
-        attachmentUrl
+        attachmentUrl,
+        isRateio: type === "CARNE_REVIVER" ? !!isRateio : false
       },
       include: {
         congregation: true,
@@ -784,6 +810,31 @@ export async function PUT(request: NextRequest) {
     }
     // Para os demais tipos: verificar Congregação + Data + Valor
     else {
+      // Validação específica para Círculo de Oração: 1 por semana por congregação
+      if (finalType === 'CIRCULO') {
+        const weekStart = startOfWeek(finalDate, { weekStartsOn: 0 }); // Domingo
+        const weekEnd = endOfWeek(finalDate, { weekStartsOn: 0 }); // Sábado
+
+        const existingWeeklyLaunch = await prisma.launch.findFirst({
+          where: {
+            congregationId: finalCongregationId,
+            type: 'CIRCULO',
+            date: {
+              gte: weekStart,
+              lte: weekEnd
+            },
+            status: { in: ["NORMAL", "APPROVED"] },
+            id: { not: id }
+          }
+        });
+
+        if (existingWeeklyLaunch) {
+          return NextResponse.json({
+            error: "Já existe um lançamento de Círculo de Oração para esta congregação nesta semana. É permitido apenas um por semana."
+          }, { status: 400 });
+        }
+      }
+
       const existingLaunch = await prisma.launch.findFirst({
         where: {
           congregationId: finalCongregationId,
@@ -797,7 +848,7 @@ export async function PUT(request: NextRequest) {
 
       if (existingLaunch) {
         return NextResponse.json({
-          error: `Já existe um lançamento do tipo ${finalType} com a mesma congregação, data e valor`
+          error: `Já existe um lançamento do tipo ${finalType === "VOTO" ? "Voto" : finalType === "EBD" ? "EBD" : finalType === "CAMPANHA" ? "Campanha" : finalType === "MISSAO" ? "Missão" : finalType === "CIRCULO" ? "Círculo de Oração" : "Oferta do Culto"} com a mesma congregação, data e valor`
         }, { status: 400 })
       }
     }

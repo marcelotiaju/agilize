@@ -30,6 +30,10 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
+        if (!user.isActive) {
+          throw new Error("Usuário desativado. Entre em contato com o administrador.")
+        }
+
         const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
 
         if (!isPasswordValid) {
@@ -86,16 +90,19 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           name: user.name,
           email: user.email,
-          login: user.login,
+          login: user.login ?? undefined,
           phone: user.phone ?? undefined,
           validFrom: user.validFrom,
           validTo: user.validTo,
           historyDays: user.historyDays,
+          maxRetroactiveDays: user.maxRetroactiveDays,
+          maxRetroactiveDaysEdit: user.maxRetroactiveDaysEdit,
           defaultPage: user.defaultPage,
           profile: user.profile ? { id: user.profile.id, name: user.profile.name } : null,
           ...resolved,
           image: user.image ?? undefined,
-        }
+          forceLogoutAt: user.forceLogoutAt
+        } as any
       }
     })
   ],
@@ -125,6 +132,8 @@ export const authOptions: NextAuthOptions = {
           validFrom: (user as any).validFrom,
           validTo: (user as any).validTo,
           historyDays: (user as any).historyDays,
+          maxRetroactiveDays: (user as any).maxRetroactiveDays,
+          maxRetroactiveDaysEdit: (user as any).maxRetroactiveDaysEdit,
           defaultPage: (user as any).defaultPage,
           profile: (user as any).profile ?? null,
           canExport: (user as any).canExport,
@@ -197,7 +206,7 @@ export const authOptions: NextAuthOptions = {
       // O 'id' do usuário está no 'token.sub' por padrão.
       session.user = {
         ...session.user,
-        id: token.sub,
+        id: token.sub as string,
         login: token.login as string | undefined,
         image: token.image as string | undefined,
         profile: token.profile as { id: string, name: string } | null,
@@ -209,6 +218,8 @@ export const authOptions: NextAuthOptions = {
           ? new Date(token.validTo)
           : undefined,
         historyDays: typeof token.historyDays === "number" ? token.historyDays : undefined,
+        maxRetroactiveDays: typeof token.maxRetroactiveDays === "number" ? token.maxRetroactiveDays : undefined,
+        maxRetroactiveDaysEdit: typeof token.maxRetroactiveDaysEdit === "number" ? token.maxRetroactiveDaysEdit : undefined,
         canExport: typeof token.canExport === "boolean" ? token.canExport : undefined,
         canDelete: typeof token.canDelete === "boolean" ? token.canDelete : undefined,
         canLaunchVote: typeof token.canLaunchVote === "boolean" ? token.canLaunchVote : undefined,
@@ -255,6 +266,11 @@ export const authOptions: NextAuthOptions = {
       // Definir expiração da sessão baseada no token exp
       if (typeof token.exp === 'number') {
         session.expires = new Date(token.exp * 1000).toISOString()
+      }
+
+      // Propagate the error so the client knows it should log out
+      if (token.error) {
+        (session as any).error = token.error
       }
       return session
     }

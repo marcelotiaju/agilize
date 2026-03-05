@@ -46,27 +46,29 @@ model VerificationToken {
 }
 
 model User {
-  id                 String             @id @default(cuid())
-  login              String?            @unique
-  name               String?
-  email              String?            @unique
-  emailVerified      DateTime?          @db.DateTime(0)
-  image              String?            @db.Text
-  phone              String?
-  password           String
-  validFrom          DateTime           @db.DateTime(0)
-  validTo            DateTime           @db.DateTime(0)
-  historyDays        Int                @default(30)
-  maxRetroactiveDays Int                @default(30)
-  defaultPage        String             @default("/dashboard")
-  forceLogoutAt      DateTime?          @db.DateTime(0)
-  profileId          String?
-  profile            Profile?           @relation(fields: [profileId], references: [id])
-  accounts           Account[]
-  sessions           Session[]
-  congregations      UserCongregation[]
-  createdAt          DateTime           @default(now()) @db.DateTime(0)
-  updatedAt          DateTime           @updatedAt @db.DateTime(0)
+  id                     String             @id @default(cuid())
+  login                  String?            @unique
+  name                   String?
+  email                  String?            @unique
+  emailVerified          DateTime?          @db.DateTime(0)
+  image                  String?            @db.Text
+  phone                  String?
+  password               String
+  validFrom              DateTime           @db.DateTime(0)
+  validTo                DateTime           @db.DateTime(0)
+  historyDays            Int                @default(30)
+  maxRetroactiveDays     Int                @default(30)
+  maxRetroactiveDaysEdit Int                @default(30)
+  defaultPage            String             @default("/dashboard")
+  forceLogoutAt          DateTime?          @db.DateTime(0)
+  profileId              String?
+  profile                Profile?           @relation(fields: [profileId], references: [id])
+  accounts               Account[]
+  sessions               Session[]
+  congregations          UserCongregation[]
+  isActive               Boolean            @default(true)
+  createdAt              DateTime           @default(now()) @db.DateTime(0)
+  updatedAt              DateTime           @updatedAt @db.DateTime(0)
 }
 
 model Profile {
@@ -100,6 +102,7 @@ model Profile {
   canExclude                       Boolean @default(false)
   canListSummary                   Boolean @default(false)
   canGenerateSummary               Boolean @default(false)
+  canManageSummary                 Boolean @default(false)
   canApproveTreasury               Boolean @default(false)
   canApproveAccountant             Boolean @default(false)
   canApproveDirector               Boolean @default(false)
@@ -185,6 +188,7 @@ model Launch {
   talonNumber          String?
   value                Float?               @default(0)
   description          String?              @db.VarChar(255)
+  isRateio             Boolean              @default(false)
   status               LaunchStatus         @default(NORMAL)
   attachmentUrl        String?              @db.Text
   contributorId        String?

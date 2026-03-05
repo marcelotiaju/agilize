@@ -10,13 +10,13 @@ function parseDateToUtcInstant(dateStr: string, timezone: string, endOfDayFlag =
   if (!dateStr) throw new Error('empty date')
   // yyyy-MM-dd (HTML date input)
   if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-    return zonedTimeToUtc(`${dateStr}T${endOfDayFlag ? '23:59:59.999' : '00:00:00'}`, timezone)
+    return zonedTimeToUtc(`${dateStr}T${endOfDayFlag ? '23:59:59' : '00:00:00'}`, timezone)
   }
   // dd/MM/yyyy
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
     const [dd, mm, yyyy] = dateStr.split('/')
     const iso = `${yyyy}-${mm}-${dd}`
-    return zonedTimeToUtc(`${iso}T${endOfDayFlag ? '23:59:59.999' : '00:00:00'}`, timezone)
+    return zonedTimeToUtc(`${iso}T${endOfDayFlag ? '23:59:59' : '00:00:00'}`, timezone)
   }
   // try full ISO / Date parse fallback
   const d = new Date(dateStr)
@@ -142,15 +142,6 @@ export async function POST(request: NextRequest) {
       case 'PADRAO':
         allowedTypes = ['DIZIMO', 'OFERTA_CULTO', 'VOTO', 'EBD', 'CAMPANHA', 'MISSAO', 'SAIDA']
         break
-      // case 'MISSAO':
-      //   allowedTypes = ['MISSAO']
-      //   break
-      // case 'CARNE_REVIVER':
-      //   allowedTypes = ['CARNE_REVIVER','SAIDA']
-      //   break
-      // case 'CIRCULO':
-      //   allowedTypes = ['CIRCULO','SAIDA']
-      //   break
       default:
         return NextResponse.json({ error: "Tipo de resumo inválido" }, { status: 400 })
     }
@@ -164,6 +155,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Formato de data inválido" }, { status: 400 })
     }
     endUtc = new Date(endUtc.getTime() - 3 * 60 * 60 * 1000) // Ajuste de +3 horas
+
     // Validação "não futura" comparando com fim do dia atual no timezone do usuário
     const nowZoned = utcToZonedTime(new Date(), timezone)
     const todayEndZoned = endOfDay(nowZoned)
@@ -181,8 +173,56 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Acesso não autorizado a esta congregação" }, { status: 403 })
     }
 
+    // Verificar se já existe resumo para este período
+    // Primeiro, checar se algum já está APROVADO
+    const approvedSummary = await prisma.congregationSummary.findFirst({
+      where: {
+        congregationId,
+        startDate: startUtc,
+        status: "APPROVED"
+      }
+    })
+
+    if (approvedSummary) {
+      return NextResponse.json({ error: "Já existe um resumo APROVADO para este período. Não é possível sobrescrever." }, { status: 400 })
+    }
+
+    // Agora, buscar todos os resumos PENDENTES para "limpar"
+    const pendingSummaries = await prisma.congregationSummary.findMany({
+      where: {
+        congregationId,
+        startDate: startUtc,
+        status: "PENDING"
+      }
+    })
+
+    if (pendingSummaries.length > 0) {
+      const summaryIds = pendingSummaries.map(s => s.id)
+
+      // Desvincular todos os lançamentos de todos os resumos pendentes encontrados
+      await prisma.launch.updateMany({
+        where: { summaryId: { in: summaryIds } },
+        data: {
+          summaryId: null,
+          approvedByTreasury: null,
+          approvedAtTreasury: null,
+          approvedByAccountant: null,
+          approvedAtAccountant: null,
+          approvedByDirector: null,
+          approvedAtDirector: null,
+          approvedVia: null,
+          status: "NORMAL"
+        }
+      })
+
+      // Deletar os resumos pendentes
+      await prisma.congregationSummary.deleteMany({
+        where: { id: { in: summaryIds } }
+      })
+    }
+
+
     // Buscar lançamentos no período filtrados pelo tipo de resumo
-    // Excluir lançamentos importados (IMPORTED) - eles não devem somar nos resumos
     const launches = await prisma.launch.findMany({
       where: {
         congregationId,
@@ -196,65 +236,30 @@ export async function POST(request: NextRequest) {
     })
 
     if (launches.length === 0) {
-      const typeLabel = summaryType === 'PADRAO' ? 'Padrão' :
-        //  summaryType === 'MISSAO' ? 'Missão' :
-        //  summaryType === 'CARNE_REVIVER' ? 'Carnê Reviver' :
-        //  summaryType === 'CIRCULO' ? 'Círculo de Oração' : 
-        'selecionado'
+      const typeLabel = summaryType === 'PADRAO' ? 'Padrão' : 'selecionado'
       return NextResponse.json({ error: `Não há lançamentos do tipo ${typeLabel} no período para criar um resumo.` }, { status: 400 });
     }
 
-    // Resumo
+    // Calcular totais
     const entradaSummary = { dizimo: 0, oferta: 0, votos: 0, campanha: 0, ebd: 0, mission: 0, circle: 0, carneReviver: 0, total: 0 }
     const saidaSummary = { saida: 0, total: 0 }
-    const approvalSummary = { pending: 0, approved: { treasury: 0, accountant: 0, director: 0, total: 0 } }
 
     launches.forEach(launch => {
-      if (launch.type === "VOTO") {
-        entradaSummary.votos += launch.value || 0
-      } else if (launch.type === "OFERTA_CULTO") {
-        entradaSummary.oferta += launch.value || 0
-      } else if (launch.type === "CAMPANHA") {
-        entradaSummary.campanha += launch.value || 0
-      } else if (launch.type === "EBD") {
-        entradaSummary.ebd += launch.value || 0
-      } else if (launch.type === "DIZIMO") {
-        entradaSummary.dizimo += launch.value || 0
-      } else if (launch.type === "MISSAO") {
-        entradaSummary.mission += launch.value || 0
-        // } else if (launch.type === "CIRCULO") {
-        //   entradaSummary.circle += launch.value || 0
-        // } else if (launch.type === "CARNE_REVIVER") {
-        //   entradaSummary.carneReviver += launch.value || 0
-      } else if (launch.type === "SAIDA") {
+      if (launch.type === "VOTO") entradaSummary.votos += launch.value || 0
+      else if (launch.type === "OFERTA_CULTO") entradaSummary.oferta += launch.value || 0
+      else if (launch.type === "CAMPANHA") entradaSummary.campanha += launch.value || 0
+      else if (launch.type === "EBD") entradaSummary.ebd += launch.value || 0
+      else if (launch.type === "DIZIMO") entradaSummary.dizimo += launch.value || 0
+      else if (launch.type === "MISSAO") entradaSummary.mission += launch.value || 0
+      else if (launch.type === "SAIDA") {
         saidaSummary.saida += launch.value || 0
         saidaSummary.total += launch.value || 0
       }
     })
-    //console.log('Entrada Summary:', entradaSummary)
-    // Verificar se já existe resumo para este período e tipo
-    const existingSummary = await prisma.congregationSummary.findFirst({
-      where: {
-        congregationId,
-        startDate: startUtc,
-        endDate: endUtc,
-        // Adicionar campo summaryType no schema se necessário, por enquanto verificar apenas período
-      }
-    })
 
-    if (existingSummary) {
-      return NextResponse.json({ error: "Já existe um resumo para este período" }, { status: 400 })
-    }
-    // Calcular total de entradas baseado no tipo de resumo
     let totalEntradas = 0
     if (summaryType === 'PADRAO') {
       totalEntradas = entradaSummary.dizimo + entradaSummary.oferta + entradaSummary.votos + entradaSummary.ebd + entradaSummary.campanha + entradaSummary.mission
-      // } else if (summaryType === 'MISSAO') {
-      //   totalEntradas = entradaSummary.mission
-      // } else if (summaryType === 'CARNE_REVIVER') {
-      //   totalEntradas = entradaSummary.carneReviver
-      // } else if (summaryType === 'CIRCULO') {
-      //   totalEntradas = entradaSummary.circle
     }
 
     const summary = await prisma.congregationSummary.create({
@@ -300,7 +305,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       entradaSummary,
       saidaSummary,
-      approvalSummary,
       launches: launches.map(l => ({ ...l, date: l.date ? new Date(l.date).toISOString() : null })),
       summary: { ...summary, startDate: summary.startDate.toISOString(), endDate: summary.endDate.toISOString() },
       period: { startUtc: startUtc.toISOString(), endUtc: endUtc.toISOString() }

@@ -133,6 +133,9 @@ export async function PUT(request: NextRequest, props: any) {
     if (body.attachmentUrl !== undefined) {
       dataToUpdate.attachmentUrl = body.attachmentUrl
     }
+    if (body.isRateio !== undefined) {
+      dataToUpdate.isRateio = !!body.isRateio
+    }
 
     // Lógica para contribuinte (Dízimo)
     if (body.type === "DIZIMO" || body.type === "CARNE_REVIVER") {

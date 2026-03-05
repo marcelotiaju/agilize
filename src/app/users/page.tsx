@@ -30,6 +30,7 @@ interface UserData {
   validTo: string
   historyDays: number
   maxRetroactiveDays?: number
+  maxRetroactiveDaysEdit?: number
   defaultPage: string
   createdAt: string
   updatedAt: string
@@ -45,6 +46,7 @@ interface UserData {
     [key: string]: any
   } | null
   image?: string | null
+  isActive: boolean
 }
 
 interface Congregation {
@@ -95,9 +97,11 @@ export default function Users() {
     validTo: format(new Date(new Date().setFullYear(new Date().getFullYear() + 1)), 'yyyy-MM-dd'),
     historyDays: 30,
     maxRetroactiveDays: 30,
+    maxRetroactiveDaysEdit: 30,
     profileId: '',
     defaultPage: '/dashboard',
-    image: ''
+    image: '',
+    isActive: true
   })
   const [associationData, setAssociationData] = useState({
     congregationIds: [] as string[]
@@ -236,9 +240,11 @@ export default function Users() {
       validTo: format(new Date(user.validTo), 'yyyy-MM-dd'),
       historyDays: user.historyDays || 30,
       maxRetroactiveDays: user.maxRetroactiveDays || 30,
+      maxRetroactiveDaysEdit: user.maxRetroactiveDaysEdit || 30,
       profileId: user.profile?.id || '',
       defaultPage: user.defaultPage || '/dashboard',
-      image: user.image || ''
+      image: user.image || '',
+      isActive: user.isActive ?? true
     })
     setIsDialogOpen(true)
   }
@@ -314,9 +320,11 @@ export default function Users() {
       validTo: format(new Date(new Date().setFullYear(new Date().getFullYear() + 1)), 'yyyy-MM-dd'),
       historyDays: 30,
       maxRetroactiveDays: 30,
+      maxRetroactiveDaysEdit: 30,
       profileId: '',
       defaultPage: '/dashboard',
-      image: ''
+      image: '',
+      isActive: true
     })
   }
 
@@ -649,12 +657,23 @@ export default function Users() {
                       </div>
 
                       <div className="space-y-2 w-30">
-                        <Label htmlFor="limit">Retroativo (Dias)</Label>
+                        <Label htmlFor="limit">Retroativo-Inserir</Label>
                         <Input
                           id="limit"
                           name="maxRetroactiveDays" // Corrigido o name para bater com o estado
                           type="number"
                           value={(formData as any).maxRetroactiveDays}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+
+                      <div className="space-y-2 w-30">
+                        <Label htmlFor="limitEdit">Retroativo-Editar</Label>
+                        <Input
+                          id="limitEdit"
+                          name="maxRetroactiveDaysEdit"
+                          type="number"
+                          value={(formData as any).maxRetroactiveDaysEdit}
                           onChange={handleInputChange}
                         />
                       </div>
@@ -697,6 +716,15 @@ export default function Users() {
                           </SelectContent>
                         </Select>
                       </div>
+                    </div>
+
+                    <div className="flex items-center space-x-2 pt-8">
+                      <Checkbox
+                        id="isActive"
+                        checked={formData.isActive}
+                        onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked as boolean }))}
+                      />
+                      <Label htmlFor="isActive" className="cursor-pointer">Ativo</Label>
                     </div>
 
                     <DialogFooter className="sticky bottom-0 bg-white pt-4 pb-2 border-t mt-4 flex-col sm:flex-row gap-2">
@@ -822,6 +850,7 @@ export default function Users() {
                           <TableHead>Dias Histórico</TableHead>
                           <TableHead>Email</TableHead>
                           <TableHead>Validade</TableHead>
+                          <TableHead>Status</TableHead>
                           <TableHead>Ações</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -836,6 +865,13 @@ export default function Users() {
                                 <div>De: {format(new Date(user.validFrom), 'dd/MM/yyyy', { locale: ptBR })}</div>
                                 <div>Até: {format(new Date(user.validTo), 'dd/MM/yyyy', { locale: ptBR })}</div>
                               </div>
+                            </TableCell>
+                            <TableCell>
+                              {user.isActive ? (
+                                <Badge className="bg-green-100 text-green-800 border-green-200">Ativo</Badge>
+                              ) : (
+                                <Badge variant="secondary" className="bg-red-100 text-red-800 border-red-200">Inativo</Badge>
+                              )}
                             </TableCell>
                             <TableCell>
                               <div className="flex space-x-2">
@@ -858,6 +894,16 @@ export default function Users() {
                           <div>
                             <p className="text-xs text-gray-600">Nome</p>
                             <p className="font-semibold text-gray-900">{user.name}</p>
+                          </div>
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="text-xs text-gray-600">Status</p>
+                              {user.isActive ? (
+                                <Badge className="bg-green-100 text-green-800 border-green-200 mt-1">Ativo</Badge>
+                              ) : (
+                                <Badge variant="secondary" className="bg-red-100 text-red-800 border-red-200 mt-1">Inativo</Badge>
+                              )}
+                            </div>
                           </div>
                           <div>
                             <p className="text-xs text-gray-600">Dias Histórico</p>

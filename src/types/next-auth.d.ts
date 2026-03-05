@@ -12,6 +12,8 @@ declare module "next-auth" {
             validFrom?: Date
             validTo?: Date
             historyDays?: number
+            maxRetroactiveDays?: number
+            maxRetroactiveDaysEdit?: number
             defaultPage?: string
             profile?: { id: string; name: string } | null
             canExport?: boolean
@@ -49,6 +51,7 @@ declare module "next-auth" {
             canReportHistoryContribSynthetic?: boolean
             canReportHistoryContribAnalytic?: boolean
             canReportSummary?: boolean
+            canReportAudit?: boolean
             canDeleteLaunch?: boolean
             canImportLaunch?: boolean
             canDeleteSummary?: boolean
@@ -58,6 +61,7 @@ declare module "next-auth" {
             // Force logout timestamp
             forceLogoutAt?: number | null
         } & DefaultSession["user"]
+        error?: "ForceLogout" | string
     }
 
     interface User {
@@ -67,6 +71,8 @@ declare module "next-auth" {
         validFrom?: Date
         validTo?: Date
         historyDays?: number
+        maxRetroactiveDays?: number
+        maxRetroactiveDaysEdit?: number
         defaultPage?: string
         profile?: { id: string; name: string } | null
         // ... all other permission fields ...

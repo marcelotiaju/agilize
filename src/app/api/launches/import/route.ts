@@ -81,8 +81,12 @@ export async function POST(request: NextRequest) {
 
     let imported = 0
     let skipped = 0
-    let errors: string[] = []
+    let errorCounts: Record<string, number> = {}
     const timezone = 'America/Sao_Paulo'
+
+    const addError = (msg: string) => {
+      errorCounts[msg] = (errorCounts[msg] || 0) + 1
+    }
 
     for (let i = 0; i < dataLines.length; i++) {
       const line = dataLines[i].trim()
@@ -91,7 +95,7 @@ export async function POST(request: NextRequest) {
       const columns = line.split(',').map(col => col.trim())
 
       if (columns.length < 4) {
-        errors.push(`Linha ${i + 2}: Formato inválido - esperado pelo menos Congregacao,Data,Valor,Contribuinte`)
+        addError(`Formato inválido - esperado pelo menos Congregacao,Data,Valor,Contribuinte`)
         continue
       }
 
@@ -140,7 +144,7 @@ export async function POST(request: NextRequest) {
         description = columns[7] || ''
       }
       if (!congregationCode || !dateStr || !valueStr || !cpfContributor) {
-        errors.push(`Linha ${i + 2}: Congregacao, Data, Valor e Contribuinte são obrigatórios`)
+        addError(`Congregacao, Data, Valor e Contribuinte são obrigatórios`)
         continue
       }
 
@@ -174,7 +178,7 @@ export async function POST(request: NextRequest) {
         const startOfDayLocal = startOfDay(launchDate)
         launchDate = zonedTimeToUtc(startOfDayLocal, timezone)
       } catch (error) {
-        errors.push(`Linha ${i + 2}: Data inválida: ${dateStr}`)
+        addError(`Data inválida`)
         continue
       }
 
@@ -188,7 +192,7 @@ export async function POST(request: NextRequest) {
           throw new Error('Valor inválido')
         }
       } catch (error) {
-        errors.push(`Linha ${i + 2}: Valor inválido: ${valueStr}`)
+        addError(`Valor inválido`)
         continue
       }
 
@@ -208,7 +212,7 @@ export async function POST(request: NextRequest) {
       })
 
       if (!congregation) {
-        errors.push(`Linha ${i + 2}: Congregação com código '${congregationCode}' não encontrada`)
+        addError(`Congregação com código '${congregationCode}' não encontrada`)
         continue
       }
       // Tentar encontrar contribuinte cadastrado pelo nome
@@ -231,7 +235,7 @@ export async function POST(request: NextRequest) {
         const existingLaunch = await prisma.launch.findFirst({
           where: {
             congregationId: congregation?.id || null,
-            type: launchType,
+            type: launchType as any,
             date: launchDate,
             value: value,
             contributorId: contributor?.id || null,
@@ -262,22 +266,28 @@ export async function POST(request: NextRequest) {
         })
         imported++
       } catch (error: any) {
-        errors.push(`Linha ${i + 2}: Erro ao criar lançamento - ${error.message}`)
+        addError(`Erro ao criar lançamento - ${error.message}`)
       }
     }
 
-    if (errors.length > 0 && imported === 0) {
+    const consolidatedErrors = Object.entries(errorCounts).map(([msg, count]) => {
+      return count > 1 ? `${msg} (${count} linhas)` : msg
+    })
+
+    if (consolidatedErrors.length > 0 && imported === 0) {
       return NextResponse.json({
-        error: "Erro na importação",
-        details: errors,
-        imported: 0
+        error: skipped > 0 ? "Nenhum novo lançamento importado (duplicados detectados)" : "Erro na importação",
+        details: consolidatedErrors,
+        imported: 0,
+        skipped
       }, { status: 400 })
     }
 
     return NextResponse.json({
-      message: imported > 0 ? "Importação concluída com sucesso" : "Nenhum lançamento importado",
+      message: imported > 0 ? "Importação concluída com sucesso" : "Processamento concluído",
       imported,
-      errors: errors.length > 0 ? errors : undefined
+      skipped,
+      errors: consolidatedErrors.length > 0 ? consolidatedErrors : undefined
     })
   } catch (error: any) {
     console.error('Erro na importação CSV:', error)

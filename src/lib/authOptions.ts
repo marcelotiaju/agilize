@@ -81,10 +81,12 @@ export const authOptions: NextAuthOptions = {
           validFrom: user.validFrom,
           validTo: user.validTo,
           historyDays: user.historyDays,
+          maxRetroactiveDays: user.maxRetroactiveDays,
+          maxRetroactiveDaysEdit: user.maxRetroactiveDaysEdit,
           defaultPage: user.defaultPage,
           profile: user.profile ? { id: user.profile.id, name: user.profile.name } : null,
           ...resolved
-        }
+        } as any
       }
     })
   ],
@@ -114,6 +116,8 @@ export const authOptions: NextAuthOptions = {
           validFrom: (user as any).validFrom,
           validTo: (user as any).validTo,
           historyDays: (user as any).historyDays,
+          maxRetroactiveDays: (user as any).maxRetroactiveDays,
+          maxRetroactiveDaysEdit: (user as any).maxRetroactiveDaysEdit,
           defaultPage: (user as any).defaultPage,
           profile: (user as any).profile ?? null,
           canExport: (user as any).canExport,
@@ -164,13 +168,15 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       session.user = {
         ...session.user,
-        id: token.sub,
+        id: token.sub as string,
         login: token.login as string | undefined,
         cpf: token.cpf as string | undefined,
         phone: token.phone as string | undefined,
         validFrom: typeof token.validFrom === "string" || typeof token.validFrom === "number" ? new Date(token.validFrom) : undefined,
         validTo: typeof token.validTo === "string" || typeof token.validTo === "number" ? new Date(token.validTo) : undefined,
         historyDays: typeof token.historyDays === "number" ? token.historyDays : undefined,
+        maxRetroactiveDays: typeof token.maxRetroactiveDays === "number" ? token.maxRetroactiveDays : undefined,
+        maxRetroactiveDaysEdit: typeof token.maxRetroactiveDaysEdit === "number" ? token.maxRetroactiveDaysEdit : undefined,
         defaultPage: typeof token.defaultPage === "string" ? token.defaultPage : undefined,
         profile: token.profile ?? undefined,
         canExport: typeof token.canExport === "boolean" ? token.canExport : undefined,

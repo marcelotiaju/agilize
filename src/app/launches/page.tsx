@@ -80,7 +80,7 @@ export default function Launches() {
 
   // Tipos
   type Congregation = { id: string; name: string }
-  type Contributor = { id: string; name: string; cpf: string; congregationId: string; ecclesiasticalPosition: string, photoUrl: string, photoExists: boolean }
+  type Contributor = { id: string; name: string; cpf: string; congregationId: string; ecclesiasticalPosition: string, tipo: string, photoUrl: string, photoExists: boolean }
   type Supplier = { id: string; razaoSocial: string; cpfcnpj: string }
   type Classification = { id: string; description: string }
 
@@ -112,6 +112,7 @@ export default function Launches() {
     approvedByDirector?: boolean
     approvedVia?: string
     attachmentUrl?: string
+    isRateio?: boolean
   }
 
   // Permissões (mantém nomes existentes)
@@ -185,7 +186,8 @@ export default function Launches() {
     classificationId: '',
     summaryId: '',
     status: 'NORMAL',
-    attachmentUrl: ''
+    attachmentUrl: '',
+    isRateio: false
   })
 
   function truncateString(str: string | null | undefined, num: number) {
@@ -233,6 +235,29 @@ export default function Launches() {
       }))
     }
   }, [congregations])
+
+  // Efeito para limpar o Nr. Recibo quando o campo for desabilitado (Dízimo para Membro/Congregado)
+  useEffect(() => {
+    if (formData.type === 'DIZIMO' && formData.talonNumber) {
+      const contributor = contributors.find(c => c.id === formData.contributorId);
+
+      const isObreiro = (() => {
+        if (!contributor) return false;
+        const cargo = (contributor.ecclesiasticalPosition || '').toUpperCase();
+        const tipo = (contributor.tipo || '').toUpperCase();
+
+        if (['MEMBRO', 'CONGREGADO'].includes(tipo) && !cargo) return false;
+        if (['MEMBRO', 'CONGREGADO'].includes(cargo)) return false;
+        if (!cargo) return false;
+
+        return true; // É Obreiro
+      })();
+
+      if (!isObreiro) {
+        setFormData(prev => ({ ...prev, talonNumber: '' }));
+      }
+    }
+  }, [formData.type, formData.contributorId, contributors, formData.talonNumber]);
 
   // Detectar scroll para mostrar/esconder botão de voltar ao topo
   useEffect(() => {
@@ -284,20 +309,25 @@ export default function Launches() {
 
       if (response.ok) {
         const result = await response.json()
-        let message = `Importação concluída! `
-        if (result.updated && result.updated > 0) {
-          message += `${result.updated} lançamento(s) atualizado(s)`
+        let message = result.message || `Importação concluída! `
+        let details = []
+
+        if (result.imported > 0) {
+          details.push(`${result.imported} lançamento(s) importado(s)`)
         }
-        if (result.created && result.created > 0) {
-          if (result.updated && result.updated > 0) {
-            message += ` e `
-          }
-          message += `${result.created} lançamento(s) criado(s)`
+        if (result.skipped > 0) {
+          details.push(`${result.skipped} lançamento(s) ignorado(s) (duplicados)`)
         }
-        if (!result.updated && !result.created) {
-          message += `${result.imported} lançamento(s) processado(s)`
+
+        if (details.length > 0) {
+          message += `\n\nResumo: ${details.join(', ')}.`
         }
-        message += `.`
+
+        const errorList = result.details || result.errors
+        if (errorList && Array.isArray(errorList)) {
+          message += '\n\nAlertas/Erros:\n' + errorList.join('\n')
+        }
+
         alert(message)
         fetchLaunches()
         setIsImportDialogOpen(false)
@@ -305,11 +335,20 @@ export default function Launches() {
       } else {
         const error = await response.json()
         let errorMessage = error.error || 'Erro ao importar arquivo CSV'
-        if (error.imported > 0) {
-          errorMessage += `\n${error.imported} lançamento(s) processado(s)`
-          if (error.updated) errorMessage += ` (${error.updated} atualizado(s))`
-          if (error.created) errorMessage += ` (${error.created} criado(s))`
+
+        let details = []
+        if (error.imported > 0) details.push(`${error.imported} importado(s)`)
+        if (error.skipped > 0) details.push(`${error.skipped} duplicado(s)`)
+
+        if (details.length > 0) {
+          errorMessage += ` (${details.join(', ')})`
         }
+
+        const errorList = error.details || error.errors
+        if (errorList && Array.isArray(errorList)) {
+          errorMessage += '\n\nDetalhes dos Erros:\n' + errorList.join('\n')
+        }
+
         alert(errorMessage)
       }
     } catch (error) {
@@ -469,7 +508,7 @@ export default function Launches() {
 
     if (name === 'talonNumber') {
       const numericValue = value.replace(/\D/g, '')
-      setFormData(prev => ({ ...prev, [name]: numericValue }))
+      setFormData(prev => ({ ...((prev as any)), [name]: numericValue }))
       return
     }
 
@@ -477,22 +516,22 @@ export default function Launches() {
       // aceitar apenas números e separadores
       const numericValue = value.replace(/[^\d.,]/g, '')
       const formattedValue = numericValue.replace(/,/g, '.')
-      setFormData(prev => ({ ...prev, [name]: formattedValue }))
+      setFormData(prev => ({ ...((prev as any)), [name]: formattedValue }))
       return
     }
 
     if (name === 'contributorName' || name === 'description' || name === 'supplierName') {
       const upperValue = value.toUpperCase()
-      setFormData((prev) => ({ ...prev, [name]: upperValue }))
+      setFormData((prev) => ({ ...((prev as any)), [name]: upperValue }))
       return
     }
 
-    setFormData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
+    setFormData((prev) => ({ ...((prev as any)), [name]: type === 'checkbox' ? checked : value }))
   }
 
   const toggleField = (name: string) => {
     setFormData((prev) => {
-      const newValue = !prev[name];
+      const newValue = !((prev as any))[name];
 
       // Regra de negócio: Se marcar Anônimo, desmarca o Contribuinte e vice-versa
       if (name === 'isAnonymous') {
@@ -517,7 +556,7 @@ export default function Launches() {
         return { ...prev, isSupplierRegistered: true };
       }
 
-      return { ...prev, [name]: newValue };
+      return { ...((prev as any)), [name]: newValue };
     });
   };
 
@@ -544,13 +583,24 @@ export default function Launches() {
     }
 
     // Comparar apenas a data (ignorando a hora) usando a data já parseada
+    // Usar split e new Date(ano, mes, dia) para garantir que a data seja tratada como local, evitando problemas de fuso horário (UTC)
+    const [year, month, day] = formData.date.split('-').map(Number);
+    const launchDate = new Date(year, month - 1, day);
+    const launchDateStart = startOfDay(launchDate);
+
     const todayStart = startOfDay(new Date())
-    if (startOfDay(new Date(formData.date)) > todayStart) {
+    if (!formData.isRateio && launchDateStart > todayStart) {
       setSalvando(false)
       return alert("Não é permitido lançar com data futura")
     }
 
-    if (startOfDay(new Date(formData.date)).getTime() <= (todayStart.getTime() - (session?.user?.historyDays || 0) * 24 * 60 * 60 * 1000)) {
+    const retroactiveLimit = editingLaunch ? session?.user?.maxRetroactiveDaysEdit : session?.user?.maxRetroactiveDays;
+    const limitDate = new Date(todayStart.getTime() - (retroactiveLimit || 0) * 24 * 60 * 60 * 1000);
+    const limitDateStart = startOfDay(limitDate);
+
+    // Bloquear apenas se a data do lançamento for menor que o limite permitido
+    if (launchDateStart < limitDateStart) {
+      console.log('Retroactive Limit:', retroactiveLimit)
       setSalvando(false)
       return alert("Não é permitido lançar com data anterior ao limite permitido")
     }
@@ -649,7 +699,8 @@ export default function Launches() {
       classificationId: launch.classificationId || '',
       summaryId: launch.summaryId || '',
       status: launch.status || 'NORMAL',
-      attachmentUrl: launch.attachmentUrl || ''
+      attachmentUrl: launch.attachmentUrl || '',
+      isRateio: !!launch.isRateio
     })
     setIsDialogOpen(true)
   }
@@ -674,7 +725,8 @@ export default function Launches() {
       classificationId: launch.classificationId || '',
       summaryId: launch.summaryId || '',
       status: launch.status || 'NORMAL',
-      attachmentUrl: launch.attachmentUrl || ''
+      attachmentUrl: launch.attachmentUrl || '',
+      isRateio: !!launch.isRateio
     })
     setIsDialogOpen(true)
   }
@@ -794,7 +846,8 @@ export default function Launches() {
       classificationId: '',
       summaryId: '',
       status: 'NORMAL',
-      attachmentUrl: ''
+      attachmentUrl: '',
+      isRateio: false
     })
     setError(null)
   }
@@ -1026,7 +1079,7 @@ export default function Launches() {
               </Tooltip>
             )}
 
-            {(launch.status === 'NORMAL' && launch.summaryId == null && (canLaunchVote || canLaunchEbd || canLaunchCampaign || canLaunchExpense || canLaunchTithe || canLaunchMission || canLaunchCircle || canLaunchServiceOffer || canApproveCarneReviver)) || (canTechnicalIntervention && isTechnicalIntervention && launch.status !== 'CANCELED') ? (
+            {(launch.status === 'NORMAL' && launch.summaryId == null && (canLaunchVote || canLaunchEbd || canLaunchCampaign || canLaunchExpense || canLaunchTithe || canLaunchMission || canLaunchCircle || canLaunchServiceOffer || canLaunchCarneReviver)) || (canTechnicalIntervention && isTechnicalIntervention && launch.status !== 'CANCELED') ? (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="outline" size="sm" onClick={() => handleCancel(launch.id)}><Trash2 className="h-4 w-4 mr-1" /></Button>
@@ -1332,17 +1385,72 @@ export default function Launches() {
                                 <div>
                                   {formData.type === 'SAIDA' ? <Label htmlFor="talonNumber">Nr. Doc</Label> : formData.type === 'DIZIMO' ? <Label htmlFor="talonNumber">Nr. Recibo</Label> : formData.type === 'CARNE_REVIVER' || formData.type === 'MISSAO' ? '' : <Label htmlFor="talonNumber">Nr. Talão</Label>}
                                   {(formData.type !== 'CARNE_REVIVER' && formData.type !== 'MISSAO') && (
-                                    <Input
-                                      id="talonNumber"
-                                      name="talonNumber"
-                                      type="text"
-                                      inputMode="numeric"
-                                      pattern="[0-9]*"
-                                      value={formData.talonNumber ?? ''}
-                                      onChange={handleInputChange}
-                                      disabled={isFieldDisabledDuringEdit()}
-                                      style={{ fontSize: '16px' }}
-                                    />
+                                    <>
+                                      <Input
+                                        id="talonNumber"
+                                        name="talonNumber"
+                                        type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        value={formData.talonNumber ?? ''}
+                                        onChange={handleInputChange}
+                                        className={cn(
+                                          (isFieldDisabledDuringEdit() ||
+                                            (formData.type === 'DIZIMO' && (() => {
+                                              const contributor = contributors.find(c => c.id === formData.contributorId);
+                                              if (!contributor) return true;
+
+                                              const cargo = (contributor.ecclesiasticalPosition || '').toUpperCase();
+                                              const tipo = (contributor.tipo || '').toUpperCase();
+
+                                              if (['MEMBRO', 'CONGREGADO'].includes(tipo) && !cargo) return true;
+                                              if (['MEMBRO', 'CONGREGADO'].includes(cargo)) return true;
+                                              if (!cargo) return true;
+
+                                              return false;
+                                            })())) ? "bg-gray-100" : "bg-white"
+                                        )}
+                                        disabled={
+                                          isFieldDisabledDuringEdit() ||
+                                          (formData.type === 'DIZIMO' && (() => {
+                                            const contributor = contributors.find(c => c.id === formData.contributorId);
+                                            if (!contributor) return true;
+
+                                            const cargo = (contributor.ecclesiasticalPosition || '').toUpperCase();
+                                            const tipo = (contributor.tipo || '').toUpperCase();
+
+                                            // Se o cargo ou tipo for MEMBRO ou CONGREGADO, e NÃO tiver outro cargo, desabilitar.
+                                            if (['MEMBRO', 'CONGREGADO'].includes(tipo) && !cargo) return true;
+                                            if (['MEMBRO', 'CONGREGADO'].includes(cargo)) return true;
+
+                                            // Se não tiver cargo nenhum, é considerado membro comum
+                                            if (!cargo) return true;
+
+                                            return false; // É Obreiro
+                                          })())
+                                        }
+                                        style={{ fontSize: '16px' }}
+                                      />
+                                      {formData.type === 'DIZIMO' && (
+                                        (() => {
+                                          const contributor = contributors.find(c => c.id === formData.contributorId);
+                                          if (!contributor) return true;
+
+                                          const cargo = (contributor.ecclesiasticalPosition || '').toUpperCase();
+                                          const tipo = (contributor.tipo || '').toUpperCase();
+
+                                          if (['MEMBRO', 'CONGREGADO'].includes(tipo) && !cargo) return true;
+                                          if (['MEMBRO', 'CONGREGADO'].includes(cargo)) return true;
+                                          if (!cargo) return true;
+
+                                          return false;
+                                        })() ? (
+                                          <p className="text-[10px] text-red-600 font-bold mt-1">
+                                            Nr. Recibo é permitido apenas para Obreiro.
+                                          </p>
+                                        ) : null
+                                      )}
+                                    </>
                                   )}
                                 </div>
                               </div>
@@ -1350,7 +1458,8 @@ export default function Launches() {
                               {/* Campo único de valor para todos os tipos */}
                               <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                  <Label htmlFor="value">{formData.type === 'VOTO' ? 'Valor Voto' : formData.type === 'EBD' ? 'Valor EBD' : formData.type === 'CAMPANHA' ? 'Valor Campanha' : formData.type === 'OFERTA_CULTO' ? 'Valor Oferta' : 'Valor'}</Label>
+                                  <Label htmlFor="value">Valor</Label>
+                                  {/* {formData.type === 'VOTO' ? 'Valor Voto' : formData.type === 'EBD' ? 'Valor EBD' : formData.type === 'CAMPANHA' ? 'Valor Campanha' : formData.type === 'OFERTA_CULTO' ? 'Valor Oferta' : 'Valor'}</Label> */}
                                   <NumericFormat
                                     id="value"
                                     name="value"
@@ -1383,6 +1492,22 @@ export default function Launches() {
                                     }}
                                   />
                                 </div>
+                                {formData.type === 'CARNE_REVIVER' && (
+                                  <div className="flex items-center space-x-2 mt-6">
+                                    <Checkbox
+                                      id="isRateio"
+                                      checked={formData.isRateio}
+                                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isRateio: !!checked }))}
+                                      disabled={isFieldDisabledDuringEdit()}
+                                    />
+                                    <Label
+                                      htmlFor="isRateio"
+                                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                    >
+                                      Rateio (Permitir Data Futura)
+                                    </Label>
+                                  </div>
+                                )}
                                 {/* Verificação de permissão para Intervenção Técnica */}
                                 {canTechnicalIntervention && isTechnicalIntervention && (
                                   <div className="space-y-2 border-l-4 border-purple-500 pl-4 bg-amber-50/50 py-2">
@@ -1974,7 +2099,7 @@ export default function Launches() {
                                   </Tooltip>
                                 )}
 
-                                {launch.status == 'NORMAL' && launch.summaryId == null && (canLaunchVote || canLaunchEbd || canLaunchCampaign || canLaunchExpense || canLaunchTithe || canLaunchMission || canLaunchCircle || canLaunchServiceOffer) ? (
+                                {launch.status == 'NORMAL' && launch.summaryId == null && (canLaunchVote || canLaunchEbd || canLaunchCampaign || canLaunchExpense || canLaunchTithe || canLaunchMission || canLaunchCircle || canLaunchServiceOffer || canLaunchCarneReviver) ? (
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <Button variant="outline" size="sm" onClick={() => handleCancel(launch.id)}><Trash2 className="h-4 w-4" /></Button>
