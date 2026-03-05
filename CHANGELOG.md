@@ -1,5 +1,12 @@
 # Histórico de Alterações
 
+## [1.4.0](https://github.com/marcelotiaju/agilize/compare/v1.3.37...v1.4.0) (2026-03-05)
+
+
+### ✨ Novas Funcionalidades
+
+* Ajuste Diversos e Tema 04032026 ([ad44afe](https://github.com/marcelotiaju/agilize/commit/ad44afe6ca19a3dc77a797d5289d45c0ee36d979))
+
 ### [1.3.37](https://github.com/marcelotiaju/agilize/compare/v1.3.36...v1.3.37) (2026-02-28)
 
 
