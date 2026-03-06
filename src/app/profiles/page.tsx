@@ -72,7 +72,8 @@ export default function Profiles() {
     canReportHistoryContribAnalytic: false,
     canDeleteSummary: false,
     canReportAudit: false,
-    canTechinicalIntervention: false
+    canTechnicalIntervention: false,
+    canManageBankIntegration: false
   })
 
   useEffect(() => {
@@ -138,7 +139,8 @@ export default function Profiles() {
       canReportHistoryContribAnalytic: false,
       canReportAudit: false,
       canDeleteSummary: false,
-      canTechinicalIntervention: false
+      canTechnicalIntervention: false,
+      canManageBankIntegration: false
     })
   }
 
@@ -408,6 +410,10 @@ export default function Profiles() {
                           <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canDelete} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canDelete: v as boolean }))} />
                             <Label>Excluir Histórico</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox checked={profileForm.canManageBankIntegration} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canManageBankIntegration: v as boolean }))} />
+                            <Label>Gerenciar Integração Bancária</Label>
                           </div>
                         </div>
                       </div>

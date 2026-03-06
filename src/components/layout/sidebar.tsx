@@ -25,12 +25,14 @@ import {
   PieChart,
   UserPen,
   Printer,
-  ListCheck
+  ListCheck,
+  CreditCard,
+  Landmark,
+  Wallet
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import Image from 'next/image';
-import { permission } from 'process'
 
 const SYSTEM_VERSION = packageJson.version
 
@@ -38,7 +40,9 @@ export function Sidebar() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const pathname = usePathname()
   const { data: session } = useSession()
-  const canAccessLaunches = ['canLaunchVote',
+
+  const canAccessLaunches = [
+    'canLaunchVote',
     'canLaunchEbd',
     'canLaunchCampaign',
     'canLaunchTithe',
@@ -54,9 +58,19 @@ export function Sidebar() {
     'canApproveMission',
     'canApproveCircle',
     'canApproveServiceOffer',
-    'canApproveExpense'];
+    'canApproveExpense'
+  ];
+
   const canAccesSummary = ['canListSummary', 'canGenerateSummary'];
-  const canGenerateReport = ['canReportLaunches', 'canReportContributors', 'canReportMonthlySummary', 'canReportHistoryContribSynthetic', 'canReportHistoryContribAnalytic', 'canReportAudit'];
+  const canGenerateReport = [
+    'canReportLaunches',
+    'canReportContributors',
+    'canReportMonthlySummary',
+    'canReportHistoryContribSynthetic',
+    'canReportHistoryContribAnalytic',
+    'canReportAudit'
+  ];
+
   const hasLaunchPermission = Boolean(canAccessLaunches.find(perm => (session?.user as any)?.[perm]));
   const hasSummaryPermission = Boolean(canAccesSummary.find(perm => (session?.user as any)?.[perm]));
   const hasGenerateReport = Boolean(canGenerateReport.find(perm => (session?.user as any)?.[perm]));
@@ -69,23 +83,27 @@ export function Sidebar() {
   const canReportHistoryContribSynthetic = Boolean(session?.user?.canReportHistoryContribSynthetic)
   const canReportHistoryContribAnalytic = Boolean(session?.user?.canReportHistoryContribAnalytic)
   const canReportAudit = Boolean(session?.user?.canReportAudit)
+  const canManageBankIntegration = Boolean((session?.user as any)?.canManageBankIntegration)
 
   const [openTesouraria, setOpenTesouraria] = useState(true)
   const [openCadastros, setOpenCadastros] = useState(false)
   const [openSeguranca, setOpenSeguranca] = useState(false)
   const [openReports, setOpenReports] = useState(false)
+  const [openBankIntegration, setOpenBankIntegration] = useState(false)
 
   useEffect(() => {
     const path = pathname || ''
     const isTesouraria = path.startsWith('/launches') || path.startsWith('/congregation-summary') || path.startsWith('/reports') || path.startsWith('/export') || path.startsWith('/delete-history')
     const isCadastros = path.startsWith('/contributors') || path.startsWith('/congregations') || path.startsWith('/suppliers') || path.startsWith('/classifications')
     const isSeguranca = path.startsWith('/users') || path.startsWith('/profiles') || path.startsWith('/profile')
+    const isBankIntegration = path.startsWith('/bank-integration')
     const isReports = path.startsWith('/reports/launches') || path.startsWith('/reports/contributors') || path.startsWith('/reports/monthly-summary') || path.startsWith('/reports/history-contrib-synthetic') || path.startsWith('/reports/history-contrib-analytic') || path.startsWith('/reports/audit')
 
     setOpenTesouraria(isTesouraria)
     setOpenCadastros(isCadastros)
     setOpenSeguranca(isSeguranca)
     setOpenReports(isReports)
+    setOpenBankIntegration(isBankIntegration)
   }, [pathname])
 
   const handleSignOut = () => {
@@ -102,11 +120,7 @@ export function Sidebar() {
         <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)} />
         <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white">
           <div className="flex h-16 items-center justify-between px-4">
-            {/* <h1 className="text-xl font-bold">Agilize</h1> */}
             <div className='flex justify-center mb-0'>
-              {/* <h2 className="text-center text-2xl font-extrabold text-gray-900 mb-6">
-                Agilize
-              </h2> */}
               <Image
                 src="/images/Logo_Agilize_Azul.png"
                 alt="Logo do Agilize"
@@ -126,7 +140,7 @@ export function Sidebar() {
               </Link>
 
               {/* Tesouraria */}
-              {(hasLaunchPermission || hasSummaryPermission || canGenerateReport) && (
+              {(hasLaunchPermission || hasSummaryPermission || hasGenerateReport) && (
                 <div className="mt-3">
                   <button type="button" onClick={() => setOpenTesouraria(!openTesouraria)} className="w-full flex items-center justify-between px-2 py-2 text-base font-medium text-gray-700 rounded-md hover:bg-gray-50">
                     <span className="flex items-center"><FileText className="mr-4 h-6 w-6" /> Tesouraria</span>
@@ -182,8 +196,23 @@ export function Sidebar() {
                 </div>
               )}
 
-              {/* Segurança */}
+              {/* Integração Bancária */}
+              {canManageBankIntegration && (
+                <div className="mt-3">
+                  <button type="button" onClick={() => setOpenBankIntegration(!openBankIntegration)} className="w-full flex items-center justify-between px-2 py-2 text-base font-medium text-gray-700 rounded-md hover:bg-gray-50">
+                    <span className="flex items-center"><Wallet className="mr-4 h-6 w-6" /> Integração</span>
+                    <ChevronDown className={cn('h-4 w-4 transform transition-transform text-gray-500', openBankIntegration ? 'rotate-0' : '-rotate-90')} />
+                  </button>
+                  {openBankIntegration && (
+                    <div className="mt-1 space-y-1 pl-8">
+                      <Link href="/bank-integration/payment-methods" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/bank-integration/payment-methods' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><CreditCard className="mr-3 h-5 w-5 shrink-0" />Formas de Pagamento</Link>
+                      <Link href="/bank-integration/financial-entities" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/bank-integration/financial-entities' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Landmark className="mr-3 h-5 w-5 shrink-0" />Entidades Financeiras</Link>
+                    </div>
+                  )}
+                </div>
+              )}
 
+              {/* Segurança */}
               <div className="mt-3">
                 <button type="button" onClick={() => setOpenSeguranca(!openSeguranca)} className="w-full flex items-center justify-between px-2 py-2 text-base font-medium text-gray-700 rounded-md hover:bg-gray-50">
                   <span className="flex items-center"><UserCheck className="mr-4 h-6 w-6" /> Segurança</span>
@@ -197,10 +226,6 @@ export function Sidebar() {
                   </div>
                 )}
               </div>
-
-              {/* Utilitários */}
-              {/* {session?.user?.canExport && (<Link href="/export" className={cn('group flex items-center px-2 py-2 text-base font-medium rounded-md mt-3', pathname === '/export' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Download className="mr-4 h-6 w-6" /> Exportar Dados</Link>)} */}
-              {/* {session?.user?.canDelete && (<Link href="/delete-history" className={cn('group flex items-center px-2 py-2 text-base font-medium rounded-md mt-1', pathname === '/delete-history' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Trash2 className="mr-4 h-6 w-6" /> Excluir Histórico</Link>)} */}
             </nav>
           </div>
           <div className="flex shrink-0 border-t border-gray-200 p-4">
@@ -243,31 +268,17 @@ export function Sidebar() {
             </div>
           </div>
         </div>
-
-        {/* Adicione esta seção para o link de registro */}
-        {/* {session?.user?.canDelete && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <Link
-              href="/auth/register"
-              className="flex items-center text-sm text-gray-600 hover:text-gray-900"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Registrar Novo Usuário
-            </Link>
-          </div>
-          )} */}
       </div>
 
       {/* Desktop sidebar */}
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
         <div className="flex min-h-0 flex-1 flex-col border-r border-gray-200 bg-white">
           <div className="flex h-16 shrink-0 items-center px-4 mt-3">
-            {/* <h1 className="text-xl font-bold">Lance Fácil</h1> */}
             <Image
-              src="/images/LogoDashboard.png" // Caminho relativo a partir da pasta `public`
+              src="/images/LogoDashboard.png"
               alt="Logo Dashboard do Agilize"
-              width={400} // Largura da imagem
-              height={300} // Altura da imagem
+              width={400}
+              height={300}
               priority
             />
           </div>
@@ -301,9 +312,9 @@ export function Sidebar() {
                               {canReportLaunches && <Link href="/reports/launches" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/launches' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50')}><Printer className="mr-3 h-5 w-5 shrink-0" />Relatório de Lançamentos</Link>}
                               {canReportContributors && <Link href="/reports/contributors" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/contributors' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50')}><Printer className="mr-3 h-5 w-5 shrink-0" />Relatório de Contribuintes</Link>}
                               {canReportMonthlySummary && <Link href="/reports/monthly-summary" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/monthly-summary' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50')}><Printer className="mr-3 h-5 w-5 shrink-0" />Resumo Mensal</Link>}
-                              {canReportHistoryContribSynthetic && <Link href="/reports/history-contrib-synthetic" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/history-contrib-synthetic' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Printer className="mr-3 h-5 w-5 shrink-0" />Histórico de Contribuições Sintético</Link>}
-                              {canReportHistoryContribAnalytic && <Link href="/reports/history-contrib-analytic" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/history-contrib-analytic' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Printer className="mr-3 h-5 w-5 shrink-0" />Histórico de Contribuições Analítico</Link>}
-                              {canReportAudit && <Link href="/reports/audit" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/audit' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Printer className="mr-3 h-5 w-5 shrink-0" />Relatório de Auditoria</Link>}
+                              {canReportHistoryContribSynthetic && <Link href="/reports/history-contrib-synthetic" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/history-contrib-synthetic' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50')}><Printer className="mr-3 h-5 w-5 shrink-0" />Histórico de Contribuições Sintético</Link>}
+                              {canReportHistoryContribAnalytic && <Link href="/reports/history-contrib-analytic" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/history-contrib-analytic' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50')}><Printer className="mr-3 h-5 w-5 shrink-0" />Histórico de Contribuições Analítico</Link>}
+                              {canReportAudit && <Link href="/reports/audit" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/audit' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50')}><Printer className="mr-3 h-5 w-5 shrink-0" />Relatório de Auditoria</Link>}
                             </div>
                           )}
                         </div>
@@ -334,6 +345,22 @@ export function Sidebar() {
                 </div>
               )}
 
+              {/* Integração Bancária */}
+              {canManageBankIntegration && (
+                <div className="mt-3">
+                  <button type="button" onClick={() => setOpenBankIntegration(!openBankIntegration)} className="w-full flex items-center justify-between px-2 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-50">
+                    <span className="flex items-center"><Wallet className="mr-3 h-5 w-5 shrink-0" /> Integração</span>
+                    <ChevronDown className={cn('h-4 w-4 transform transition-transform text-gray-500', openBankIntegration ? 'rotate-0' : '-rotate-90')} />
+                  </button>
+                  {openBankIntegration && (
+                    <div className="mt-1 space-y-1 pl-8">
+                      <Link href="/bank-integration/payment-methods" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/bank-integration/payment-methods' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50')}><CreditCard className="mr-3 h-5 w-5 shrink-0" />Formas de Pagamento</Link>
+                      <Link href="/bank-integration/financial-entities" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/bank-integration/financial-entities' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50')}><Landmark className="mr-3 h-5 w-5 shrink-0" />Entidades Financeiras</Link>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Segurança */}
               <div className="mt-3">
                 <button type="button" onClick={() => setOpenSeguranca(!openSeguranca)} className="w-full flex items-center justify-between px-2 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-50">
@@ -348,10 +375,6 @@ export function Sidebar() {
                   </div>
                 )}
               </div>
-
-              {/* Utilitários */}
-              {/* {session?.user?.canExport && (<Link href="/export" className={cn('group flex items-center px-2 py-2 text-sm font-medium rounded-md mt-3', pathname === '/export' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><Download className="mr-3 h-5 w-5 shrink-0" /> Exportar Dados</Link>)}
-              {session?.user?.canDelete && (<Link href="/delete-history" className={cn('group flex items-center px-2 py-2 text-sm font-medium rounded-md mt-1', pathname === '/delete-history' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50')}><Trash2 className="mr-3 h-5 w-5 shrink-0" /> Excluir Histórico</Link>)} */}
             </nav>
           </div>
           <div className="flex shrink-0 border-t border-gray-200 p-4">
@@ -402,11 +425,7 @@ export function Sidebar() {
           <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-6 w-6" />
           </Button>
-          {/* <h1 className="text-lg font-semibold">Agilize</h1> */}
           <div className='flex justify-center mb-0'>
-            {/* <h2 className="text-center text-2xl font-extrabold text-gray-900 mb-6">
-              Agilize
-            </h2> */}
             <Image
               src="/images/Logo_Agilize_Azul.png"
               alt="Logo do Agilize"
@@ -429,7 +448,7 @@ export function Sidebar() {
                 <User className="h-6 w-6 text-gray-400" />
               </div>
             )}
-            <div></div> {/* Spacer */}
+            <div className="w-6" /> {/* Spacer */}
           </div>
         </div>
       </div>

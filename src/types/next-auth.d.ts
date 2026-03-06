@@ -57,6 +57,7 @@ declare module "next-auth" {
             canDeleteSummary?: boolean
             defaultLaunchType?: string
             canTechnicalIntervention?: boolean
+            canManageBankIntegration?: boolean
             image?: string
             // Force logout timestamp
             forceLogoutAt?: number | null

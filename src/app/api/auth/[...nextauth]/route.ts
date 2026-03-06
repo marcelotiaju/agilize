@@ -84,6 +84,7 @@ export const authOptions: NextAuthOptions = {
           canDeleteSummary: !!p?.canDeleteSummary,
           defaultLaunchType: p?.defaultLaunchType ?? 'DIZIMO',
           canTechnicalIntervention: !!p?.canTechnicalIntervention,
+          canManageBankIntegration: !!p?.canManageBankIntegration,
         }
 
         return {
@@ -177,6 +178,7 @@ export const authOptions: NextAuthOptions = {
           canDeleteSummary: (user as any).canDeleteSummary,
           defaultLaunchType: (user as any).defaultLaunchType ?? 'DIZIMO',
           canTechnicalIntervention: (user as any).canTechnicalIntervention,
+          canManageBankIntegration: (user as any).canManageBankIntegration,
           image: (user as any).image,
           forceLogoutAt: (user as any).forceLogoutAt ? new Date((user as any).forceLogoutAt).getTime() : null
         }
@@ -262,6 +264,7 @@ export const authOptions: NextAuthOptions = {
         canDeleteSummary: typeof token.canDeleteSummary === "boolean" ? token.canDeleteSummary : undefined,
         defaultLaunchType: typeof token.defaultLaunchType === "string" ? token.defaultLaunchType : 'DIZIMO',
         canTechnicalIntervention: typeof token.canTechnicalIntervention === "boolean" ? token.canTechnicalIntervention : undefined,
+        canManageBankIntegration: typeof token.canManageBankIntegration === "boolean" ? token.canManageBankIntegration : undefined,
       }
       // Definir expiração da sessão baseada no token exp
       if (typeof token.exp === 'number') {

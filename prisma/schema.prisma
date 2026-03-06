@@ -118,11 +118,32 @@ model Profile {
   canImportLaunch                  Boolean @default(false)
   canDeleteSummary                 Boolean @default(false)
   canTechnicalIntervention         Boolean @default(false)
+  canManageBankIntegration         Boolean @default(false)
   defaultLaunchType                String? @default("DIZIMO")
 
   users     User[]
   createdAt DateTime @default(now()) @db.DateTime(0)
   updatedAt DateTime @updatedAt @db.DateTime(0)
+}
+
+model PaymentMethod {
+  id   Int    @id
+  name String @db.VarChar(60)
+
+  createdAt DateTime @default(now()) @db.DateTime(0)
+  updatedAt DateTime @updatedAt @db.DateTime(0)
+}
+
+model FinancialEntity {
+  id             Int          @id
+  name           String       @db.VarChar(60)
+  congregationId String
+  congregation   Congregation @relation(fields: [congregationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @db.DateTime(0)
+  updatedAt DateTime @updatedAt @db.DateTime(0)
+
+  @@index([congregationId])
 }
 
 model Congregation {
@@ -165,6 +186,7 @@ model Congregation {
   createdAt                          DateTime              @default(now()) @db.DateTime(0)
   updatedAt                          DateTime              @updatedAt @db.DateTime(0)
   CongregationSummary                CongregationSummary[]
+  financialEntities                  FinancialEntity[]
 }
 
 model UserCongregation {
