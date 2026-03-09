@@ -20,10 +20,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { startDate, endDate, type, congregationIds, launchStatus } = body
 
-    const launchDateStart = new Date(`${body.startDate}T12:00:00Z`)
-    const launchDateEnd = new Date(`${body.endDate}T12:00:00Z`)
-    launchDateStart.setHours(0, 0, 0, 0)
-    launchDateEnd.setHours(0, 0, 0, 0)
+    const timezone = 'America/Sao_Paulo';
+
+    // Converte strings 'YYYY-MM-DD' para o início e fim do dia no timezone correto
+    const launchDateStart = new Date(`${body.startDate}T00:00:00Z`);
+    const launchDateEnd = new Date(`${body.endDate}T23:59:59Z`);
 
     const userCongregations = await prisma.userCongregation.findMany({
       where: {
@@ -38,58 +39,23 @@ export async function POST(request: NextRequest) {
 
     let deletedCount = 0
 
-    // if (type === "launches" || type === "both") {
-    // const deleteResult = await prisma.launch.deleteMany({
-    //   where: {
-    //     congregationId: { in: congregationIds },
-    //     date: {
-    //       gte: new Date(startDate),
-    //       lte: new Date(endDate)
-    //     }
-    //   }
-    // })
-
-    // deletedCount += deleteResult.count
-    // }
-
-    // if (type === "contributors" || type === "both") {
-    // Construir filtro de status baseado na seleção do usuário
     const where: any = {
       congregationId: { in: congregationIds },
       date: {
         gte: launchDateStart,
         lte: launchDateEnd
       },
-      type: { in: type },
-      OR: [
-        { status: "CANCELED" },
-        { status: "EXPORTED" }
-      ]
+      type: { in: type }
     }
 
-    // Filtrar por status de importação se especificado
+    // Lógica correta de filtragem por status
     if (launchStatus === 'IMPORTED') {
-      where.AND = [
-        {
-          OR: [
-            { status: "CANCELED" },
-            { status: "EXPORTED" }
-          ]
-        },
-        { status: "IMPORTED" }
-      ]
-      delete where.OR
+      where.status = "IMPORTED";
     } else if (launchStatus === 'MANUAL') {
-      where.AND = [
-        {
-          OR: [
-            { status: "CANCELED" },
-            { status: "EXPORTED" }
-          ]
-        },
-        { status: { not: "IMPORTED" } }
-      ]
-      delete where.OR
+      where.status = { in: ["CANCELED", "EXPORTED"] };
+    } else {
+      // Caso padrão (todos os removíveis)
+      where.status = { in: ["CANCELED", "EXPORTED", "IMPORTED"] };
     }
 
     // Buscar os lançamentos antes de excluir para pegar attachmentUrl e summaryId

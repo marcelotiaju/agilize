@@ -45,6 +45,7 @@ interface CongregationPreview {
 interface PreviewData {
   totalEntrada: number
   totalSaida: number
+  totalLaunchCount: number
   byCongregation: { name: string; entrada: number; saida: number }[]
   congregations: CongregationPreview[]
 }
@@ -437,6 +438,9 @@ export default function Reports() {
                   Prévia do Relatório
                 </CardTitle>
                 <div className="flex items-center gap-4 text-sm">
+                  <span className="font-semibold text-blue-700">
+                    Total Lançamentos: {previewData.totalLaunchCount}
+                  </span>
                   <span className="font-semibold text-green-600">
                     Total Entradas: R$ {formatCurrency(previewData.totalEntrada)}
                   </span>

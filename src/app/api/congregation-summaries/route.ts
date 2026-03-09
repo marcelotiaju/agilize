@@ -173,20 +173,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Acesso não autorizado a esta congregação" }, { status: 403 })
     }
 
-    // Verificar se já existe resumo para este período
-    // Primeiro, checar se algum já está APROVADO
-    const approvedSummary = await prisma.congregationSummary.findFirst({
-      where: {
-        congregationId,
-        startDate: startUtc,
-        status: "APPROVED"
-      }
-    })
-
-    if (approvedSummary) {
-      return NextResponse.json({ error: "Já existe um resumo APROVADO para este período. Não é possível sobrescrever." }, { status: 400 })
-    }
-
     // Agora, buscar todos os resumos PENDENTES para "limpar"
     const pendingSummaries = await prisma.congregationSummary.findMany({
       where: {

@@ -76,13 +76,23 @@ export async function GET(request: NextRequest) {
     // Cálculo de Totais
     const stats = congregations.map(c => {
       const cLaunches = launchesByCongregation[c.id] || []
-      const entrada = cLaunches.filter((l: any) => l.type !== 'SAIDA').reduce((sum: number, l: any) => sum + (Number(l.value) || 0), 0)
-      const saida = cLaunches.filter((l: any) => l.type === 'SAIDA').reduce((sum: number, l: any) => sum + (Number(l.value) || 0), 0)
-      return { name: c.name, entrada, saida }
+      const entryLaunches = cLaunches.filter((l: any) => l.type !== 'SAIDA')
+      const exitLaunches = cLaunches.filter((l: any) => l.type === 'SAIDA')
+
+      const entrada = entryLaunches.reduce((sum: number, l: any) => sum + (Number(l.value) || 0), 0)
+      const saida = exitLaunches.reduce((sum: number, l: any) => sum + (Number(l.value) || 0), 0)
+
+      return {
+        name: c.name,
+        entrada,
+        saida,
+        totalCount: cLaunches.length
+      }
     })
 
     const totalEntrada = stats.reduce((sum, s) => sum + s.entrada, 0)
     const totalSaida = stats.reduce((sum, s) => sum + s.saida, 0)
+    const totalLaunchCount = stats.reduce((sum, s) => sum + s.totalCount, 0)
 
     // RESPOSTA APENAS DE DADOS (PRÉVIA)
     if (onlyData || preview) {
@@ -112,6 +122,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         totalEntrada,
         totalSaida,
+        totalLaunchCount,
         byCongregation: stats,
         congregations: congregationsPreview
       })
@@ -286,9 +297,13 @@ export async function GET(request: NextRequest) {
       doc.setFont('helvetica', 'bold')
       const totalEntradaFormatado = congEntrada.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
       const totalSaidaFormatado = congSaida.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-      doc.text('TOTAL CONGREGAÇÃO', colX[0], yPos)
+
+      const cStats = stats.find(s => s.name === congregation.name)
+      const cTotalCount = cStats?.totalCount || 0
+
+      doc.text(`TOTAL CONGREGAÇÃO (Lançamentos: ${cTotalCount})`, colX[0], yPos)
       doc.text(`    R$ ${totalEntradaFormatado}`, colX[4] + 8, yPos, { align: 'right' })
-      doc.text(congSaida > 0 ? `    R$ ${totalSaidaFormatado}` : 'R$ -', colX[5] + 8, yPos, { align: 'right' })
+      doc.text(congSaida > 0 ? `    R$ ${totalSaidaFormatado}` : `R$ -`, colX[5] + 8, yPos, { align: 'right' })
       yPos += lineHeight
       doc.text('SALDO CONGREGAÇÃO', colX[0], yPos)
       doc.text(`    R$ ${(Number(congEntrada) - Number(congSaida)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, colX[5] + 8, yPos, { align: 'right' })
@@ -306,7 +321,7 @@ export async function GET(request: NextRequest) {
       checkNewPage(lineHeight * 3)
       doc.setFontSize(10)
       doc.setFont('helvetica', 'bold')
-      doc.text('TOTAL GERAL DE TODAS AS CONGREGAÇÕES', margin, yPos)
+      doc.text(`TOTAL GERAL DE TODAS AS CONGREGAÇÕES (Lançamentos: ${totalLaunchCount})`, margin, yPos)
       yPos += lineHeight
       const totalEntradaGeralFormatado = totalEntrada.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
       const totalSaidaGeralFormatado = totalSaida.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
