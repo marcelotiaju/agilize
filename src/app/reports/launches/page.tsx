@@ -432,12 +432,12 @@ export default function Reports() {
             </Card>
           ) : previewData && (
             <Card className="mb-6">
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-col items-start gap-4">
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5" />
                   Prévia do Relatório
                 </CardTitle>
-                <div className="flex items-center gap-4 text-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm">
                   <span className="font-semibold text-blue-700">
                     Total Lançamentos: {previewData.totalLaunchCount}
                   </span>
