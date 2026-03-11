@@ -113,6 +113,9 @@ export default function Launches() {
     approvedVia?: string
     attachmentUrl?: string
     isRateio?: boolean
+    isIntegrated?: boolean
+    integrationBatchId?: string
+    createdAt?: string | Date
   }
 
   // Permissões (mantém nomes existentes)
@@ -203,6 +206,7 @@ export default function Launches() {
   // Função helper para verificar se um lançamento pode ser editado
   const isEditDisabled = (launch: Launch | null) => {
     if (!launch) return false;
+    if (launch.isIntegrated) return true;
     // Se tem canTechnicalIntervention E o modo está ativo, permite editar qualquer lançamento
     if (canTechnicalIntervention && isTechnicalIntervention) return false;
     // Caso contrário, desabilita se: não é NORMAL ou faz parte de um resumo
@@ -212,6 +216,7 @@ export default function Launches() {
   // Função helper para verificar se um campo específico deve ser desabilitado durante edição
   const isFieldDisabledDuringEdit = () => {
     if (!editingLaunch) return false;
+    if (editingLaunch.isIntegrated) return true;
     // Se tem canTechnicalIntervention E o modo está ativo, permite editar todos os campos
     if (canTechnicalIntervention && isTechnicalIntervention) return false;
     // Caso contrário, desabilita se o status não é NORMAL ou tem resumo vinculado
@@ -236,28 +241,7 @@ export default function Launches() {
     }
   }, [congregations])
 
-  // Efeito para limpar o Nr. Recibo quando o campo for desabilitado (Dízimo para Membro/Congregado)
-  useEffect(() => {
-    if (formData.type === 'DIZIMO' && formData.talonNumber) {
-      const contributor = contributors.find(c => c.id === formData.contributorId);
-
-      const isObreiro = (() => {
-        if (!contributor) return false;
-        const cargo = (contributor.ecclesiasticalPosition || '').toUpperCase();
-        const tipo = (contributor.tipo || '').toUpperCase();
-
-        if (['MEMBRO', 'CONGREGADO'].includes(tipo) && !cargo) return false;
-        if (['MEMBRO', 'CONGREGADO'].includes(cargo)) return false;
-        if (!cargo) return false;
-
-        return true; // É Obreiro
-      })();
-
-      if (!isObreiro) {
-        setFormData(prev => ({ ...prev, talonNumber: '' }));
-      }
-    }
-  }, [formData.type, formData.contributorId, contributors, formData.talonNumber]);
+  // Efeito para limpar o Nr. Recibo quando o campo for desabilitado (removido a pedido)
 
   // Detectar scroll para mostrar/esconder botão de voltar ao topo
   useEffect(() => {
@@ -1394,62 +1378,10 @@ export default function Launches() {
                                         pattern="[0-9]*"
                                         value={formData.talonNumber ?? ''}
                                         onChange={handleInputChange}
-                                        className={cn(
-                                          (isFieldDisabledDuringEdit() ||
-                                            (formData.type === 'DIZIMO' && (() => {
-                                              const contributor = contributors.find(c => c.id === formData.contributorId);
-                                              if (!contributor) return true;
-
-                                              const cargo = (contributor.ecclesiasticalPosition || '').toUpperCase();
-                                              const tipo = (contributor.tipo || '').toUpperCase();
-
-                                              if (['MEMBRO', 'CONGREGADO'].includes(tipo) && !cargo) return true;
-                                              if (['MEMBRO', 'CONGREGADO'].includes(cargo)) return true;
-                                              if (!cargo) return true;
-
-                                              return false;
-                                            })())) ? "bg-gray-100" : "bg-white"
-                                        )}
-                                        disabled={
-                                          isFieldDisabledDuringEdit() ||
-                                          (formData.type === 'DIZIMO' && (() => {
-                                            const contributor = contributors.find(c => c.id === formData.contributorId);
-                                            if (!contributor) return true;
-
-                                            const cargo = (contributor.ecclesiasticalPosition || '').toUpperCase();
-                                            const tipo = (contributor.tipo || '').toUpperCase();
-
-                                            // Se o cargo ou tipo for MEMBRO ou CONGREGADO, e NÃO tiver outro cargo, desabilitar.
-                                            if (['MEMBRO', 'CONGREGADO'].includes(tipo) && !cargo) return true;
-                                            if (['MEMBRO', 'CONGREGADO'].includes(cargo)) return true;
-
-                                            // Se não tiver cargo nenhum, é considerado membro comum
-                                            if (!cargo) return true;
-
-                                            return false; // É Obreiro
-                                          })())
-                                        }
+                                        className={cn(isFieldDisabledDuringEdit() ? "bg-gray-100" : "bg-white")}
+                                        disabled={isFieldDisabledDuringEdit()}
                                         style={{ fontSize: '16px' }}
                                       />
-                                      {formData.type === 'DIZIMO' && (
-                                        (() => {
-                                          const contributor = contributors.find(c => c.id === formData.contributorId);
-                                          if (!contributor) return true;
-
-                                          const cargo = (contributor.ecclesiasticalPosition || '').toUpperCase();
-                                          const tipo = (contributor.tipo || '').toUpperCase();
-
-                                          if (['MEMBRO', 'CONGREGADO'].includes(tipo) && !cargo) return true;
-                                          if (['MEMBRO', 'CONGREGADO'].includes(cargo)) return true;
-                                          if (!cargo) return true;
-
-                                          return false;
-                                        })() ? (
-                                          <p className="text-[10px] text-red-600 font-bold mt-1">
-                                            Nr. Recibo é permitido apenas para Obreiro.
-                                          </p>
-                                        ) : null
-                                      )}
                                     </>
                                   )}
                                 </div>
@@ -1736,6 +1668,14 @@ export default function Launches() {
                                       <TableCell>{editingLaunch?.createdBy || 'N/A'}</TableCell>
                                       <TableCell>{editingLaunch?.createdAt ? format(new Date(editingLaunch.createdAt), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
                                     </TableRow>
+                                    {/* Log de Integração */}
+                                    {editingLaunch?.isIntegrated && (
+                                      <TableRow className="text-blue-600 bg-blue-50/50">
+                                        <TableCell className="font-medium">Importação Bancária</TableCell>
+                                        <TableCell>{editingLaunch?.createdBy || '-'}</TableCell>
+                                        <TableCell>{editingLaunch?.createdAt ? format(new Date(editingLaunch.createdAt), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
+                                      </TableRow>
+                                    )}
                                     {/* Log de Cancelamento */}
                                     {editingLaunch?.status === 'CANCELED' && (
                                       <TableRow className="text-red-600">

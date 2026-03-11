@@ -46,29 +46,30 @@ model VerificationToken {
 }
 
 model User {
-  id                     String             @id @default(cuid())
-  login                  String?            @unique
+  id                     String                 @id @default(cuid())
+  login                  String?                @unique
   name                   String?
-  email                  String?            @unique
-  emailVerified          DateTime?          @db.DateTime(0)
-  image                  String?            @db.Text
+  email                  String?                @unique
+  emailVerified          DateTime?              @db.DateTime(0)
+  image                  String?                @db.Text
   phone                  String?
   password               String
-  validFrom              DateTime           @db.DateTime(0)
-  validTo                DateTime           @db.DateTime(0)
-  historyDays            Int                @default(30)
-  maxRetroactiveDays     Int                @default(30)
-  maxRetroactiveDaysEdit Int                @default(30)
-  defaultPage            String             @default("/dashboard")
-  forceLogoutAt          DateTime?          @db.DateTime(0)
+  validFrom              DateTime               @db.DateTime(0)
+  validTo                DateTime               @db.DateTime(0)
+  historyDays            Int                    @default(30)
+  maxRetroactiveDays     Int                    @default(30)
+  maxRetroactiveDaysEdit Int                    @default(30)
+  defaultPage            String                 @default("/dashboard")
+  forceLogoutAt          DateTime?              @db.DateTime(0)
   profileId              String?
-  profile                Profile?           @relation(fields: [profileId], references: [id])
+  profile                Profile?               @relation(fields: [profileId], references: [id])
   accounts               Account[]
   sessions               Session[]
   congregations          UserCongregation[]
-  isActive               Boolean            @default(true)
-  createdAt              DateTime           @default(now()) @db.DateTime(0)
-  updatedAt              DateTime           @updatedAt @db.DateTime(0)
+  isActive               Boolean                @default(true)
+  createdAt              DateTime               @default(now()) @db.DateTime(0)
+  updatedAt              DateTime               @updatedAt @db.DateTime(0)
+  bankIntegrationBatches BankIntegrationBatch[]
 }
 
 model Profile {
@@ -132,6 +133,9 @@ model PaymentMethod {
 
   createdAt DateTime @default(now()) @db.DateTime(0)
   updatedAt DateTime @updatedAt @db.DateTime(0)
+
+  BankIntegrationConfig  BankIntegrationConfig[]
+  bankIntegrationBatches BankIntegrationBatch[]
 }
 
 model FinancialEntity {
@@ -140,10 +144,58 @@ model FinancialEntity {
   congregationId String
   congregation   Congregation @relation(fields: [congregationId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime @default(now()) @db.DateTime(0)
-  updatedAt DateTime @updatedAt @db.DateTime(0)
+  createdAt              DateTime                @default(now()) @db.DateTime(0)
+  updatedAt              DateTime                @updatedAt @db.DateTime(0)
+  BankIntegrationConfig  BankIntegrationConfig[]
+  bankIntegrationBatches BankIntegrationBatch[]
 
   @@index([congregationId])
+}
+
+model BankIntegrationConfig {
+  id                String          @id @default(cuid())
+  code              String          @unique
+  name              String
+  financialEntityId Int
+  financialEntity   FinancialEntity @relation(fields: [financialEntityId], references: [id])
+  paymentMethodId   Int
+  paymentMethod     PaymentMethod   @relation(fields: [paymentMethodId], references: [id])
+  accountPlan       String?
+  launchType        String // DEBIT, CREDIT
+  launchTypeSource  String          @default("FIXED") // FIXED or FROM_FILE
+
+  sourceColumns      SourceFileColumn[]
+  destinationColumns DestinationFileColumn[]
+
+  createdAt              DateTime               @default(now()) @db.DateTime(0)
+  updatedAt              DateTime               @updatedAt @db.DateTime(0)
+  bankIntegrationBatches BankIntegrationBatch[]
+
+  @@index([financialEntityId])
+  @@index([paymentMethodId])
+}
+
+model SourceFileColumn {
+  id       String                @id @default(cuid())
+  configId String
+  config   BankIntegrationConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  code     String
+  name     String
+
+  @@unique([configId, code])
+  @@index([configId])
+}
+
+model DestinationFileColumn {
+  id             String                @id @default(cuid())
+  configId       String
+  config         BankIntegrationConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  code           String
+  name           String
+  transformation String?               @db.Text // TransformStep JSON serialized
+
+  @@unique([configId, code])
+  @@index([configId])
 }
 
 model Congregation {
@@ -202,29 +254,29 @@ model UserCongregation {
 }
 
 model Launch {
-  id                   String               @id @default(cuid())
+  id                   String                @id @default(cuid())
   congregationId       String
-  congregation         Congregation         @relation(fields: [congregationId], references: [id], onDelete: Cascade)
+  congregation         Congregation          @relation(fields: [congregationId], references: [id], onDelete: Cascade)
   type                 LaunchType
-  date                 DateTime             @db.DateTime(0)
+  date                 DateTime              @db.DateTime(0)
   talonNumber          String?
-  value                Float?               @default(0)
-  description          String?              @db.VarChar(255)
-  isRateio             Boolean              @default(false)
-  status               LaunchStatus         @default(NORMAL)
-  attachmentUrl        String?              @db.Text
+  value                Float?                @default(0)
+  description          String?               @db.VarChar(255)
+  isRateio             Boolean               @default(false)
+  status               LaunchStatus          @default(NORMAL)
+  attachmentUrl        String?               @db.Text
   contributorId        String?
-  contributor          Contributor?         @relation(fields: [contributorId], references: [id])
+  contributor          Contributor?          @relation(fields: [contributorId], references: [id])
   contributorName      String?
   supplierId           String?
-  supplier             Supplier?            @relation(fields: [supplierId], references: [id])
+  supplier             Supplier?             @relation(fields: [supplierId], references: [id])
   supplierName         String?
   classificationId     String?
-  classification       Classification?      @relation(fields: [classificationId], references: [id])
+  classification       Classification?       @relation(fields: [classificationId], references: [id])
   summaryId            String?
-  summary              CongregationSummary? @relation(fields: [summaryId], references: [id])
-  createdAt            DateTime             @default(now()) @db.DateTime(0)
-  updatedAt            DateTime             @updatedAt @db.DateTime(0)
+  summary              CongregationSummary?  @relation(fields: [summaryId], references: [id])
+  createdAt            DateTime              @default(now()) @db.DateTime(0)
+  updatedAt            DateTime              @updatedAt @db.DateTime(0)
   createdBy            String?
   cancelledBy          String?
   cancelledAt          DateTime?
@@ -235,12 +287,16 @@ model Launch {
   approvedByDirector   String?
   approvedAtDirector   DateTime?
   approvedVia          String? // 'GRID' ou 'SUMMARY' - método de aprovação
+  isIntegrated         Boolean               @default(false)
+  integrationBatchId   String?
+  integrationBatch     BankIntegrationBatch? @relation(fields: [integrationBatchId], references: [id])
 
   @@index([congregationId])
   @@index([summaryId])
   @@index([contributorId])
   @@index([supplierId])
   @@index([classificationId])
+  @@index([integrationBatchId])
 }
 
 model Contributor {
@@ -347,6 +403,7 @@ enum LaunchStatus {
   APPROVED
   EXPORTED
   IMPORTED
+  INTEGRATED
 }
 
 enum ContributorType {
@@ -362,4 +419,43 @@ enum PessoaType {
 enum SummaryStatus {
   PENDING
   APPROVED
+}
+
+model BankIntegrationBatch {
+  id                String                @id @default(cuid())
+  sequentialNumber  Int                   @unique @default(autoincrement())
+  configId          String
+  config            BankIntegrationConfig @relation(fields: [configId], references: [id])
+  financialEntityId Int
+  financialEntity   FinancialEntity       @relation(fields: [financialEntityId], references: [id])
+  paymentMethodId   Int
+  paymentMethod     PaymentMethod         @relation(fields: [paymentMethodId], references: [id])
+  importedAt        DateTime              @default(now()) @db.DateTime(0)
+  importedByUserId  String
+  importedByUser    User                  @relation(fields: [importedByUserId], references: [id])
+  status            String                @default("PENDING") // PENDING, INTEGRATED
+  fileName          String?
+
+  rows     BankIntegrationRow[]
+  launches Launch[]
+
+  @@index([configId])
+  @@index([financialEntityId])
+  @@index([paymentMethodId])
+  @@index([importedByUserId])
+}
+
+model BankIntegrationRow {
+  id              String               @id @default(cuid())
+  batchId         String
+  batch           BankIntegrationBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  rowIndex        Int
+  sourceData      String               @db.Text
+  destinationData String?              @db.Text
+  isValid         Boolean              @default(true)
+  errorMsg        String?              @db.Text
+  isIntegrated    Boolean              @default(false)
+  launchId        String?              @unique
+
+  @@index([batchId])
 }

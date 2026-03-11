@@ -30,11 +30,15 @@ export async function PUT(request: NextRequest, props: any) {
     // Verifique se o lançamento já foi exportado
     const existingLaunch = await prisma.launch.findUnique({
       where: { id },
-      select: { type: true, status: true }
+      select: { type: true, status: true, isIntegrated: true }
     });
 
     if (!existingLaunch) {
       return NextResponse.json({ error: "Lançamento não encontrado" }, { status: 404 });
+    }
+
+    if (existingLaunch.isIntegrated) {
+      return NextResponse.json({ error: "Lançamento de integração bancária não pode ser alterado diretamente" }, { status: 400 });
     }
 
     const launchDate = new Date(`${body.date}T12:00:00Z`)
@@ -208,6 +212,15 @@ export async function DELETE(request: NextRequest, props: any) {
 
     if (!id) {
       return NextResponse.json({ error: "ID do lançamento é obrigatório" }, { status: 400 })
+    }
+
+    const existingLaunch = await prisma.launch.findUnique({
+      where: { id },
+      select: { isIntegrated: true }
+    });
+
+    if (existingLaunch?.isIntegrated) {
+      return NextResponse.json({ error: "Lançamento de integração bancária não pode ser excluído diretamente" }, { status: 400 });
     }
 
     await prisma.launch.delete({

@@ -28,7 +28,8 @@ import {
   ListCheck,
   CreditCard,
   Landmark,
-  Wallet
+  Wallet,
+  PlayCircle
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -207,6 +208,8 @@ export function Sidebar() {
                     <div className="mt-1 space-y-1 pl-8">
                       <Link href="/bank-integration/payment-methods" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/bank-integration/payment-methods' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><CreditCard className="mr-3 h-5 w-5 shrink-0" />Formas de Pagamento</Link>
                       <Link href="/bank-integration/financial-entities" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/bank-integration/financial-entities' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Landmark className="mr-3 h-5 w-5 shrink-0" />Entidades Financeiras</Link>
+                      <Link href="/bank-integration/config-integration" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname?.startsWith('/bank-integration/config-integration') ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Settings className="mr-3 h-5 w-5 shrink-0" />Configurações de Integração</Link>
+                      <Link href="/bank-integration/execute" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname?.startsWith('/bank-integration/execute') ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><PlayCircle className="mr-3 h-5 w-5 shrink-0" />Integrar</Link>
                     </div>
                   )}
                 </div>
@@ -356,6 +359,8 @@ export function Sidebar() {
                     <div className="mt-1 space-y-1 pl-8">
                       <Link href="/bank-integration/payment-methods" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/bank-integration/payment-methods' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50')}><CreditCard className="mr-3 h-5 w-5 shrink-0" />Formas de Pagamento</Link>
                       <Link href="/bank-integration/financial-entities" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/bank-integration/financial-entities' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50')}><Landmark className="mr-3 h-5 w-5 shrink-0" />Entidades Financeiras</Link>
+                      <Link href="/bank-integration/config-integration" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname?.startsWith('/bank-integration/config-integration') ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50')}><Settings className="mr-3 h-5 w-5 shrink-0" />Configurações de Integração</Link>
+                      <Link href="/bank-integration/execute" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname?.startsWith('/bank-integration/execute') ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><PlayCircle className="mr-3 h-5 w-5 shrink-0" />Integrar</Link>
                     </div>
                   )}
                 </div>
