@@ -1,5 +1,12 @@
 # Histórico de Alterações
 
+### [1.4.4](https://github.com/marcelotiaju/agilize/compare/v1.4.3...v1.4.4) (2026-03-11)
+
+
+### 🐛 Correções de Erros
+
+* Ajuste Diversos 10032026 ([7367b42](https://github.com/marcelotiaju/agilize/commit/7367b42c8d8a8f88cc5a9dc1fb73533ee936c3be))
+
 ### [1.4.3](https://github.com/marcelotiaju/agilize/compare/v1.4.2...v1.4.3) (2026-03-09)
 
 
