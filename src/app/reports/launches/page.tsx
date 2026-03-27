@@ -33,6 +33,8 @@ interface LaunchPreview {
   supplierName: string | null
   value: number
   isEntry: boolean
+  nrDoc: string
+  status: string
 }
 
 interface CongregationPreview {
@@ -61,7 +63,7 @@ export default function Reports() {
   const [isGeneratingExcel, setIsGeneratingExcel] = useState(false)
   const [loadingPreview, setLoadingPreview] = useState(false)
   const [previewData, setPreviewData] = useState<PreviewData | null>(null)
-  const [importFilter, setImportFilter] = useState<'ALL' | 'IMPORTED' | 'MANUAL'>('MANUAL');
+  const [importFilter, setImportFilter] = useState<'ALL' | 'IMPORTED' | 'MANUAL' | 'INTEGRATED'>('MANUAL');
 
   // Estados de Filtro (assumindo que já existem no seu código)
   const [selectedCongregations, setSelectedCongregations] = useState<string[]>([])
@@ -73,17 +75,17 @@ export default function Reports() {
   const availableTypes = useMemo(() => {
     const types: { value: string; label: string }[] = []
     const user = session?.user as any
-
     if (user?.canLaunchTithe) types.push({ value: 'DIZIMO', label: 'Dízimo' })
-    if (user?.canLaunchServiceOffer) types.push({ value: 'OFERTA_CULTO', label: 'Oferta do Culto' })
     if (user?.canLaunchVote) types.push({ value: 'VOTO', label: 'Voto' })
     if (user?.canLaunchEbd) types.push({ value: 'EBD', label: 'EBD' })
     if (user?.canLaunchCampaign) types.push({ value: 'CAMPANHA', label: 'Campanha' })
     if (user?.canLaunchMission) types.push({ value: 'MISSAO', label: 'Missão' })
-    if (user?.canLaunchCircle) types.push({ value: 'CIRCULO', label: 'Círculo de Oração' })
+    if (user?.canLaunchCircle) types.push({ value: 'CIRCULO', label: 'Círculo' })
     if (user?.canLaunchCarneReviver) types.push({ value: 'CARNE_REVIVER', label: 'Carnê Reviver' })
+    if (user?.canLaunchCarneAfrica) types.push({ value: 'CARNE_AFRICA', label: 'Carnê África' })
+    if (user?.canLaunchServiceOffer) types.push({ value: 'OFERTA_CULTO', label: 'Oferta do Culto' })
     if (user?.canLaunchExpense) types.push({ value: 'SAIDA', label: 'Saída' })
-
+    if (user?.canLaunchRendaBruta) types.push({ value: 'RENDA_BRUTA', label: 'Renda Bruta' })
     return types
   }, [session])
 
@@ -203,7 +205,11 @@ export default function Reports() {
           'Congregação': cong.name,
           'Contribuinte': cong.name,
           'Data': format(new Date(launch.date), 'dd/MM/yyyy'),
-          'Tipo': launch.type === 'DIZIMO' ? 'Dízimo' : launch.type === 'CARNE_REVIVER' ? 'Carnê Reviver' : launch.type,
+          'Tipo': launch.type === 'DIZIMO' ? 'Dízimo' :
+            launch.type === 'CARNE_REVIVER' ? 'Carnê Reviver' :
+              launch.type === 'CARNE_AFRICA' ? 'Carnê África' :
+                launch.type === 'RENDA_BRUTA' ? 'Renda Bruta' :
+                  launch.type === 'OFERTA_CULTO' ? 'Oferta do Culto' : launch.type,
           'Valor': formatCurrency(launch.value)
         })
       })
@@ -304,7 +310,7 @@ export default function Reports() {
                       <Calendar
                         mode="single"
                         selected={startDate}
-                        locale={ptBR}
+                        locale={ptBR as any}
                         onSelect={(d) => {
                           if (d) {
                             setStartDate(d)
@@ -329,7 +335,7 @@ export default function Reports() {
                       <Calendar
                         mode="single"
                         selected={endDate}
-                        locale={ptBR}
+                        locale={ptBR as any}
                         onSelect={(d) => {
                           if (d) {
                             setEndDate(d)
@@ -349,6 +355,7 @@ export default function Reports() {
                     <SelectContent>
                       <SelectItem value="ALL">Todos os Lançamentos</SelectItem>
                       <SelectItem value="IMPORTED">Apenas Importados</SelectItem>
+                      <SelectItem value="INTEGRATED">Apenas Integrados</SelectItem>
                       <SelectItem value="MANUAL">Apenas Digitados</SelectItem>
                     </SelectContent>
                   </Select>
@@ -465,6 +472,8 @@ export default function Reports() {
                                 <TableRow className="bg-primary/10">
                                   <TableHead className="font-bold whitespace-nowrap w-[100px]">Data</TableHead>
                                   <TableHead className="font-bold whitespace-nowrap w-[120px]">Tipo</TableHead>
+                                  <TableHead className="font-bold whitespace-nowrap w-[100px]">Nr. Doc</TableHead>
+                                  <TableHead className="font-bold whitespace-nowrap w-[120px]">Status</TableHead>
                                   <TableHead className="font-bold whitespace-nowrap">Contribuinte/Fornecedor</TableHead>
                                   <TableHead className="font-bold whitespace-nowrap w-auto">Descrição</TableHead>
                                   <TableHead className="text-right font-bold whitesspace-nowrap min-w-[100px]">Entrada</TableHead>
@@ -476,8 +485,25 @@ export default function Reports() {
                                   <TableRow key={idx}>
                                     <TableCell className="whitespace-nowrap">{formatDate(new Date(launch.date), 'dd/MM/yyyy', { locale: ptBR })}</TableCell>
                                     <TableCell className="font-medium whitespace-nowrap">{getTypeLabel(launch.type)}</TableCell>
+                                    <TableCell className="whitespace-nowrap">{launch.nrDoc}</TableCell>
+                                    <TableCell className="whitespace-nowrap">
+                                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                        launch.status === 'INTEGRATED' ? 'bg-green-100 text-green-800' :
+                                        launch.status === 'IMPORTED' ? 'bg-yellow-100 text-yellow-800' :
+                                        launch.status === 'CANCELED' ? 'bg-red-100 text-red-800' :
+                                        launch.status === 'APPROVED' ? 'bg-blue-100 text-blue-800' :
+                                        launch.status === 'EXPORTED' ? 'bg-purple-100 text-purple-800' :
+                                        'bg-gray-100 text-gray-800'
+                                      }`}>
+                                        {launch.status === 'INTEGRATED' ? 'Integrado' :
+                                         launch.status === 'IMPORTED' ? 'Importado' :
+                                         launch.status === 'CANCELED' ? 'Cancelado' : 
+                                         launch.status === 'APPROVED' ? 'Aprovado' :
+                                         launch.status === 'EXPORTED' ? 'Exportado' : 'Normal'}
+                                      </span>
+                                    </TableCell>
                                     <TableCell className="max-w-[150px] truncate">
-                                      {(launch.type === 'DIZIMO' || launch.type === 'CARNE_REVIVER') ? (launch.contributorName || '-') :
+                                      {(launch.type === 'DIZIMO' || launch.type === 'CARNE_REVIVER' || launch.type === 'CARNE_AFRICA' || launch.type === 'RENDA_BRUTA' || launch.type === 'OFERTA_CULTO') ? (launch.contributorName || '-') :
                                         launch.type === 'SAIDA' ? (launch.supplierName || '-') :
                                           '-'}
                                     </TableCell>
@@ -492,7 +518,7 @@ export default function Reports() {
                                 ))}
                                 {/* Linha de totais da congregação */}
                                 <TableRow className="bg-gray-100 font-bold">
-                                  <TableCell colSpan={4} className="whitespace-nowrap">TOTAL {cong.name}</TableCell>
+                                  <TableCell colSpan={6} className="whitespace-nowrap">TOTAL {cong.name}</TableCell>
                                   <TableCell className="text-right text-green-600 whitespace-nowrap">
                                     R$ {formatCurrency(cong.entrada)}
                                   </TableCell>
@@ -502,7 +528,7 @@ export default function Reports() {
                                 </TableRow>
                                 {/* Linha de saldo (entrada - saída) */}
                                 <TableRow className="bg-blue-50 font-bold">
-                                  <TableCell colSpan={4} className="whitespace-nowrap">SALDO ({cong.name})</TableCell>
+                                  <TableCell colSpan={6} className="whitespace-nowrap">SALDO ({cong.name})</TableCell>
                                   <TableCell colSpan={2} className="text-right whitespace-nowrap">
                                     <span className={cong.entrada - cong.saida >= 0 ? 'text-green-600' : 'text-red-600'}>
                                       R$ {formatCurrency(cong.entrada - cong.saida)}
@@ -525,14 +551,14 @@ export default function Reports() {
                           <Table className="min-w-[800px]">
                             <TableHeader>
                               <TableRow className="bg-blue-50">
-                                <TableHead colSpan={4} className="font-bold text-lg">TOTAL GERAL</TableHead>
+                                <TableHead colSpan={6} className="font-bold text-lg">TOTAL GERAL</TableHead>
                                 <TableHead className="text-right font-bold text-lg text-green-600 whitespace-nowrap min-w-[100px]">Entrada</TableHead>
                                 <TableHead className="text-right font-bold text-lg text-red-600 whitespace-nowrap min-w-[100px]">Saída</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
                               <TableRow className="bg-blue-50 font-bold">
-                                <TableCell colSpan={4} className="text-lg">TOTAL DE TODAS AS CONGREGAÇÕES</TableCell>
+                                <TableCell colSpan={6} className="text-lg">TOTAL DE TODAS AS CONGREGAÇÕES</TableCell>
                                 <TableCell className="text-right text-lg text-green-600 whitespace-nowrap font-medium">
                                   R$ {formatCurrency(previewData.totalEntrada)}
                                 </TableCell>
@@ -542,7 +568,7 @@ export default function Reports() {
                               </TableRow>
                               {/* Linha de saldo geral */}
                               <TableRow className="bg-blue-100 font-bold">
-                                <TableCell colSpan={4} className="text-lg">SALDO GERAL</TableCell>
+                                <TableCell colSpan={6} className="text-lg">SALDO GERAL</TableCell>
                                 <TableCell colSpan={2} className="text-right text-lg whitespace-nowrap">
                                   <span className={previewData.totalEntrada - previewData.totalSaida >= 0 ? 'text-green-600' : 'text-red-600'}>
                                     R$ {formatCurrency(previewData.totalEntrada - previewData.totalSaida)}

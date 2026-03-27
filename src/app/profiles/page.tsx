@@ -46,6 +46,8 @@ export default function Profiles() {
     canLaunchCircle: false,
     canLaunchServiceOffer: false,
     canLaunchCarneReviver: false,
+    canLaunchCarneAfrica: false,
+    canLaunchRendaBruta: false,
     canApproveVote: false,
     canApproveEbd: false,
     canApproveCampaign: false,
@@ -55,6 +57,8 @@ export default function Profiles() {
     canApproveCircle: false,
     canApproveServiceOffer: false,
     canApproveCarneReviver: false,
+    canApproveCarneAfrica: false,
+    canApproveRendaBruta: false,
     canCreate: false,
     canEdit: false,
     canExclude: false,
@@ -72,6 +76,7 @@ export default function Profiles() {
     canReportHistoryContribAnalytic: false,
     canDeleteSummary: false,
     canReportAudit: false,
+    canReportAccountability: false,
     canTechnicalIntervention: false,
     canManageBankIntegration: false
   })
@@ -112,6 +117,8 @@ export default function Profiles() {
       canLaunchCircle: false,
       canLaunchServiceOffer: false,
       canLaunchCarneReviver: false,
+      canLaunchCarneAfrica: false,
+      canLaunchRendaBruta: false,
       canApproveVote: false,
       canApproveEbd: false,
       canApproveCampaign: false,
@@ -121,6 +128,8 @@ export default function Profiles() {
       canApproveCircle: false,
       canApproveServiceOffer: false,
       canApproveCarneReviver: false,
+      canApproveCarneAfrica: false,
+      canApproveRendaBruta: false,
       canCreate: false,
       canEdit: false,
       canExclude: false,
@@ -138,6 +147,7 @@ export default function Profiles() {
       canReportHistoryContribSynthetic: false,
       canReportHistoryContribAnalytic: false,
       canReportAudit: false,
+      canReportAccountability: false,
       canDeleteSummary: false,
       canTechnicalIntervention: false,
       canManageBankIntegration: false
@@ -278,6 +288,8 @@ export default function Profiles() {
                           <SelectItem value="EBD">EBD</SelectItem>
                           <SelectItem value="CAMPANHA">Campanha</SelectItem>
                           <SelectItem value="CARNE_REVIVER">Carnê Reviver</SelectItem>
+                          <SelectItem value="CARNE_AFRICA">Carnê África</SelectItem>
+                          <SelectItem value="RENDA_BRUTA">Renda Bruta</SelectItem>
                           <SelectItem value="SAIDA">Saída</SelectItem>
                         </SelectContent>
                       </Select>
@@ -318,6 +330,14 @@ export default function Profiles() {
                           <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canLaunchCarneReviver} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchCarneReviver: v as boolean }))} />
                             <Label>Lançar Carnê Reviver</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox checked={profileForm.canLaunchCarneAfrica} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchCarneAfrica: v as boolean }))} />
+                            <Label>Lançar Carnê África</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox checked={profileForm.canLaunchRendaBruta} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchRendaBruta: v as boolean }))} />
+                            <Label>Lançar Renda Bruta</Label>
                           </div>
                           <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canLaunchExpense} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canLaunchExpense: v as boolean }))} />
@@ -372,6 +392,14 @@ export default function Profiles() {
                           <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canApproveCarneReviver} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveCarneReviver: v as boolean }))} />
                             <Label>Aprovar Carnê Reviver</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox checked={profileForm.canApproveCarneAfrica} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveCarneAfrica: v as boolean }))} />
+                            <Label>Aprovar Carnê África</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox checked={profileForm.canApproveRendaBruta} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveRendaBruta: v as boolean }))} />
+                            <Label>Aprovar Renda Bruta</Label>
                           </div>
                           <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canApproveExpense} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canApproveExpense: v as boolean }))} />
@@ -478,6 +506,10 @@ export default function Profiles() {
                           <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canReportAudit} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canReportAudit: v as boolean }))} />
                             <Label>Relatório de Auditoria</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox checked={profileForm.canReportAccountability} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canReportAccountability: v as boolean }))} />
+                            <Label>Prestação de Contas</Label>
                           </div>
                         </div>
                       </div>

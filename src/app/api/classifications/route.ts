@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
-import prisma from "@/lib/prisma"
+import { getDb } from "@/lib/getDb"
 import { getServerSession } from "next-auth"
-import { authOptions }  from "../auth/[...nextauth]/route";
+import { authOptions }  from "../auth/[...nextauth]/route"
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -9,6 +9,8 @@ export async function GET(request: NextRequest) {
   if (!session) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
+
+  const prisma = await getDb(request)
 
   try {
     const { searchParams } = new URL(request.url)
@@ -23,6 +25,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(classifications)
   } catch (error) {
+    console.error('API: Erro ao buscar classificações:', error)
     return NextResponse.json({ error: "Erro ao buscar classificações" }, { status: 500 })
   }
 }
@@ -34,6 +37,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
 
+  const prisma = await getDb(request)
+
   try {
     const body = await request.json()
     const { code, shortCode, description } = body
@@ -42,7 +47,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Todos os campos são obrigatórios" }, { status: 400 })
     }
 
-    // Verificar se já existe uma classificação com o mesmo código ou reduzido
     const existingClassification = await prisma.classification.findFirst({
       where: {
         OR: [
@@ -66,6 +70,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(classification, { status: 201 })
   } catch (error) {
+    console.error('API: Erro ao criar classificação:', error)
     return NextResponse.json({ error: "Erro ao criar classificação" }, { status: 500 })
   }
 }
@@ -77,6 +82,8 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
 
+  const prisma = await getDb(request)
+
   try {
     const body = await request.json()
     const { id, code, shortCode, description, isActive } = body
@@ -85,7 +92,6 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Todos os campos são obrigatórios" }, { status: 400 })
     }
 
-    // Verificar se já existe uma classificação com o mesmo código ou reduzido (exceto a atual)
     const existingClassification = await prisma.classification.findFirst({
       where: {
         OR: [
@@ -114,6 +120,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json(classification)
   } catch (error) {
+    console.error('API: Erro ao atualizar classificação:', error)
     return NextResponse.json({ error: "Erro ao atualizar classificação" }, { status: 500 })
   }
 }
@@ -124,6 +131,8 @@ export async function DELETE(request: NextRequest) {
   if (!session) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
+
+  const prisma = await getDb(request)
 
   try {
     const { searchParams } = new URL(request.url)
@@ -139,6 +148,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ message: "Classificação excluída com sucesso" })
   } catch (error) {
+    console.error('API: Erro ao excluir classificação:', error)
     return NextResponse.json({ error: "Erro ao excluir classificação" }, { status: 500 })
   }
 }

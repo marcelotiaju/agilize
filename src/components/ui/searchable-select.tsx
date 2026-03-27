@@ -36,7 +36,7 @@ interface SearchableSelectProps {
   /**
    * Optional rendering mode. Use 'congregation' to hide avatar and strip prefix until ':' from name.
    */
-  itemRenderMode?: 'default' | 'congregation';
+  itemRenderMode?: 'default' | 'congregation' | 'supplier' | 'classification';
 }
 
 export function SearchableSelect({

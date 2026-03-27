@@ -1,31 +1,29 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import prisma from "@/lib/prisma"
-import { authOptions } from "../auth/[...nextauth]/route";
-import Congregations from "@/app/congregations/page";
-import path from 'path';
-import fs from 'fs';
+import { getDb } from "@/lib/getDb"
+import { authOptions } from "../auth/[...nextauth]/route"
+import path from 'path'
+import fs from 'fs'
 
-const UPLOADS_FOLDER = "public/uploads";
+const UPLOADS_FOLDER = "public/uploads"
 
 export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptions)
 
   if (!session) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
 
+  const prisma = await getDb(request)
+
   try {
     const { searchParams } = new URL(request.url)
     const congregationId = searchParams.get('congregationId')
-    const startDate = searchParams.get('startDate')
-    const endDate = searchParams.get('endDate')
     const filterByUserCongregations = searchParams.get('filterByUserCongregations') !== 'false'
     const activeOnly = searchParams.get('activeOnly') === 'true'
 
     let where: any = {}
 
-    // Only filter by user congregations if explicitly requested (default is to show all)
     if (filterByUserCongregations) {
       const userCongregations = await prisma.userCongregation.findMany({
         where: {
@@ -45,17 +43,9 @@ export async function GET(request: NextRequest) {
       where.congregationId = congregationId
     }
 
-    // Fetch all contributors (active and inactive) unless activeOnly is specified
     if (activeOnly) {
       where.isActive = true
     }
-
-    // if (startDate && endDate) {
-    //   where.date = {
-    //     gte: new Date(startDate as string),
-    //     lte: new Date(endDate as string)
-    //   }
-    // }
 
     const contributors = await prisma.contributor.findMany({
       where,
@@ -71,36 +61,37 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    // Caminho absoluto para o diretório de uploads
-    const UPLOADS_DIR = path.join(process.cwd(), UPLOADS_FOLDER);
-    //console.log('Uploads Dir:', UPLOADS_DIR);
+    const UPLOADS_DIR = path.join(process.cwd(), UPLOADS_FOLDER)
     const contributorsWithPhotos = contributors.map(c => {
       if (!c.photoUrl) {
-        return { ...c, photoExists: false };
+        return { ...c, photoExists: false }
       }
 
-      const fileName = c.photoUrl;
-      const filePath = path.join(UPLOADS_DIR, fileName);
-      const fileExists = fs.existsSync(filePath);
+      const fileName = c.photoUrl
+      const filePath = path.join(UPLOADS_DIR, fileName)
+      const fileExists = fs.existsSync(filePath)
 
       return {
         ...c,
         photoExists: fileExists
-      };
-    });
+      }
+    })
 
     return NextResponse.json(contributorsWithPhotos)
   } catch (error) {
+    console.error('API: Erro ao buscar contribuintes:', error)
     return NextResponse.json({ error: "Erro ao buscar contribuintes" }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptions)
 
   if (!session) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
+
+  const prisma = await getDb(request)
 
   try {
     const body = await request.json()
@@ -124,14 +115,6 @@ export async function POST(request: NextRequest) {
     if (!userCongregation) {
       return NextResponse.json({ error: "Acesso não autorizado a esta congregação" }, { status: 403 })
     }
-
-    // const contributorDate = new Date(date)
-    // const today = new Date()
-    // today.setHours(0, 0, 0, 0)
-
-    // if (contributorDate > today) {
-    //   return NextResponse.json({ error: "Não é permitido lançar com data futura" }, { status: 400 })
-    // }
 
     const existingContributor = await prisma.contributor.findFirst({
       where: {
@@ -163,20 +146,22 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(contributor, { status: 201 })
   } catch (error) {
+    console.error('API: Erro ao criar contribuinte:', error)
     return NextResponse.json({ error: "Erro ao criar contribuinte" }, { status: 500 })
   }
 }
 
 export async function PUT(request: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptions)
 
   if (!session) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
 
+  const prisma = await getDb(request)
+
   try {
     const body = await request.json()
-
     const { id, name, cpf, ecclesiasticalPosition, tipo, photoUrl } = body
 
     const contributor = await prisma.contributor.findUnique({
@@ -187,42 +172,33 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Contribuinte não encontrado" }, { status: 404 })
     }
 
-    // const userCongregation = await prisma.userCongregation.findFirst({
-    //   where: {
-    //     userId: session.user.id,
-    //     congregationId: contributor.congregationId
-    //   }
-    // })
-
-    // if (!userCongregation) {
-    //   return NextResponse.json({ error: "Acesso não autorizado a esta congregação" }, { status: 403 })
-    // }
-
-    // if (contributor.exported) {
-    //   return NextResponse.json({ error: "Contribuinte já exportado não pode ser alterado" }, { status: 400 })
-    // }
-
-    // if (contributor.status === "CANCELED" && status === "NORMAL") {
-    //   return NextResponse.json({ error: "Não é possível reverter um contribuinte cancelado" }, { status: 400 })
-    // }
-
     const updatedContributor = await prisma.contributor.update({
       where: { id },
-      data: { code: body.code, name: body.name, cpf: body.cpf, ecclesiasticalPosition: body.ecclesiasticalPosition, tipo: body.tipo, photoUrl }
+      data: { 
+        code: body.code, 
+        name: body.name, 
+        cpf: body.cpf, 
+        ecclesiasticalPosition: body.ecclesiasticalPosition, 
+        tipo: body.tipo, 
+        photoUrl 
+      }
     })
 
     return NextResponse.json(updatedContributor)
   } catch (error) {
+    console.error('API: Erro ao atualizar contribuinte:', error)
     return NextResponse.json({ error: "Erro ao atualizar contribuinte" }, { status: 500 })
   }
 }
 
 export async function DELETE(request: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptions)
 
   if (!session) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
+
+  const prisma = await getDb(request)
 
   try {
     const { searchParams } = new URL(request.url)
@@ -238,6 +214,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ message: "Contribuinte excluído com sucesso" })
   } catch (error) {
+    console.error('API: Erro ao excluir contribuinte:', error)
     return NextResponse.json({ error: "Erro ao excluir contribuinte" }, { status: 500 })
   }
 }

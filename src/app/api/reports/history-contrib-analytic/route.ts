@@ -84,7 +84,10 @@ async function handleRequest(request: NextRequest) {
         lte: new Date(`${year}-12-31T23:59:59Z`),
       },
       status: {
-        ...importFilter === 'IMPORTED' ? { equals: 'IMPORTED' } : importFilter === 'MANUAL' ? { not: { in: ['IMPORTED', 'CANCELED'] } } : { not: 'CANCELED' }
+        ...importFilter === 'IMPORTED' ? { equals: 'IMPORTED' } :
+          importFilter === 'INTEGRATED' ? { equals: 'INTEGRATED' } :
+            importFilter === 'MANUAL' ? { not: { in: ['IMPORTED', 'INTEGRATED', 'CANCELED'] } } :
+              { not: 'CANCELED' }
       }
     };
 
@@ -235,7 +238,7 @@ async function handleRequest(request: NextRequest) {
         doc.text(` ${format(utcToZonedTime(now, timezone), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`, rightAlignX, y, { align: 'right' });
 
         y += 4;
-        doc.text(`Origem: ${importFilter === 'ALL' ? 'Todos' : importFilter === 'IMPORTED' ? 'Importados' : 'Apenas Digitados'}`, margin, y);
+        doc.text(`Origem: ${importFilter === 'ALL' ? 'Todos' : importFilter === 'IMPORTED' ? 'Importados' : importFilter === 'INTEGRATED' ? 'Integrados' : 'Apenas Digitados'}`, margin, y);
         y += 10;
 
         // Sub-header: Congregation and Contributor
@@ -253,11 +256,15 @@ async function handleRequest(request: NextRequest) {
           body: contributor.launches.map((launch) => [
             format(utcToZonedTime(new Date(launch.date), timezone), 'dd/MM/yyyy', { locale: ptBR }),
             launch.congregationName,
-            launch.type === 'DIZIMO' ? 'Dízimo' : launch.type === 'CARNE_REVIVER' ? 'Carnê Reviver' : launch.type,
+            launch.type === 'DIZIMO' ? 'Dízimo' :
+              launch.type === 'CARNE_REVIVER' ? 'Carnê Reviver' :
+                launch.type === 'CARNE_AFRICA' ? 'Carnê África' :
+                  launch.type === 'RENDA_BRUTA' ? 'Renda Bruta' :
+                    launch.type === 'OFERTA_CULTO' ? 'Oferta do Culto' : launch.type,
             launch.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
           ]),
           theme: 'grid',
-          headStyles: { fillColor: [0, 51, 102] },
+          headStyles: { fillColor: [0, 51, 102], lineWidth: 0.3, lineColor: [0, 0, 0] },
           foot: [[
             '',
             '',

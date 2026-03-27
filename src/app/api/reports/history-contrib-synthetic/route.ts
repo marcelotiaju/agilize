@@ -82,7 +82,10 @@ async function handleRequest(request: NextRequest) {
         lte: new Date(`${year}-12-31T23:59:59Z`),
       },
       status: {
-        ...importFilter === 'IMPORTED' ? { equals: 'IMPORTED' } : importFilter === 'MANUAL' ? { not: { in: ['IMPORTED', 'CANCELED'] } } : { not: 'CANCELED' }
+        ...importFilter === 'IMPORTED' ? { equals: 'IMPORTED' } :
+          importFilter === 'INTEGRATED' ? { equals: 'INTEGRATED' } :
+            importFilter === 'MANUAL' ? { not: { in: ['IMPORTED', 'INTEGRATED', 'CANCELED'] } } :
+              { not: 'CANCELED' }
       }
     };
 
@@ -146,9 +149,9 @@ async function handleRequest(request: NextRequest) {
       const month = new Date(l.date).getUTCMonth();
       const value = Number(l.value);
 
-      if (l.type === 'DIZIMO') {
+      if (l.type === 'DIZIMO' || l.type === 'RENDA_BRUTA') {
         monthlyData[month].dizimo += value;
-      } else if (l.type === 'CARNE_REVIVER') {
+      } else if (l.type === 'CARNE_REVIVER' || l.type === 'CARNE_AFRICA') {
         monthlyData[month].carne_reviver += value;
       }
 
@@ -227,7 +230,7 @@ async function handleRequest(request: NextRequest) {
         doc.text(` ${format(utcToZonedTime(now, timezone), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`, rightAlignX, y, { align: 'right' });
 
         y += 4;
-        doc.text(`Origem: ${importFilter === 'ALL' ? 'Todos' : importFilter === 'IMPORTED' ? 'Importados' : 'Apenas Digitados'}`, margin, y);
+        doc.text(`Origem: ${importFilter === 'ALL' ? 'Todos' : importFilter === 'IMPORTED' ? 'Importados' : importFilter === 'INTEGRATED' ? 'Integrados' : 'Apenas Digitados'}`, margin, y);
         y += 10;
 
         // Sub-header: Congregation and Contributor
@@ -253,7 +256,7 @@ async function handleRequest(request: NextRequest) {
             contributor.monthlyData[i].total.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
           ]),
           theme: 'grid',
-          headStyles: { fillColor: [0, 51, 102] },
+          headStyles: { fillColor: [0, 51, 102], lineWidth: 0.3, lineColor: [0, 0, 0] },
           foot: [[
             'TOTAIS',
             totalDizimo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),

@@ -60,6 +60,9 @@ type Summary = {
   approvedAtAccountant?: string;
   approvedByDirector?: string;
   approvedAtDirector?: string;
+  treasuryApproverImage?: string | null;
+  accountantApproverImage?: string | null;
+  directorApproverImage?: string | null;
   // Add other properties as needed
 };
 
@@ -1017,23 +1020,45 @@ export default function CongregationSummary() {
                         <div className="md:hidden space-y-2">
                           {summaries.map((summary) => (
                             <Card key={summary.id} className="border-l-1">
-                              <CardHeader className="py-1">
-                                <CardTitle className="text-base flex justify-between items-center">
-                                  {/* Nome da Congregação (assumindo que você adicione esta informação ao tipo Summary) */}
-                                  <span className="text-gray-700 font-semibold">
-                                    {/* {congregations.find(c => c.id === selectedCongregations[0])?.name || "Resumo"} */}
-                                    {congregations.find(c => c.id === (summary as any).congregationId)?.name || "Resumo"}
+                              <CardHeader className="py-2">
+                                <CardTitle className="text-sm flex justify-between items-center">
+                                  {/* Nome da Congregação */}
+                                  <span className="text-gray-700 font-medium">
+                                    {(() => {
+                                      const fullName = congregations.find(c => c.id === (summary as any).congregationId)?.name || "Resumo";
+                                      const parts = fullName.split(':');
+                                      return parts.length > 1 ? parts[1].trim() : fullName;
+                                    })()}
                                   </span>
-                                  <Badge variant={summary.status === 'APPROVED' ? 'default' : 'secondary'}>
+                                  <Badge variant={summary.status === 'APPROVED' ? 'default' : 'secondary'} className="text-[10px] px-1.5 py-0">
                                     {summary.status === 'APPROVED' ? 'Aprovado' : 'Pendente'}
                                   </Badge>
                                 </CardTitle>
-                                <CardDescription className="text-sm mb-[-20]">
-                                  {formatDate(new Date(summary.startDate), 'dd/MM/yyyy', { locale: ptBR })}
-                                  {/* {formatDate(new Date(summary.endDate), 'dd/MM/yyyy', { locale: ptBR })} */}
+                                <CardDescription className="text-xs flex justify-between items-center mt-1">
+                                  <span>{formatDate(new Date(summary.startDate), 'dd/MM/yyyy', { locale: ptBR })}</span>
+                                  <div className="flex items-center space-x-1.5">
+                                    <img 
+                                      src={summary.treasurerApproved && summary.treasuryApproverImage ? summary.treasuryApproverImage : 'https://ui-avatars.com/api/?name=T&background=e2e8f0&color=a1a1aa'} 
+                                      alt="Tesoureiro" 
+                                      title={summary.treasurerApproved ? `Tesoureiro: ${summary.approvedByTreasury}` : "Tesoureiro Pendente"}
+                                      className={`w-6 h-6 rounded-full border-2 ${summary.treasurerApproved ? 'border-green-500' : 'border-gray-200 grayscale opacity-60'}`}
+                                    />
+                                    <img 
+                                      src={summary.accountantApproved && summary.accountantApproverImage ? summary.accountantApproverImage : 'https://ui-avatars.com/api/?name=C&background=e2e8f0&color=a1a1aa'} 
+                                      alt="Contador" 
+                                      title={summary.accountantApproved ? `Contador: ${summary.approvedByAccountant}` : "Contador Pendente"}
+                                      className={`w-6 h-6 rounded-full border-2 ${summary.accountantApproved ? 'border-green-500' : 'border-gray-200 grayscale opacity-60'}`}
+                                    />
+                                    <img 
+                                      src={summary.directorApproved && summary.directorApproverImage ? summary.directorApproverImage : 'https://ui-avatars.com/api/?name=D&background=e2e8f0&color=a1a1aa'} 
+                                      alt="Dirigente" 
+                                      title={summary.directorApproved ? `Dirigente: ${summary.approvedByDirector}` : "Dirigente Pendente"}
+                                      className={`w-6 h-6 rounded-full border-2 ${summary.directorApproved ? 'border-green-500' : 'border-gray-200 grayscale opacity-60'}`}
+                                    />
+                                  </div>
                                 </CardDescription>
                               </CardHeader>
-                              <CardContent className="space-y-1 text-sm">
+                              <CardContent className="space-y-1 text-sm pb-3">
                                 <div className="flex justify-between">
                                   <span>Dízimo:</span>
                                   <span className="font-medium text-blue-600">

@@ -69,7 +69,8 @@ export function Sidebar() {
     'canReportMonthlySummary',
     'canReportHistoryContribSynthetic',
     'canReportHistoryContribAnalytic',
-    'canReportAudit'
+    'canReportAudit',
+    'canReportAccountability'
   ];
 
   const hasLaunchPermission = Boolean(canAccessLaunches.find(perm => (session?.user as any)?.[perm]));
@@ -84,6 +85,7 @@ export function Sidebar() {
   const canReportHistoryContribSynthetic = Boolean(session?.user?.canReportHistoryContribSynthetic)
   const canReportHistoryContribAnalytic = Boolean(session?.user?.canReportHistoryContribAnalytic)
   const canReportAudit = Boolean(session?.user?.canReportAudit)
+  const canReportAccountability = Boolean(session?.user?.canReportAccountability)
   const canManageBankIntegration = Boolean((session?.user as any)?.canManageBankIntegration)
 
   const [openTesouraria, setOpenTesouraria] = useState(true)
@@ -98,7 +100,7 @@ export function Sidebar() {
     const isCadastros = path.startsWith('/contributors') || path.startsWith('/congregations') || path.startsWith('/suppliers') || path.startsWith('/classifications')
     const isSeguranca = path.startsWith('/users') || path.startsWith('/profiles') || path.startsWith('/profile')
     const isBankIntegration = path.startsWith('/bank-integration')
-    const isReports = path.startsWith('/reports/launches') || path.startsWith('/reports/contributors') || path.startsWith('/reports/monthly-summary') || path.startsWith('/reports/history-contrib-synthetic') || path.startsWith('/reports/history-contrib-analytic') || path.startsWith('/reports/audit')
+    const isReports = path.startsWith('/reports/launches') || path.startsWith('/reports/contributors') || path.startsWith('/reports/monthly-summary') || path.startsWith('/reports/history-contrib-synthetic') || path.startsWith('/reports/history-contrib-analytic') || path.startsWith('/reports/audit') || path.startsWith('/reports/accountability')
 
     setOpenTesouraria(isTesouraria)
     setOpenCadastros(isCadastros)
@@ -123,7 +125,7 @@ export function Sidebar() {
           <div className="flex h-16 items-center justify-between px-4">
             <div className='flex justify-center mb-0'>
               <Image
-                src="/images/Logo_Agilize_Azul.png"
+                src={(session?.user as any)?.dbLogoUrl || "/images/Logo_Agilize_Azul.png"}
                 alt="Logo do Agilize"
                 width={100}
                 height={80}
@@ -167,6 +169,7 @@ export function Sidebar() {
                               {canReportHistoryContribSynthetic && <Link href="/reports/history-contrib-synthetic" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/history-contrib-synthetic' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Printer className="mr-3 h-5 w-5 shrink-0" />Histórico de Contribuições Sintético</Link>}
                               {canReportHistoryContribAnalytic && <Link href="/reports/history-contrib-analytic" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/history-contrib-analytic' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Printer className="mr-3 h-5 w-5 shrink-0" />Histórico de Contribuições Analítico</Link>}
                               {canReportAudit && <Link href="/reports/audit" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/audit' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Printer className="mr-3 h-5 w-5 shrink-0" />Relatório de Auditoria</Link>}
+                              {canReportAccountability && <Link href="/reports/accountability" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/accountability' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50')} onClick={() => setSidebarOpen(false)}><Printer className="mr-3 h-5 w-5 shrink-0" />Prestação de Contas</Link>}
                             </div>
                           )}
                         </div>
@@ -278,7 +281,7 @@ export function Sidebar() {
         <div className="flex min-h-0 flex-1 flex-col border-r border-gray-200 bg-white">
           <div className="flex h-16 shrink-0 items-center px-4 mt-3">
             <Image
-              src="/images/LogoDashboard.png"
+              src={(session?.user as any)?.dbLogoUrl || "/images/LogoDashboard.png"}
               alt="Logo Dashboard do Agilize"
               width={400}
               height={300}
@@ -318,6 +321,7 @@ export function Sidebar() {
                               {canReportHistoryContribSynthetic && <Link href="/reports/history-contrib-synthetic" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/history-contrib-synthetic' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50')}><Printer className="mr-3 h-5 w-5 shrink-0" />Histórico de Contribuições Sintético</Link>}
                               {canReportHistoryContribAnalytic && <Link href="/reports/history-contrib-analytic" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/history-contrib-analytic' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50')}><Printer className="mr-3 h-5 w-5 shrink-0" />Histórico de Contribuições Analítico</Link>}
                               {canReportAudit && <Link href="/reports/audit" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/audit' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50')}><Printer className="mr-3 h-5 w-5 shrink-0" />Relatório de Auditoria</Link>}
+                              {canReportAccountability && <Link href="/reports/accountability" className={cn('group flex items-center px-2 py-2 text-sm rounded-md', pathname === '/reports/accountability' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50')}><Printer className="mr-3 h-5 w-5 shrink-0" />Prestação de Contas</Link>}
                             </div>
                           )}
                         </div>
@@ -432,7 +436,7 @@ export function Sidebar() {
           </Button>
           <div className='flex justify-center mb-0'>
             <Image
-              src="/images/Logo_Agilize_Azul.png"
+              src={(session?.user as any)?.dbLogoUrl || "/images/Logo_Agilize_Azul.png"}
               alt="Logo do Agilize"
               width={100}
               height={100}

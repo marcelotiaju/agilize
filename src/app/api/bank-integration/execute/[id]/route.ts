@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import prisma from "@/lib/prisma"
+import { getDb } from "@/lib/getDb"
 import { getServerSession } from "next-auth"
 import { authOptions } from "../../../auth/[...nextauth]/route"
 
@@ -14,10 +14,16 @@ export async function GET(
     }
 
     try {
+        const prisma = await getDb(request)
         const batch = await prisma.bankIntegrationBatch.findUnique({
             where: { id },
             include: {
-                config: true,
+                config: {
+                    include: {
+                        destinationColumns: { orderBy: { id: 'asc' } },
+                        sourceColumns: { orderBy: { id: 'asc' } }
+                    }
+                },
                 financialEntity: true,
                 rows: true,
                 importedByUser: { select: { name: true } }
@@ -44,6 +50,7 @@ export async function DELETE(
     }
 
     try {
+        const prisma = await getDb(request)
         const batch = await prisma.bankIntegrationBatch.findUnique({ where: { id } })
         if (!batch) return NextResponse.json({ error: "Lote não encontrado" }, { status: 404 })
 

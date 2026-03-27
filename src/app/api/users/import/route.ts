@@ -59,15 +59,15 @@ export async function POST(request: NextRequest) {
         // Cadastro_incluir,Cadastro_Edita,Cadastro_Excluir,Dados_Exportacao,Dados_Exclusao
       ] = columns
 
-      if (!usulogin || !usunome || !email || !dtvalidadeinicio || !dtvalidadefim) {
-        errors.push(`Linha ${i + 2}: nome,email,cpf,validade_inicio,validade_fim são obrigatórios`)
+      if (!usulogin || !usunome || !dtvalidadeinicio || !dtvalidadefim) {
+        errors.push(`Linha ${i + 2}: login, nome, validade_inicio, validade_fim são obrigatórios`)
         continue
       }
 
       try {
         // Verifica se já existe um usuario com este código
         const existing = await prisma.user.findUnique({
-          where: { cpf: usulogin.toString() }
+          where: { login: usulogin.toString() }
         })
 
         if (existing) {
@@ -86,10 +86,10 @@ export async function POST(request: NextRequest) {
         // Cria a novo usuario
         await prisma.user.create({
           data: {
-            cpf: usulogin.toString(),
+            login: usulogin.toString(),
             name: usunome,
             password: hashedPassword,
-            email,
+            email: email || null,
             phone: celular,
             validFrom: new Date(dtvalidadeinicio),
             validTo: new Date(dtvalidadefim),
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
         })
 
         imported++
-      } catch (error) {
+      } catch (error: any) {
         errors.push(`Linha ${i + 2}: Erro ao criar usuário - ${error.message}`)
       }
     }

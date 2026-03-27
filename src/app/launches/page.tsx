@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, Search, Check, X, AlertCircle, CalendarIcon, User, Users, Ghost, List, ArrowUp, Upload, FileText, Building, Loader2, Camera, Paperclip, Star } from 'lucide-react'
+import { Plus, Edit, Trash2, Search, Check, X, AlertCircle, CalendarIcon, User, Users, Ghost, List, ArrowUp, Upload, FileText, Building, Loader2, Camera, Paperclip, Star, History } from 'lucide-react'
 import { format, startOfDay } from 'date-fns'
 import { zonedTimeToUtc } from 'date-fns-tz'
 import { ptBR } from 'date-fns/locale'
@@ -76,11 +76,11 @@ export default function Launches() {
   const [pageYPosition, setPageYPosition] = useState(0);
   const router = useRouter()
   // Dentro do componente principal no page.tsx
-  const [importFilter, setImportFilter] = useState<'ALL' | 'IMPORTED' | 'MANUAL'>('MANUAL');
+  const [importFilter, setImportFilter] = useState<'ALL' | 'IMPORTED' | 'MANUAL' | 'INTEGRATED'>('MANUAL');
 
   // Tipos
   type Congregation = { id: string; name: string }
-  type Contributor = { id: string; name: string; cpf: string; congregationId: string; ecclesiasticalPosition: string, tipo: string, photoUrl: string, photoExists: boolean }
+  type Contributor = { id: string; name: string; cpf: string; congregationId: string; ecclesiasticalPosition: string, tipo: string, photoUrl: string, photoExists: boolean, isActive: boolean }
   type Supplier = { id: string; razaoSocial: string; cpfcnpj: string }
   type Classification = { id: string; description: string }
 
@@ -102,14 +102,16 @@ export default function Launches() {
     supplier?: { id: string; razaoSocial: string; cpfcnpj: string }
     supplierName?: string
     classificationId?: string
-    classification?: { id: string; name: string }
+    classification?: { id: string; description: string }
+    financialEntityId?: string
+    financialEntity?: { id: string; name: string }
     //approved?: boolean
     summaryId?: string
-    createdBy?: String
+    createdBy?: string
     cancelledBy?: string
-    approvedByTreasury?: boolean
-    approvedByAccountant?: boolean
-    approvedByDirector?: boolean
+    approvedByTreasury?: string
+    approvedByAccountant?: string
+    approvedByDirector?: string
     approvedVia?: string
     attachmentUrl?: string
     isRateio?: boolean
@@ -128,6 +130,8 @@ export default function Launches() {
   const canLaunchCircle = session?.user?.canLaunchCircle
   const canLaunchServiceOffer = session?.user?.canLaunchServiceOffer
   const canLaunchCarneReviver = session?.user?.canLaunchCarneReviver
+  const canLaunchCarneAfrica = session?.user?.canLaunchCarneAfrica
+  const canLaunchRendaBruta = session?.user?.canLaunchRendaBruta
   const canApproveVote = session?.user?.canApproveVote
   const canApproveEbd = session?.user?.canApproveEbd
   const canApproveCampaign = session?.user?.canApproveCampaign
@@ -137,6 +141,8 @@ export default function Launches() {
   const canApproveCircle = session?.user?.canApproveCircle
   const canApproveServiceOffer = session?.user?.canApproveServiceOffer
   const canApproveCarneReviver = session?.user?.canApproveCarneReviver
+  const canApproveCarneAfrica = session?.user?.canApproveCarneAfrica
+  const canApproveRendaBruta = session?.user?.canApproveRendaBruta
   const canApproveTreasury = session?.user?.canApproveTreasury
   const canApproveAccountant = session?.user?.canApproveAccountant
   const canApproveDirector = session?.user?.canApproveDirector
@@ -158,6 +164,8 @@ export default function Launches() {
     if (canLaunchVote) types.push({ value: 'VOTO', label: 'Voto' });
     if (canLaunchCircle) types.push({ value: 'CIRCULO', label: 'Círculo de Oração' });
     if (canLaunchCarneReviver) types.push({ value: 'CARNE_REVIVER', label: 'Carnê Reviver' });
+    if (session?.user?.canLaunchCarneAfrica) types.push({ value: 'CARNE_AFRICA', label: 'Carnê África' });
+    if (session?.user?.canLaunchRendaBruta) types.push({ value: 'RENDA_BRUTA', label: 'Renda Bruta' });
     if (canLaunchExpense) types.push({ value: 'SAIDA', label: 'Saída' });
     return types;
   }, [canLaunchTithe, canLaunchServiceOffer, canLaunchCarneReviver, canLaunchVote, canLaunchEbd, canLaunchCampaign, canLaunchMission, canLaunchCircle, canLaunchExpense]);
@@ -190,7 +198,8 @@ export default function Launches() {
     summaryId: '',
     status: 'NORMAL',
     attachmentUrl: '',
-    isRateio: false
+    isRateio: false,
+    financialEntityName: ''
   })
 
   function truncateString(str: string | null | undefined, num: number) {
@@ -206,9 +215,11 @@ export default function Launches() {
   // Função helper para verificar se um lançamento pode ser editado
   const isEditDisabled = (launch: Launch | null) => {
     if (!launch) return false;
-    if (launch.isIntegrated) return true;
     // Se tem canTechnicalIntervention E o modo está ativo, permite editar qualquer lançamento
     if (canTechnicalIntervention && isTechnicalIntervention) return false;
+
+    if (launch.isIntegrated || launch.status === 'INTEGRATED') return true;
+
     // Caso contrário, desabilita se: não é NORMAL ou faz parte de um resumo
     return launch.status !== 'NORMAL' || launch.summaryId != null;
   }
@@ -216,9 +227,11 @@ export default function Launches() {
   // Função helper para verificar se um campo específico deve ser desabilitado durante edição
   const isFieldDisabledDuringEdit = () => {
     if (!editingLaunch) return false;
-    if (editingLaunch.isIntegrated) return true;
     // Se tem canTechnicalIntervention E o modo está ativo, permite editar todos os campos
     if (canTechnicalIntervention && isTechnicalIntervention) return false;
+
+    if (editingLaunch.isIntegrated || editingLaunch.status === 'INTEGRATED') return true;
+
     // Caso contrário, desabilita se o status não é NORMAL ou tem resumo vinculado
     return editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null;
   }
@@ -448,8 +461,8 @@ export default function Launches() {
     try {
       // Para lançamentos importados, permitimos ver contribuinte de qualquer congregação
       const url = importFilter === 'IMPORTED'
-        ? '/api/contributors?activeOnly=true&filterByUserCongregations=false'
-        : '/api/contributors?activeOnly=true'
+        ? '/api/contributors?filterByUserCongregations=false'
+        : '/api/contributors'
 
       const response = await fetch(url)
       if (response.ok) {
@@ -591,7 +604,7 @@ export default function Launches() {
 
     // Todos os tipos agora usam campo único "value" (exceto quando a regra específica difere)
     const numericValue = parseFloat(formData.value as any)
-    if (['VOTO', 'EBD', 'CAMPANHA', 'DIZIMO', 'SAIDA', 'OFERTA_CULTO', 'MISSAO', 'CIRCULO', 'CARNE_REVIVER'].includes(formData.type)) {
+    if (['VOTO', 'EBD', 'CAMPANHA', 'DIZIMO', 'SAIDA', 'OFERTA_CULTO', 'MISSAO', 'CIRCULO', 'CARNE_REVIVER', 'CARNE_AFRICA', 'RENDA_BRUTA'].includes(formData.type)) {
       if (!numericValue || Number.isNaN(numericValue)) {
         alert('O campo Valor deve ser preenchido.')
         setSalvando(false)
@@ -606,7 +619,7 @@ export default function Launches() {
     }
 
     // Validar se o nome do contribuinte não é apenas espaços em branco quando não cadastrado
-    if ((formData.type === 'DIZIMO' || formData.type === 'CARNE_REVIVER') && !formData.isContributorRegistered && !formData.isAnonymous) {
+    if ((formData.type === 'DIZIMO' || formData.type === 'CARNE_REVIVER' || formData.type === 'CARNE_AFRICA') && !formData.isContributorRegistered && !formData.isAnonymous) {
       const trimmedName = formData.contributorName?.trim() || ''
       if (!trimmedName) {
         alert(`Nome do contribuinte é obrigatório para lançamentos do tipo ${formData.type === 'DIZIMO' ? 'Dízimo' : 'Carnê Reviver'}`)
@@ -684,7 +697,8 @@ export default function Launches() {
       summaryId: launch.summaryId || '',
       status: launch.status || 'NORMAL',
       attachmentUrl: launch.attachmentUrl || '',
-      isRateio: !!launch.isRateio
+      isRateio: !!launch.isRateio,
+      financialEntityName: launch.financialEntity?.name || ''
     })
     setIsDialogOpen(true)
   }
@@ -710,7 +724,8 @@ export default function Launches() {
       summaryId: launch.summaryId || '',
       status: launch.status || 'NORMAL',
       attachmentUrl: launch.attachmentUrl || '',
-      isRateio: !!launch.isRateio
+      isRateio: !!launch.isRateio,
+      financialEntityName: launch.financialEntity?.name || ''
     })
     setIsDialogOpen(true)
   }
@@ -810,6 +825,7 @@ export default function Launches() {
     }
   }
 
+
   const resetForm = () => {
     setEditingLaunch(null)
     setIsTechnicalIntervention(false)
@@ -831,7 +847,8 @@ export default function Launches() {
       summaryId: '',
       status: 'NORMAL',
       attachmentUrl: '',
-      isRateio: false
+      isRateio: false,
+      financialEntityName: ''
     })
     setError(null)
   }
@@ -858,6 +875,8 @@ export default function Launches() {
         return 'border-l-blue-500'
       case 'OFERTA_CULTO':
         return 'border-l-green-500'
+      case 'RENDA_BRUTA':
+        return 'border-l-green-500'
       case 'VOTO':
         return 'border-l-green-500'
       case 'EBD':
@@ -865,6 +884,8 @@ export default function Launches() {
       case 'CAMPANHA':
         return 'border-l-green-500'
       case 'CARNE_REVIVER':
+        return 'border-l-amber-800'
+      case 'CARNE_AFRICA':
         return 'border-l-amber-800'
       case 'SAIDA':
         return 'border-l-red-500'
@@ -880,7 +901,7 @@ export default function Launches() {
   // Mobile
   const LaunchCard = ({ launch }: { launch: Launch }) => {
     const borderColor = getLaunchTypeBorderColor(launch.type)
-    const showContributorPhoto = (launch.type === 'DIZIMO' || launch.type === 'CARNE_REVIVER')
+    const showContributorPhoto = (launch.type === 'DIZIMO' || launch.type === 'CARNE_REVIVER' || launch.type === 'CARNE_AFRICA')
     // Anônimo: Dízimo/Carnê Reviver sem contributorId e com contributorName 'ANÔNIMO' (ou vazio)
     const name = (launch.contributorName || '').trim().toUpperCase()
     const isAnonymous = showContributorPhoto &&
@@ -896,10 +917,10 @@ export default function Launches() {
               launch.type === 'EBD' ? 'bg-green-500' :
                 launch.type === 'CAMPANHA' ? 'bg-green-500' :
                   launch.type === 'DIZIMO' ? 'bg-blue-500' :
-                    launch.type === 'CARNE_REVIVER' ? 'bg-amber-800' :
+                    launch.type === 'CARNE_REVIVER' || launch.type === 'CARNE_AFRICA' ? 'bg-amber-800' :
                       launch.type === 'SAIDA' ? 'bg-red-500' :
                         launch.type === 'MISSAO' ? 'bg-green-500' :
-                          launch.type === 'OFERTA_CULTO' ? 'bg-green-500' :
+                          launch.type === 'OFERTA_CULTO' || launch.type === 'RENDA_BRUTA' ? 'bg-green-500' :
                             launch.type === 'CIRCULO' ? 'bg-pink-500' : ''
               }`}>
               {launch.type === 'VOTO' ? 'Voto' :
@@ -907,10 +928,12 @@ export default function Launches() {
                   launch.type === 'CAMPANHA' ? 'Campanha' :
                     launch.type === 'DIZIMO' ? 'Dízimo' :
                       launch.type === 'CARNE_REVIVER' ? 'Carnê Reviver' :
-                        launch.type === 'SAIDA' ? 'Saída' :
-                          launch.type === 'MISSAO' ? 'Missão' :
-                            launch.type === 'OFERTA_CULTO' ? 'Oferta do Culto' :
-                              launch.type === 'CIRCULO' ? 'Círculo de Oração' : ''}
+                        launch.type === 'CARNE_AFRICA' ? 'Carnê África' :
+                          launch.type === 'SAIDA' ? 'Saída' :
+                            launch.type === 'MISSAO' ? 'Missão' :
+                              launch.type === 'OFERTA_CULTO' ? 'Oferta do Culto' :
+                                launch.type === 'RENDA_BRUTA' ? 'Renda Bruta' :
+                                  launch.type === 'CIRCULO' ? 'Círculo de Oração' : ''}
             </div>
             <div className={`flex items-center space-x-2`}>
               {launch.contributor?.ecclesiasticalPosition &&
@@ -944,17 +967,23 @@ export default function Launches() {
                   </TooltipContent>
                 </Tooltip>
               )}
-              <Badge className={`${launch.status === 'IMPORTED' ? 'bg-orange-500 hover:bg-orange-600' : ''}`}
+              <Badge className={cn(
+                "w-24 text-center justify-center py-1 rounded font-medium",
+                launch.status === 'EXPORTED' ? 'text-black' : 'text-white',
+                launch.status === 'IMPORTED' ? 'bg-orange-500 hover:bg-orange-600' :
+                  launch.status === 'INTEGRATED' ? 'bg-fuchsia-600 hover:bg-fuchsia-700' : ''
+              )}
                 variant={
                   launch.status === 'NORMAL' ? 'default' :
                     launch.status === 'APPROVED' ? 'default' :
                       launch.status === 'EXPORTED' ? 'secondary' :
-                        launch.status === 'IMPORTED' ? 'destructive' : 'destructive'
+                        launch.status === 'IMPORTED' || launch.status === 'INTEGRATED' ? 'secondary' : 'destructive'
                 }>
                 {launch.status === 'NORMAL' ? 'Normal' :
                   launch.status === 'APPROVED' ? 'Aprovado' :
                     launch.status === 'EXPORTED' ? 'Exportado' :
-                      launch.status === 'IMPORTED' ? 'Importado' : 'Cancelado'}
+                      launch.status === 'IMPORTED' ? 'Importado' :
+                        launch.status === 'INTEGRATED' ? 'Integrado' : 'Cancelado'}
               </Badge>
             </div>
           </div>
@@ -1020,9 +1049,9 @@ export default function Launches() {
             )}
           </div>
 
-          {launch.talonNumber && launch.type !== 'CARNE_REVIVER' && launch.type !== 'MISSAO' && (
+          {launch.talonNumber && launch.type !== 'CARNE_REVIVER' && launch.type !== 'CARNE_AFRICA' && launch.type !== 'MISSAO' && (
             <div className="flex justify-start">
-              <span className="text-sm font-normal">{launch.type === 'SAIDA' ? 'Nr. Doc:' : launch.type === 'DIZIMO' ? 'Nr. Recibo:' : 'Nr. Talão:'}</span>
+              <span className="text-sm font-normal">{launch.type === 'SAIDA' ? 'Nr. Doc:' : 'Nr. Talão:'}</span>
               <span className="text-sm font-medium">{launch.talonNumber}</span>
             </div>
           )}
@@ -1054,7 +1083,7 @@ export default function Launches() {
               </Tooltip>
             )}
 
-            {launch.status === 'CANCELED' && launch.summaryId == null && canDeleteLaunch && (
+            {(launch.status === 'CANCELED' || launch.status === 'IMPORTED' || launch.status === 'INTEGRATED' || launch.status === 'NORMAL') && launch.summaryId == null && canDeleteLaunch && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="destructive" size="sm" onClick={() => handleDelete(launch.id)}><Trash2 className="h-4 w-4" /></Button>
@@ -1080,6 +1109,8 @@ export default function Launches() {
                   (launch.type === 'OFERTA_CULTO' && canApproveServiceOffer) ||
                   (launch.type === 'DIZIMO' && canApproveTithe) ||
                   (launch.type === 'CARNE_REVIVER' && canApproveCarneReviver) ||
+                  (launch.type === 'CARNE_AFRICA' && canApproveCarneAfrica) ||
+                  (launch.type === 'RENDA_BRUTA' && canApproveRendaBruta) ||
                   (launch.type === 'SAIDA' && canApproveExpense) ||
                   (launch.type === 'MISSAO' && canApproveMission) ||
                   (launch.type === 'CIRCULO' && canApproveCircle) ? (
@@ -1101,6 +1132,8 @@ export default function Launches() {
                   (launch.type === 'OFERTA_CULTO' && canApproveServiceOffer) ||
                   (launch.type === 'DIZIMO' && canApproveTithe) ||
                   (launch.type === 'CARNE_REVIVER' && canApproveCarneReviver) ||
+                  (launch.type === 'CARNE_AFRICA' && canApproveCarneAfrica) ||
+                  (launch.type === 'RENDA_BRUTA' && canApproveRendaBruta) ||
                   (launch.type === 'SAIDA' && canApproveExpense) ||
                   (launch.type === 'MISSAO' && canApproveMission) ||
                   (launch.type === 'CIRCULO' && canApproveCircle) ? (
@@ -1241,18 +1274,18 @@ export default function Launches() {
                         )}
                       </DialogTitle>
                       <DialogDescription asChild style={{ fontSize: '14px' }}>
-                        {editingLaunch && editingLaunch.status !== 'NORMAL' && editingLaunch.status !== 'IMPORTED' && (
+                        {editingLaunch && editingLaunch.status !== 'NORMAL' && editingLaunch.status !== 'IMPORTED' && editingLaunch.status !== 'INTEGRATED' && (
                           <div className="mt-2 p-2 bg-yellow-50 text-red-800 rounded-md flex items-center">
                             <AlertCircle className="h-4 w-4 mr-2" />
-                            Este lançamento não pode ser editado porque está com status "{editingLaunch.status === 'CANCELED' ? 'CANCELADO' : editingLaunch.status === 'APPROVED' ? 'APROVADO' : editingLaunch.status === 'EXPORTED' ? 'EXPORTADO' : editingLaunch.status === 'IMPORTED' ? 'IMPORTADO' : ''}".
+                            Este lançamento não pode ser editado porque está com status "{editingLaunch.status === 'CANCELED' ? 'CANCELADO' : editingLaunch.status === 'APPROVED' ? 'APROVADO' : editingLaunch.status === 'EXPORTED' ? 'EXPORTADO' : editingLaunch.status === 'IMPORTED' ? 'IMPORTADO' : editingLaunch.status === 'INTEGRATED' ? 'INTEGRADO' : ''}".
                           </div>
                         )}
                       </DialogDescription>
                       <DialogDescription asChild style={{ fontSize: '14px' }}>
-                        {editingLaunch && editingLaunch.status === 'IMPORTED' && (
-                          <div className="mt-2 p-2 bg-yellow-50 text-red-800 rounded-md flex items-center">
-                            <AlertCircle className="h-4 w-4 mr-2" />
-                            Este lançamento faz parte da integração bancária e não pode ser alterado.
+                        {editingLaunch && (editingLaunch.status === 'IMPORTED' || editingLaunch.status === 'INTEGRATED') && !isTechnicalIntervention && (
+                          <div className="mt-2 p-2 bg-blue-50 text-blue-800 rounded-md flex items-center border border-blue-200">
+                            <AlertCircle className="h-4 w-4 mr-2 text-blue-600" />
+                            Este lançamento faz parte da integração bancária e está protegido. Use a Intervenção Técnica para realizar qualquer ajuste.
                           </div>
                         )}
                       </DialogDescription>
@@ -1328,6 +1361,8 @@ export default function Launches() {
                                       {canLaunchVote && <SelectItem value="VOTO">Voto</SelectItem>}
                                       {canLaunchCircle && <SelectItem value="CIRCULO">Círculo de Oração</SelectItem>}
                                       {canLaunchCarneReviver && <SelectItem value="CARNE_REVIVER">Carnê Reviver</SelectItem>}
+                                      {session?.user?.canLaunchCarneAfrica && <SelectItem value="CARNE_AFRICA">Carnê África</SelectItem>}
+                                      {session?.user?.canLaunchRendaBruta && <SelectItem value="RENDA_BRUTA">Renda Bruta</SelectItem>}
                                       {canLaunchExpense && <SelectItem value="SAIDA">Saída</SelectItem>}
                                     </SelectContent>
                                   </Select>
@@ -1367,8 +1402,8 @@ export default function Launches() {
                                 </div>
 
                                 <div>
-                                  {formData.type === 'SAIDA' ? <Label htmlFor="talonNumber">Nr. Doc</Label> : formData.type === 'DIZIMO' ? <Label htmlFor="talonNumber">Nr. Recibo</Label> : formData.type === 'CARNE_REVIVER' || formData.type === 'MISSAO' ? '' : <Label htmlFor="talonNumber">Nr. Talão</Label>}
-                                  {(formData.type !== 'CARNE_REVIVER' && formData.type !== 'MISSAO') && (
+                                  {formData.type === 'SAIDA' ? <Label htmlFor="talonNumber">Nr. Doc</Label> : formData.type === 'CARNE_REVIVER' || formData.type === 'CARNE_AFRICA' || formData.type === 'MISSAO' ? '' : <Label htmlFor="talonNumber">Nr. Talão</Label>}
+                                  {(formData.type !== 'CARNE_REVIVER' && formData.type !== 'CARNE_AFRICA' && formData.type !== 'MISSAO') && (
                                     <>
                                       <Input
                                         id="talonNumber"
@@ -1424,7 +1459,7 @@ export default function Launches() {
                                     }}
                                   />
                                 </div>
-                                {formData.type === 'CARNE_REVIVER' && (
+                                {(formData.type === 'CARNE_REVIVER' || formData.type === 'CARNE_AFRICA') && (
                                   <div className="flex items-center space-x-2 mt-6">
                                     <Checkbox
                                       id="isRateio"
@@ -1455,10 +1490,11 @@ export default function Launches() {
                                       </SelectTrigger>
                                       <SelectContent>
                                         <SelectItem value="NORMAL">Normal</SelectItem>
-                                        <SelectItem value="CANCELLED">Cancelado</SelectItem>
+                                        <SelectItem value="CANCELED">Cancelado</SelectItem>
                                         <SelectItem value="APPROVED">Aprovado</SelectItem>
                                         <SelectItem value="EXPORTED">Exportado</SelectItem>
                                         <SelectItem value="IMPORTED">Importado</SelectItem>
+                                        <SelectItem value="INTEGRATED">Integrado</SelectItem>
                                       </SelectContent>
                                     </Select>
                                     {/* <p className="text-xs text-amber-600">
@@ -1469,7 +1505,7 @@ export default function Launches() {
                               </div>
 
                               {/* Dízimo: contribuinte */}
-                              {(formData.type === 'DIZIMO' || formData.type === 'CARNE_REVIVER') && (
+                              {(formData.type === 'DIZIMO' || formData.type === 'CARNE_REVIVER' || formData.type === 'CARNE_AFRICA') && (
                                 <div className="w-full">
                                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
                                     {!formData.isAnonymous && (
@@ -1534,8 +1570,10 @@ export default function Launches() {
                                         name="contributorId"
                                         data={contributors.filter(f => (
                                           editingLaunch?.status === 'IMPORTED' ||
+                                          editingLaunch?.status === 'INTEGRATED' ||
                                           importFilter === 'IMPORTED' ||
-                                          f.congregationId == formData.congregationId ||
+                                          importFilter === 'INTEGRATED' ||
+                                          f.isActive ||
                                           f.id === formData.contributorId
                                         )).map(c => ({ key: c.id, id: c.id, name: c.name, document: c.cpf, cargo: c.ecclesiasticalPosition, photoUrl: c.photoUrl, photoExists: c.photoExists }))}
                                         searchKeys={['name', 'document']}
@@ -1617,6 +1655,22 @@ export default function Launches() {
                                     </div>
                                   )}
                                 </>
+                              )}
+
+                              {editingLaunch && (editingLaunch.status === 'IMPORTED' || editingLaunch.status === 'INTEGRATED') && formData.financialEntityName && (
+                                <div>
+                                  <Label htmlFor="financialEntityName" className="flex items-center gap-2">
+                                    <span className="md:inline">Entidade Financeira</span>
+                                  </Label>
+                                  <Input
+                                    id="financialEntityName"
+                                    name="financialEntityName"
+                                    value={formData.financialEntityName}
+                                    disabled={true}
+                                    style={{ fontSize: '16px' }}
+                                    className="bg-gray-100"
+                                  />
+                                </div>
                               )}
 
                               <div>
@@ -1885,6 +1939,7 @@ export default function Launches() {
                     <SelectContent>
                       <SelectItem value="ALL">Todos os Lançamentos</SelectItem>
                       <SelectItem value="IMPORTED">Apenas Importados</SelectItem>
+                      <SelectItem value="INTEGRATED">Apenas Integrados</SelectItem>
                       <SelectItem value="MANUAL">Apenas Digitados</SelectItem>
                     </SelectContent>
                   </Select>
@@ -1905,6 +1960,8 @@ export default function Launches() {
                       {canLaunchVote && <SelectItem value="VOTO">Voto</SelectItem>}
                       {canLaunchCircle && <SelectItem value="CIRCULO">Círculo de Oração</SelectItem>}
                       {canLaunchCarneReviver && <SelectItem value="CARNE_REVIVER">Carnê Reviver</SelectItem>}
+                      {canLaunchCarneReviver && <SelectItem value="CARNE_AFRICA">Carnê África</SelectItem>}
+                      {canLaunchServiceOffer && <SelectItem value="RENDA_BRUTA">Renda Bruta</SelectItem>}
                       {canLaunchExpense && <SelectItem value="SAIDA">Saída</SelectItem>}
                     </SelectContent>
                   </Select>
@@ -1959,20 +2016,22 @@ export default function Launches() {
                                   launch.type === 'VOTO' ? 'bg-green-500' :
                                     launch.type === 'EBD' ? 'bg-green-500' :
                                       launch.type === 'CAMPANHA' ? 'bg-green-500' :
-                                        launch.type === 'CARNE_REVIVER' ? 'bg-amber-800' :
+                                        launch.type === 'CARNE_REVIVER' || launch.type === 'CARNE_AFRICA' ? 'bg-amber-800' :
                                           launch.type === 'SAIDA' ? 'bg-red-500' :
-                                            launch.type === 'MISSAO' ? 'bg-green-500' :
+                                            launch.type === 'OFERTA_CULTO' || launch.type === 'RENDA_BRUTA' ? 'bg-green-500' :
                                               launch.type === 'CIRCULO' ? 'bg-pink-500' : ''
                                 }`}>
                                 {launch.type === 'VOTO' ? 'Voto' :
                                   launch.type === 'OFERTA_CULTO' ? 'Oferta do Culto' :
-                                    launch.type === 'EBD' ? 'EBD' :
-                                      launch.type === 'CAMPANHA' ? 'Campanha' :
-                                        launch.type === 'DIZIMO' ? 'Dízimo' :
-                                          launch.type === 'CARNE_REVIVER' ? 'Carnê Reviver' :
-                                            launch.type === 'SAIDA' ? 'Saída' :
-                                              launch.type === 'MISSAO' ? 'Missão' :
-                                                launch.type === 'CIRCULO' ? 'Círculo de Oração' : ''}
+                                    launch.type === 'RENDA_BRUTA' ? 'Renda Bruta' :
+                                      launch.type === 'EBD' ? 'EBD' :
+                                        launch.type === 'CAMPANHA' ? 'Campanha' :
+                                          launch.type === 'DIZIMO' ? 'Dízimo' :
+                                            launch.type === 'CARNE_REVIVER' ? 'Carnê Reviver' :
+                                              launch.type === 'CARNE_AFRICA' ? 'Carnê África' :
+                                                launch.type === 'SAIDA' ? 'Saída' :
+                                                  launch.type === 'MISSAO' ? 'Missão' :
+                                                    launch.type === 'CIRCULO' ? 'Círculo de Oração' : ''}
                               </div>
                             </TableCell>
                             <TableCell>{extractAfterColon(launch.congregation?.name)}</TableCell>
@@ -1988,20 +2047,23 @@ export default function Launches() {
                             <TableCell>{launch.talonNumber}</TableCell>
                             <TableCell>
                               <div className="flex items-center space-x-2">
-                                <Badge className={`w-32 text-center py-1.5 px-1 rounded 
-                                ${launch.status === 'EXPORTED' ? 'text-black' : 'text-white'} 
-                                ${launch.status === 'IMPORTED' ? 'bg-orange-500 hover:bg-orange-600' : ''} font-medium`}
-
+                                <Badge className={cn(
+                                  "w-32 text-center py-1.5 px-1 rounded font-medium",
+                                  launch.status === 'EXPORTED' ? 'text-black' : 'text-white',
+                                  launch.status === 'IMPORTED' ? 'bg-orange-500 hover:bg-orange-600' :
+                                    launch.status === 'INTEGRATED' ? 'bg-fuchsia-600 hover:bg-fuchsia-700' : ''
+                                )}
                                   variant={
                                     launch.status === 'NORMAL' ? 'default' :
                                       launch.status === 'APPROVED' ? 'default' :
                                         launch.status === 'EXPORTED' ? 'secondary' :
-                                          launch.status === 'IMPORTED' ? 'secondary' : 'destructive'
+                                          launch.status === 'IMPORTED' || launch.status === 'INTEGRATED' ? 'secondary' : 'destructive'
                                   }>
                                   {launch.status === 'NORMAL' ? 'Normal' :
                                     launch.status === 'APPROVED' ? 'Aprovado' :
                                       launch.status === 'EXPORTED' ? 'Exportado' :
-                                        launch.status === 'IMPORTED' ? 'Importado' : 'Cancelado'}
+                                        launch.status === 'IMPORTED' ? 'Importado' :
+                                          launch.status === 'INTEGRATED' ? 'Integrado' : 'Cancelado'}
                                 </Badge>
                                 {/* {launch.approvedBy && (
                                  <Tooltip>
@@ -2030,7 +2092,7 @@ export default function Launches() {
                                   </Tooltip>
                                 )}
 
-                                {(launch.status === 'CANCELED' || launch.status === 'IMPORTED') && launch.summaryId == null && canDeleteLaunch && (
+                                {(launch.status === 'CANCELED' || launch.status === 'IMPORTED' || launch.status === 'INTEGRATED' || launch.status === 'NORMAL') && launch.summaryId == null && canDeleteLaunch && (
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <Button variant="destructive" size="sm" onClick={() => handleDelete(launch.id)}><Trash2 className="h-4 w-4" /></Button>
@@ -2056,6 +2118,8 @@ export default function Launches() {
                                       (launch.type === 'OFERTA_CULTO' && canApproveServiceOffer) ||
                                       (launch.type === 'DIZIMO' && canApproveTithe) ||
                                       (launch.type === 'CARNE_REVIVER' && canApproveCarneReviver) ||
+                                      (launch.type === 'CARNE_AFRICA' && canApproveCarneAfrica) ||
+                                      (launch.type === 'RENDA_BRUTA' && canApproveRendaBruta) ||
                                       (launch.type === 'SAIDA' && canApproveExpense) ||
                                       (launch.type === 'MISSAO' && canApproveMission) ||
                                       (launch.type === 'CIRCULO' && canApproveCircle) ? (
@@ -2077,6 +2141,8 @@ export default function Launches() {
                                       (launch.type === 'OFERTA_CULTO' && canApproveServiceOffer) ||
                                       (launch.type === 'DIZIMO' && canApproveTithe) ||
                                       (launch.type === 'CARNE_REVIVER' && canApproveCarneReviver) ||
+                                      (launch.type === 'CARNE_AFRICA' && canApproveCarneAfrica) ||
+                                      (launch.type === 'RENDA_BRUTA' && canApproveRendaBruta) ||
                                       (launch.type === 'SAIDA' && canApproveExpense) ||
                                       (launch.type === 'MISSAO' && canApproveMission) ||
                                       (launch.type === 'CIRCULO' && canApproveCircle) ? (
@@ -2096,6 +2162,8 @@ export default function Launches() {
                                   (launch.type === 'OFERTA_CULTO' && canLaunchServiceOffer) ||
                                   (launch.type === 'CARNE_REVIVER' && canLaunchCarneReviver) ||
                                   (launch.type === 'DIZIMO' && canLaunchTithe) ||
+                                  (launch.type === 'CARNE_AFRICA' && canLaunchCarneAfrica) ||
+                                  (launch.type === 'RENDA_BRUTA' && canLaunchRendaBruta) ||
                                   (launch.type === 'SAIDA' && canLaunchExpense) ||
                                   (launch.type === 'MISSAO' && canLaunchMission) ||
                                   (launch.type === 'CIRCULO' && canLaunchCircle) ? (

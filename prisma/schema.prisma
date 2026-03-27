@@ -89,6 +89,8 @@ model Profile {
   canLaunchCircle                  Boolean @default(false)
   canLaunchServiceOffer            Boolean @default(false)
   canLaunchCarneReviver            Boolean @default(false)
+  canLaunchCarneAfrica             Boolean @default(false)
+  canLaunchRendaBruta              Boolean @default(false)
   canApproveVote                   Boolean @default(false)
   canApproveEbd                    Boolean @default(false)
   canApproveCampaign               Boolean @default(false)
@@ -98,6 +100,8 @@ model Profile {
   canApproveCircle                 Boolean @default(false)
   canApproveServiceOffer           Boolean @default(false)
   canApproveCarneReviver           Boolean @default(false)
+  canApproveCarneAfrica            Boolean @default(false)
+  canApproveRendaBruta             Boolean @default(false)
   canCreate                        Boolean @default(false)
   canEdit                          Boolean @default(false)
   canExclude                       Boolean @default(false)
@@ -115,6 +119,7 @@ model Profile {
   canReportHistoryContribSynthetic Boolean @default(false)
   canReportHistoryContribAnalytic  Boolean @default(false)
   canReportAudit                   Boolean @default(false)
+  canReportAccountability          Boolean @default(false)
   canDeleteLaunch                  Boolean @default(false)
   canImportLaunch                  Boolean @default(false)
   canDeleteSummary                 Boolean @default(false)
@@ -148,21 +153,23 @@ model FinancialEntity {
   updatedAt              DateTime                @updatedAt @db.DateTime(0)
   BankIntegrationConfig  BankIntegrationConfig[]
   bankIntegrationBatches BankIntegrationBatch[]
+  launches               Launch[]
 
   @@index([congregationId])
 }
 
 model BankIntegrationConfig {
-  id                String          @id @default(cuid())
-  code              String          @unique
-  name              String
-  financialEntityId Int
-  financialEntity   FinancialEntity @relation(fields: [financialEntityId], references: [id])
-  paymentMethodId   Int
-  paymentMethod     PaymentMethod   @relation(fields: [paymentMethodId], references: [id])
-  accountPlan       String?
-  launchType        String // DEBIT, CREDIT
-  launchTypeSource  String          @default("FIXED") // FIXED or FROM_FILE
+  id                 String          @id @default(cuid())
+  code               String          @unique
+  name               String
+  financialEntityId  Int
+  financialEntity    FinancialEntity @relation(fields: [financialEntityId], references: [id])
+  paymentMethodId    Int
+  paymentMethod      PaymentMethod   @relation(fields: [paymentMethodId], references: [id])
+  accountPlan        String?
+  launchType         String // DEBIT, CREDIT
+  launchTypeSource   String          @default("FIXED") // FIXED or FROM_FILE
+  congregationSource String          @default("FIXED") // FIXED or FROM_FILE
 
   sourceColumns      SourceFileColumn[]
   destinationColumns DestinationFileColumn[]
@@ -290,7 +297,10 @@ model Launch {
   isIntegrated         Boolean               @default(false)
   integrationBatchId   String?
   integrationBatch     BankIntegrationBatch? @relation(fields: [integrationBatchId], references: [id])
+  financialEntityId    Int?
+  financialEntity      FinancialEntity?      @relation(fields: [financialEntityId], references: [id])
 
+  @@index([financialEntityId])
   @@index([congregationId])
   @@index([summaryId])
   @@index([contributorId])
@@ -395,6 +405,8 @@ enum LaunchType {
   ENTRADA
   SAIDA
   CARNE_REVIVER
+  CARNE_AFRICA
+  RENDA_BRUTA
 }
 
 enum LaunchStatus {
@@ -456,6 +468,10 @@ model BankIntegrationRow {
   errorMsg        String?              @db.Text
   isIntegrated    Boolean              @default(false)
   launchId        String?              @unique
+
+  // Cache de campos importantes para a UI
+  contributorId   String?
+  contributorName String?
 
   @@index([batchId])
 }

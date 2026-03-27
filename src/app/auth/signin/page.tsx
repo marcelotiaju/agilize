@@ -10,7 +10,7 @@ export default function SignIn() {
           {/* <h2 className="text-center text-2xl font-extrabold text-gray-900 mb-6">
             Agilize
           </h2> */}
-          <Image 
+          <Image
             src="/images/Logo_Agilize_Azul.png"
             alt="Logo do Agilize"
             width={150}

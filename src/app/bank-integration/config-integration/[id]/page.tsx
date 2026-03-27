@@ -71,7 +71,8 @@ export default function ConfigDetailPage() {
         paymentMethodId: '',
         accountPlan: '',
         launchType: 'CREDIT',
-        launchTypeSource: 'FIXED'
+        launchTypeSource: 'FIXED',
+        congregationSource: 'FIXED'
     })
 
     const [sourceColumns, setSourceColumns] = useState<Column[]>([])
@@ -116,7 +117,8 @@ export default function ConfigDetailPage() {
                     paymentMethodId: data.paymentMethodId.toString(),
                     accountPlan: data.accountPlan || '',
                     launchType: data.launchType,
-                    launchTypeSource: data.launchTypeSource || 'FIXED'
+                    launchTypeSource: data.launchTypeSource || 'FIXED',
+                    congregationSource: data.congregationSource || 'FIXED'
                 })
                 setSourceColumns(data.sourceColumns || [])
                 setDestinationColumns((data.destinationColumns || []).map((col: any) => ({
@@ -342,6 +344,21 @@ export default function ConfigDetailPage() {
                                                         </SelectTrigger>
                                                         <SelectContent>
                                                             <SelectItem value="FIXED">Fixo no Cadastro</SelectItem>
+                                                            <SelectItem value="FROM_FILE">Busca do Arquivo Origem</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="grid gap-2">
+                                                    <Label>Origem da Congregação</Label>
+                                                    <Select
+                                                        value={formData.congregationSource}
+                                                        onValueChange={(val) => setFormData(prev => ({ ...prev, congregationSource: val }))}
+                                                    >
+                                                        <SelectTrigger>
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="FIXED">Fixo (Entidade Financeira)</SelectItem>
                                                             <SelectItem value="FROM_FILE">Busca do Arquivo Origem</SelectItem>
                                                         </SelectContent>
                                                     </Select>

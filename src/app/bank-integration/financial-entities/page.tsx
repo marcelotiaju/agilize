@@ -76,7 +76,7 @@ export default function FinancialEntitiesPage() {
 
     const fetchCongregations = async () => {
         try {
-            const response = await fetch('/api/congregations')
+            const response = await fetch('/api/congregations/all')
             if (response.ok) {
                 const data = await response.json()
                 setCongregations(data)

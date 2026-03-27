@@ -24,7 +24,20 @@ export async function POST(request: NextRequest) {
 
     // 1. Leia o arquivo como um ArrayBuffer
     const buffer = await file.arrayBuffer();
-    const decoder = new TextDecoder('iso-8859-1');
+    
+    // Tentar detectar se é UTF-8 (procurando pelo BOM) ou usar ISO-8859-1
+    const uint8Array = new Uint8Array(buffer);
+    let decoder;
+    
+    if (uint8Array[0] === 0xEF && uint8Array[1] === 0xBB && uint8Array[2] === 0xBF) {
+      decoder = new TextDecoder('utf-8');
+    } else {
+      // Se não tiver BOM, tentamos UTF-8 e se falhar ou tiver caracteres estranhos, 
+      // o iso-8859-1 é o fallback seguro para o sistema atual.
+      // No entanto, para simplificar e manter compatibilidade com o que existia:
+      decoder = new TextDecoder('iso-8859-1');
+    }
+    
     const text = decoder.decode(buffer);
 
     //const text = await file.text()
@@ -133,7 +146,7 @@ export async function POST(request: NextRequest) {
           imported++
           created++
         }
-      } catch (error) {
+      } catch (error: any) {
         errors.push(`Linha ${i + 2}: Erro ao processar contribuinte - ${error.message}`)
       }
     }

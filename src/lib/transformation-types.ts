@@ -39,6 +39,11 @@ export interface TransformStep {
     default?: string
     find?: string
     replaceWith?: string
+    // New lookup specific fields
+    searchCondition?: 'MEMBRO' | 'CONGREGADO' | 'NONE'
+    fallbackType?: 'EMPTY' | 'SOURCE'
+    fallbackSourceField?: string
+    returnEmptyIfFound?: boolean
 }
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
@@ -64,7 +69,12 @@ export function describeTransformation(step: TransformStep | null | undefined): 
         case 'SOURCE': return `Origem: ${step.field ?? step.sourceField}`
         case 'DB_FIELD': return `BD: ${step.table}.${step.field}`
         case 'CONFIG_FIELD': return `Configuração: ${step.configField}`
-        case 'LOOKUP': return `Buscar ${step.searchTable} por ${step.searchBy} → ${step.returnField}`
+        case 'LOOKUP': {
+            const cond = step.searchCondition && step.searchCondition !== 'NONE' ? ` [${step.searchCondition}]` : ''
+            const fb = step.fallbackType === 'SOURCE' ? ` (FB: ${step.fallbackSourceField})` : ''
+            const effect = step.returnEmptyIfFound ? '→ (Vazio)' : ` → ${step.returnField}`
+            return `Buscar ${step.searchTable}${cond} por ${step.searchBy}${effect}${fb}`
+        }
         case 'FALLBACK': return `Fallback (${step.parts?.length ?? 0} etapas)`
         case 'CONCAT': return `Concat (${step.parts?.length ?? 0} partes)`
         case 'FORMAT_DATE': return `Data: ${step.inputFormat} → ${step.outputFormat}`

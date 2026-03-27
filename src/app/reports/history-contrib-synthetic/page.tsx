@@ -53,7 +53,7 @@ export default function ReportsPage() {
     const [selectedTypes, setSelectedTypes] = useState<string[]>([])
     const [selectedLaunchTypes, setSelectedLaunchTypes] = useState<string[]>([])
     const [previewData, setPreviewData] = useState<PreviewData | null>(null)
-    const [importFilter, setImportFilter] = useState<'ALL' | 'IMPORTED' | 'MANUAL'>('MANUAL')
+    const [importFilter, setImportFilter] = useState<'ALL' | 'IMPORTED' | 'INTEGRATED' | 'MANUAL'>('MANUAL')
     const [contributors, setContributors] = useState<Contributor[]>([])
     const [contributorFilter, setContributorFilter] = useState('')
     const [allFilteredSelected, setAllFilteredSelected] = useState(false)
@@ -80,7 +80,7 @@ export default function ReportsPage() {
         }
     }
 
-    
+
     const removeAccents = (str: string): string => {
         return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     }
@@ -100,6 +100,7 @@ export default function ReportsPage() {
         return [
             (session?.user as any)?.canLaunchTithe ? { value: 'DIZIMO', label: 'Dízimo' } : null,
             (session?.user as any)?.canLaunchCarneReviver ? { value: 'CARNE_REVIVER', label: 'Carnê Reviver' } : null,
+            (session?.user as any)?.canLaunchCarneAfrica ? { value: 'CARNE_AFRICA', label: 'Carnê África' } : null,
         ].filter(Boolean) as { value: string, label: string }[]
     }, [session])
 
@@ -389,6 +390,7 @@ export default function ReportsPage() {
                                         <SelectContent>
                                             <SelectItem value="ALL">Todos os Lançamentos</SelectItem>
                                             <SelectItem value="IMPORTED">Apenas Importados</SelectItem>
+                                            <SelectItem value="INTEGRATED">Apenas Integrados</SelectItem>
                                             <SelectItem value="MANUAL">Apenas Digitados</SelectItem>
                                         </SelectContent>
                                     </Select>

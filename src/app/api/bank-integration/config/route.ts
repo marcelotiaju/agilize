@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import prisma from "@/lib/prisma"
+import { getDb } from "@/lib/getDb"
 import { getServerSession } from "next-auth"
 import { authOptions } from "../../auth/[...nextauth]/route"
 
@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
     if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
 
     try {
+        const prisma = await getDb(request)
         const configs = await prisma.bankIntegrationConfig.findMany({
             include: {
                 financialEntity: { select: { name: true } },
@@ -31,6 +32,7 @@ export async function POST(request: NextRequest) {
     }
 
     try {
+        const prisma = await getDb(request)
         const body = await request.json()
         const {
             code,
@@ -40,6 +42,7 @@ export async function POST(request: NextRequest) {
             accountPlan,
             launchType,
             launchTypeSource,
+            congregationSource,
             sourceColumns,
             destinationColumns
         } = body
@@ -60,6 +63,7 @@ export async function POST(request: NextRequest) {
                 accountPlan,
                 launchType,
                 launchTypeSource: launchTypeSource || "FIXED",
+                congregationSource: congregationSource || "FIXED",
                 sourceColumns: {
                     create: sourceColumns?.map((col: any) => ({
                         code: col.code,

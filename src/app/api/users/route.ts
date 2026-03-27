@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import prisma from "@/lib/prisma"
+import { getDb } from "@/lib/getDb"
 import bcrypt from "bcrypt"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
@@ -7,8 +7,9 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    console.log('API /api/users - session:', !!session, session?.user?.email ?? session?.user?.login ?? null)
     if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+
+    const prisma = await getDb(request)
 
     const users = await prisma.user.findMany({
       include: {
@@ -24,8 +25,6 @@ export async function GET(request: NextRequest) {
     })
 
     const transformedUsers = users.map(user => {
-      // resolvemos permissões: sempre priorizar as do profile (quando existir),
-      // caso não exista profile, retornar permissões padrão (false)
       const profile = user.profile
       const resolvedPermissions = {
         canExport: !!profile?.canExport,
@@ -74,7 +73,6 @@ export async function GET(request: NextRequest) {
         congregations: user.congregations.map(uc => uc.congregation),
         profile: user.profile ? { id: user.profile.id, name: user.profile.name } : null,
         isActive: user.isActive,
-        // permissões resolvidas a partir do profile
         ...resolvedPermissions
       }
     })
@@ -88,22 +86,31 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+
+    const prisma = await getDb(request)
     const payload = await request.json()
     const {
       login, name, email, phone, password, validFrom, validTo, historyDays, maxRetroactiveDays,
       maxRetroactiveDaysEdit, profileId, defaultPage, image, isActive
     } = payload
 
-    if (!email || !password) {
-      return NextResponse.json({ error: "Email, e senha são obrigatórios" }, { status: 400 })
+    if (!password) {
+      return NextResponse.json({ error: "A senha é obrigatória" }, { status: 400 })
     }
 
-    // Unicidades
+    if (!login) {
+      return NextResponse.json({ error: "Login é obrigatório" }, { status: 400 })
+    }
+
     const existingLogin = login ? await prisma.user.findUnique({ where: { login } }) : null
     if (existingLogin) return NextResponse.json({ error: "Login já cadastrado" }, { status: 400 })
 
-    const existingEmail = await prisma.user.findUnique({ where: { email } })
-    if (existingEmail) return NextResponse.json({ error: "Email já cadastrado" }, { status: 400 })
+    if (email) {
+      const existingEmail = await prisma.user.findUnique({ where: { email } })
+      if (existingEmail) return NextResponse.json({ error: "Email já cadastrado" }, { status: 400 })
+    }
 
     const hashedPassword = await bcrypt.hash(password, 12)
 
@@ -135,6 +142,10 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+
+    const prisma = await getDb(request)
     const payload = await request.json()
     const {
       id, login, name, email, phone, password, validFrom, validTo, historyDays, maxRetroactiveDays,
@@ -185,6 +196,10 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+
+    const prisma = await getDb(request)
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
     if (!id) return NextResponse.json({ error: "ID do usuário é obrigatório" }, { status: 400 })

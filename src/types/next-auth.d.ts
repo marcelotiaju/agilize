@@ -27,6 +27,8 @@ declare module "next-auth" {
             canLaunchCircle?: boolean
             canLaunchServiceOffer?: boolean
             canLaunchCarneReviver?: boolean
+            canLaunchCarneAfrica?: boolean
+            canLaunchRendaBruta?: boolean
             canApproveVote?: boolean
             canApproveEbd?: boolean
             canApproveCampaign?: boolean
@@ -52,12 +54,16 @@ declare module "next-auth" {
             canReportHistoryContribAnalytic?: boolean
             canReportSummary?: boolean
             canReportAudit?: boolean
+            canReportAccountability?: boolean
             canDeleteLaunch?: boolean
             canImportLaunch?: boolean
             canDeleteSummary?: boolean
             defaultLaunchType?: string
             canTechnicalIntervention?: boolean
             canManageBankIntegration?: boolean
+            // Multi-database information
+            dbAlias?: string
+            dbLogoUrl?: string
             image?: string
             // Force logout timestamp
             forceLogoutAt?: number | null
@@ -77,12 +83,16 @@ declare module "next-auth" {
         defaultPage?: string
         profile?: { id: string; name: string } | null
         // ... all other permission fields ...
+        dbAlias?: string
+        dbLogoUrl?: string
         forceLogoutAt?: Date | null
     }
 }
 
 declare module "next-auth/jwt" {
     interface JWT {
+        dbAlias?: string
+        dbLogoUrl?: string
         forceLogoutAt?: number | null
     }
 }

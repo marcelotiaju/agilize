@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, User, Upload } from 'lucide-react'
+import { Plus, Edit, Trash2, User, Upload, Download, AlertCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { PermissionGuard } from '@/components/auth/PermissionGuard'
@@ -34,6 +34,7 @@ interface Contributor {
     name: string
   },
   photoUrl: string
+  isActive: boolean
 }
 
 interface Congregation {
@@ -62,6 +63,7 @@ export default function Contributors() {
   })
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const [importing, setImporting] = useState(false)
+  const [importErrors, setImportErrors] = useState<string[]>([])
   const [photoPreview, setPhotoPreview] = useState('')
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -120,8 +122,9 @@ export default function Contributors() {
     }
   }
 
-  const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const target = e.target as HTMLInputElement
+    const { name, value, type, checked } = target
     const finalValue = type === 'checkbox' ? checked : value
     setFormData(prev => ({ ...prev, [name]: finalValue }))
   }
@@ -130,8 +133,8 @@ export default function Contributors() {
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
-  const handlePhotoChange = async (e) => {
-    const file = e.target.files[0]
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
     if (!file) return
 
     // Validar tamanho do arquivo (2MB = 2,097,152 bytes)
@@ -144,8 +147,8 @@ export default function Contributors() {
 
     // Mostrar preview
     const reader = new FileReader()
-    reader.onload = (e) => {
-      setPhotoPreview(e.target.result)
+    reader.onload = (event) => {
+      setPhotoPreview(event.target?.result as string)
     }
     reader.readAsDataURL(file)
 
@@ -249,12 +252,13 @@ export default function Contributors() {
       cpf: '',
       ecclesiasticalPosition: '',
       tipo: 'MEMBRO',
-      photoUrl: ''
+      photoUrl: '',
+      isActive: true
     })
     setPhotoPreview('')
   }
 
-  const handleFileChange = (e) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file /*&& file.type === 'text/csv'*/) {
       setCsvFile(file)
@@ -300,13 +304,17 @@ export default function Contributors() {
         fetchContributors()
         setIsImportDialogOpen(false)
         setCsvFile(null)
+        setImportErrors([])
       } else {
-        const error = await response.json()
-        let errorMessage = error.error || 'Erro ao importar arquivo CSV'
-        if (error.imported > 0) {
-          errorMessage += `\n${error.imported} contribuinte(s) processado(s)`
-          if (error.updated) errorMessage += ` (${error.updated} atualizado(s))`
-          if (error.created) errorMessage += ` (${error.created} criado(s))`
+        const result = await response.json()
+        if (result.details?.errors) {
+          setImportErrors(result.details.errors)
+        }
+        let errorMessage = result.error || 'Erro ao importar arquivo CSV'
+        if (result.imported > 0) {
+          errorMessage += `\n${result.imported} contribuinte(s) processado(s)`
+          if (result.updated) errorMessage += ` (${result.updated} atualizado(s))`
+          if (result.created) errorMessage += ` (${result.created} criado(s))`
         }
         alert(errorMessage)
       }
@@ -321,6 +329,38 @@ export default function Contributors() {
   const resetImportForm = () => {
     setCsvFile(null)
     setImporting(false)
+    setImportErrors([])
+  }
+
+  const handleExportCSV = () => {
+    // Cabeçalho conforme layout de importação
+    const header = "Codigo,Nome,CPF,CargoEclesiastico,CodCongregação,Tipo,Foto,Ativo";
+    
+    const rows = filteredContributors.map(c => {
+      const code = c.code || '';
+      const name = c.name || '';
+      const cpf = c.cpf || '';
+      const pos = c.ecclesiasticalPosition || '';
+      const congregationCode = congregations.find(cong => cong.id === c.congregationId)?.code || '';
+      const tipo = c.tipo || 'MEMBRO';
+      const foto = c.photoUrl || '';
+      const ativo = c.isActive ? 'S' : 'N';
+      
+      return `${code},${name},${cpf},${pos},${congregationCode},${tipo},${foto},${ativo}`;
+    });
+
+    const csvContent = [header, ...rows].join('\n');
+    
+    // Adicionar BOM para Excel reconhecer UTF-8
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `contribuintes_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 
   return (
@@ -336,17 +376,18 @@ export default function Contributors() {
 
         <div className="lg:pl-64">
           <div className="p-6">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Contribuintes</h1>
                 {/* <p className="text-gray-600">Gerencie os registros de contribuintes</p> */}
               </div>
 
-              <div className="flex space-x-2">
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                   <DialogTrigger asChild>
                     <Button onClick={resetForm}
-                      disabled={!canCreate}>
+                      disabled={!canCreate}
+                      className="w-full sm:w-auto">
                       <Plus className="mr-2 h-4 w-4" />
                       Novo Contribuinte
                     </Button>
@@ -472,15 +513,15 @@ export default function Contributors() {
                         <div className="space-y-2">
                           <Label htmlFor="photo">Foto</Label>
                           <div className="flex items-center space-x-4">
-                            <div className="flex-shrink-0">
+                            <div className="shrink-0">
                               {photoPreview ? (
                                 <img
                                   src={photoPreview}
                                   alt="Preview"
-                                  className="h-16 w-16 rounded-full object-cover border"
+                                  className="h-16 w-16 rounded-full object-cover border shrink-0"
                                 />
                               ) : (
-                                <div className="h-16 w-16 rounded-full bg-gray-200 flex items-center justify-center">
+                                <div className="h-16 w-16 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
                                   <User className="h-8 w-8 text-gray-400" />
                                 </div>
                               )}
@@ -514,9 +555,14 @@ export default function Contributors() {
                   </DialogContent>
                 </Dialog>
 
+                <Button variant="outline" onClick={handleExportCSV} className="w-full sm:w-auto">
+                  <Download className="mr-2 h-4 w-4" />
+                  Exportar CSV
+                </Button>
+
                 <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="outline" onClick={resetImportForm}>
+                    <Button variant="outline" onClick={resetImportForm} className="w-full sm:w-auto">
                       <Upload className="mr-2 h-4 w-4" />
                       Importar CSV
                     </Button>
@@ -558,6 +604,20 @@ export default function Contributors() {
                           </a>
                         </div>
                       </div>
+
+                      {importErrors.length > 0 && (
+                        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md max-h-60 overflow-y-auto">
+                          <h3 className="text-sm font-semibold text-red-800 mb-2 flex items-center">
+                            <AlertCircle className="h-4 w-4 mr-1" />
+                            Erros encontrados ({importErrors.length}):
+                          </h3>
+                          <ul className="list-disc list-inside text-xs text-red-700 space-y-1">
+                            {importErrors.map((err, idx) => (
+                              <li key={idx}>{err}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
                     <DialogFooter>
                       <Button

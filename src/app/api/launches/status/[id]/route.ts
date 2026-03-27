@@ -19,7 +19,7 @@ export async function PUT(request: NextRequest, props: any) {
     // Verifique se o lançamento existe
     const existingLaunch = await prisma.launch.findUnique({
       where: { id },
-      select: { type: true, status: true, summaryId: true }
+      select: { type: true, status: true, summaryId: true, isIntegrated: true, integrationBatchId: true }
     });
 
     if (!existingLaunch) {
@@ -108,10 +108,39 @@ export async function PUT(request: NextRequest, props: any) {
       updateData.cancelledBy = cancelledBy
       updateData.cancelledAt = new Date(cancelledAt)
     }
-    const updatedLaunch = await prisma.launch.update({
-      where: { id },
-      data: updateData
-    })
+    let updatedLaunch;
+    
+    if (status === "NORMAL" && existingLaunch.isIntegrated) {
+      // Deep undo of integration
+      updatedLaunch = await prisma.$transaction(async (tx) => {
+        // Release the row
+        await tx.bankIntegrationRow.updateMany({
+          where: { launchId: id },
+          data: { isIntegrated: false, launchId: null }
+        });
+
+        if (existingLaunch.integrationBatchId) {
+          await tx.bankIntegrationBatch.update({
+            where: { id: existingLaunch.integrationBatchId },
+            data: { status: 'PENDING' }
+          });
+        }
+
+        // Clear integration flags on the launch itself
+        updateData.isIntegrated = false;
+        updateData.integrationBatchId = null;
+
+        return await tx.launch.update({
+          where: { id },
+          data: updateData
+        });
+      });
+    } else {
+      updatedLaunch = await prisma.launch.update({
+        where: { id },
+        data: updateData
+      });
+    }
 
     return NextResponse.json(updatedLaunch)
   } catch (error) {

@@ -63,7 +63,7 @@ export default function ReportsPage() {
     const [selectedTypes, setSelectedTypes] = useState<string[]>([])
     const [selectedLaunchTypes, setSelectedLaunchTypes] = useState<string[]>([])
     const [previewData, setPreviewData] = useState<PreviewData | null>(null)
-    const [importFilter, setImportFilter] = useState<'ALL' | 'IMPORTED' | 'MANUAL'>('MANUAL')
+    const [importFilter, setImportFilter] = useState<'ALL' | 'IMPORTED' | 'INTEGRATED' | 'MANUAL'>('MANUAL')
     const [contributors, setContributors] = useState<Contributor[]>([])
     const [contributorFilter, setContributorFilter] = useState('')
     const [allFilteredSelected, setAllFilteredSelected] = useState(false)
@@ -90,7 +90,7 @@ export default function ReportsPage() {
         }
     }
 
-    
+
     const removeAccents = (str: string): string => {
         return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     }
@@ -110,6 +110,7 @@ export default function ReportsPage() {
         return [
             (session?.user as any)?.canLaunchTithe ? { value: 'DIZIMO', label: 'Dízimo' } : null,
             (session?.user as any)?.canLaunchCarneReviver ? { value: 'CARNE_REVIVER', label: 'Carnê Reviver' } : null,
+            (session?.user as any)?.canLaunchCarneAfrica ? { value: 'CARNE_AFRICA', label: 'Carnê África' } : null,
         ].filter(Boolean) as { value: string, label: string }[]
     }, [session])
 
@@ -277,7 +278,11 @@ export default function ReportsPage() {
                         'Congregação': cong.name,
                         'Contribuinte': cont.name,
                         'Data': format(new Date(launch.date), 'dd/MM/yyyy'),
-                        'Tipo': launch.type === 'DIZIMO' ? 'Dízimo' : launch.type === 'CARNE_REVIVER' ? 'Carnê Reviver' : launch.type,
+                        'Tipo': launch.type === 'DIZIMO' ? 'Dízimo' :
+                            launch.type === 'CARNE_REVIVER' ? 'Carnê Reviver' :
+                                launch.type === 'CARNE_AFRICA' ? 'Carnê África' :
+                                    launch.type === 'RENDA_BRUTA' ? 'Renda Bruta' :
+                                        launch.type === 'OFERTA_CULTO' ? 'Oferta do Culto' : launch.type,
                         'Valor': formatCurrency(launch.value)
                     })
                 })
@@ -290,7 +295,7 @@ export default function ReportsPage() {
                     'Tipo': 'TOTAL',
                     'Valor': formatCurrency(cont.total)
                 })
-                
+
                 // Add empty row for separation
                 worksheetData.push({
                     'Congregação': '',
@@ -404,6 +409,7 @@ export default function ReportsPage() {
                                         <SelectContent>
                                             <SelectItem value="ALL">Todos os Lançamentos</SelectItem>
                                             <SelectItem value="IMPORTED">Apenas Importados</SelectItem>
+                                            <SelectItem value="INTEGRATED">Apenas Integrados</SelectItem>
                                             <SelectItem value="MANUAL">Apenas Digitados</SelectItem>
                                         </SelectContent>
                                     </Select>
@@ -556,7 +562,11 @@ export default function ReportsPage() {
                                                                     <TableRow key={launchIdx}>
                                                                         <TableCell>{format(new Date(launch.date), 'dd/MM/yyyy')}</TableCell>
                                                                         <TableCell>{launch.congregationName}</TableCell>
-                                                                        <TableCell>{launch.type === 'DIZIMO' ? 'Dízimo' : launch.type === 'CARNE_REVIVER' ? 'Carnê Reviver' : launch.type}</TableCell>
+                                                                        <TableCell>{launch.type === 'DIZIMO' ? 'Dízimo' :
+                                                                            launch.type === 'CARNE_REVIVER' ? 'Carnê Reviver' :
+                                                                                launch.type === 'CARNE_AFRICA' ? 'Carnê África' :
+                                                                                    launch.type === 'RENDA_BRUTA' ? 'Renda Bruta' :
+                                                                                        launch.type === 'OFERTA_CULTO' ? 'Oferta do Culto' : launch.type}</TableCell>
                                                                         <TableCell className="text-right">{formatCurrency(launch.value)}</TableCell>
                                                                     </TableRow>
                                                                 ))
@@ -587,7 +597,7 @@ export default function ReportsPage() {
                     ) : null}
 
                     <div className="flex gap-2">
-                        <Button onClick={handleExportExcel}  className="flex-1 bg-green-600 hover:bg-green-700" disabled={!previewData}>Gerar Excel</Button>
+                        <Button onClick={handleExportExcel} className="flex-1 bg-green-600 hover:bg-green-700" disabled={!previewData}>Gerar Excel</Button>
                         <Button
                             onClick={handleGenerateReport}
                             disabled={loading || selectedCongregations.length === 0 || selectedLaunchTypes.length === 0 || formData.contributorIds.length === 0}

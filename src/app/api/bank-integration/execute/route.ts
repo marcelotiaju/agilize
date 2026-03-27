@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import prisma from "@/lib/prisma"
+import { getDb } from "@/lib/getDb"
 import { getServerSession } from "next-auth"
 import { authOptions } from "../../auth/[...nextauth]/route"
 
@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
     }
 
     try {
+        const prisma = await getDb(request)
         const batches = await prisma.bankIntegrationBatch.findMany({
             include: {
                 config: { select: { name: true } },

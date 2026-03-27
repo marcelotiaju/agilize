@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       try {
         // Verifica se já existe um usuario com este código
         const usuario = await prisma.user.findUnique({
-          where: { cpf: usulogin.toString() },
+          where: { login: usulogin.toString() },
           select: {
             id: true
           }
@@ -73,6 +73,16 @@ export async function POST(request: NextRequest) {
             id: true
           }
         })
+
+        if (!usuario) {
+          errors.push(`Linha ${i + 2}: Usuário ${usulogin} não encontrado`)
+          continue
+        }
+
+        if (!congregacao) {
+          errors.push(`Linha ${i + 2}: Congregação ${codCongregacao} não encontrada`)
+          continue
+        }
         // const usuario_congregacao = await prisma.userCongregation.findUnique({
         //     where: { 
         //         userId: usuario?.id, 
@@ -93,13 +103,13 @@ export async function POST(request: NextRequest) {
         // Associa novo usuario
         await prisma.userCongregation.create({
           data: {
-            userId: usuario?.id,
-            congregationId: congregacao?.id
+            userId: usuario.id,
+            congregationId: congregacao.id
           }
         })
 
         imported++
-      } catch (error) {
+      } catch (error: any) {
         errors.push(`Linha ${i + 2}: Erro ao criar usuário - ${error.message}`)
       }
     }

@@ -1,21 +1,21 @@
 import { NextRequest, NextResponse } from "next/server"
-import prisma from "@/lib/prisma"
-import { authOptions } from "../auth/[...nextauth]/route";
-import { getServerSession } from "next-auth";
-
+import { getDb } from "@/lib/getDb"
+import { authOptions } from "../auth/[...nextauth]/route"
+import { getServerSession } from "next-auth"
 
 export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptions)
 
   if (!session) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
 
+  const prisma = await getDb(request)
+
   try {
     const { searchParams } = new URL(request.url)
     const activeOnly = searchParams.get('activeOnly') === 'true'
 
-    // Buscar apenas congregações vinculadas ao usuário
     const userCongregations = await prisma.userCongregation.findMany({
       where: {
         userId: session.user.id
@@ -48,10 +48,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(congregations)
   } catch (error) {
+    console.error('API: Erro ao buscar congregações:', error)
     return NextResponse.json({ error: "Erro ao buscar congregações" }, { status: 500 })
   }
 }
-
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -60,13 +60,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
 
+  const prisma = await getDb(request)
+
   try {
     const body = await request.json()
     const {
       code,
       name,
       regionalName,
-      // Accept both old (entradaOffer*) and new (serviceOffer*) names from client
       entradaOfferAccountPlan,
       entradaOfferFinancialEntity,
       entradaOfferPaymentMethod,
@@ -101,18 +102,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Código e nome são obrigatórios" }, { status: 400 })
     }
 
-    // Map serviceOffer* from client into the existing entradaOffer* DB columns for backward compatibility.
-    // If your DB has been migrated to serviceOffer* columns, replace the keys below accordingly.
-    // const entradaOfferAccountPlanToSave =  entradaOfferAccountPlan ?? null
-    // const entradaOfferFinancialEntityToSave = entradaOfferFinancialEntity ?? null
-    // const entradaOfferPaymentMethodToSave = entradaOfferPaymentMethod ?? null
-
     const congregation = await prisma.congregation.create({
       data: {
         code,
         name,
         regionalName,
-        // store into existing entradaOffer* fields (compat)
         entradaOfferAccountPlan,
         entradaOfferFinancialEntity,
         entradaOfferPaymentMethod,
@@ -144,15 +138,6 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Associar o usuário atual à nova congregação
-    // await prisma.userCongregation.create({
-    //   data: {
-    //     userId: session.user.id,
-    //     congregationId: congregation.id
-    //   }
-    // })
-    console.log(congregation)
-
     return NextResponse.json(congregation, { status: 201 })
   } catch (error) {
     console.error('API: Erro ao criar congregação:', error)
@@ -167,6 +152,8 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
 
+  const prisma = await getDb(request)
+
   try {
     const body = await request.json()
     const {
@@ -175,7 +162,6 @@ export async function PUT(request: NextRequest) {
       name,
       regionalName,
       isActive,
-      // Accept both old (entradaOffer*) and new (serviceOffer*) names from client
       entradaOfferAccountPlan,
       entradaOfferFinancialEntity,
       entradaOfferPaymentMethod,
@@ -205,11 +191,6 @@ export async function PUT(request: NextRequest) {
       circleFinancialEntity,
       circlePaymentMethod
     } = body
-
-    // Map serviceOffer* from client into the existing entradaOffer* DB columns for backward compatibility.
-    // const entradaOfferAccountPlanToSave = serviceOfferAccountPlan ?? entradaOfferAccountPlan ?? null
-    // const entradaOfferFinancialEntityToSave = serviceOfferFinancialEntity ?? entradaOfferFinancialEntity ?? null
-    // const entradaOfferPaymentMethodToSave = serviceOfferPaymentMethod ?? entradaOfferPaymentMethod ?? null
 
     const congregation = await prisma.congregation.update({
       where: { id },
@@ -257,6 +238,14 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+
+  if (!session) {
+    return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+  }
+
+  const prisma = await getDb(request)
+
   try {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
@@ -265,9 +254,6 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "ID da congregação é obrigatório" }, { status: 400 })
     }
 
-    console.log('API: Excluindo congregação:', id)
-
-    // Verifica se a congregação tem relacionamentos antes de excluir
     const congregation = await prisma.congregation.findUnique({
       where: { id },
       include: {
@@ -291,7 +277,6 @@ export async function DELETE(request: NextRequest) {
       where: { id }
     })
 
-    console.log('API: Congregação excluída com sucesso')
     return NextResponse.json({ message: "Congregação excluída com sucesso" })
   } catch (error) {
     console.error('API: Erro ao excluir congregação:', error)

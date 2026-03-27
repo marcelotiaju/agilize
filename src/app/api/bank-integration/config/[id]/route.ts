@@ -48,6 +48,7 @@ export async function PUT(
             accountPlan,
             launchType,
             launchTypeSource,
+            congregationSource,
             sourceColumns,
             destinationColumns
         } = body
@@ -67,6 +68,7 @@ export async function PUT(
                     accountPlan,
                     launchType,
                     launchTypeSource: launchTypeSource || "FIXED",
+                    congregationSource: congregationSource || "FIXED",
                     sourceColumns: {
                         create: sourceColumns?.map((col: any) => ({
                             code: col.code,

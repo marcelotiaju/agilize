@@ -57,7 +57,10 @@ export async function GET(request: NextRequest) {
             },
             type: { in: launchTypes as any },
             status: {
-              ...importFilter === 'IMPORTED' ? { equals: 'IMPORTED' } : importFilter === 'MANUAL' ? { not: { in: ['IMPORTED', 'CANCELED'] } } : { not: 'CANCELED' }
+              ...importFilter === 'IMPORTED' ? { equals: 'IMPORTED' } : 
+                 importFilter === 'INTEGRATED' ? { equals: 'INTEGRATED' } :
+                 importFilter === 'MANUAL' ? { not: { in: ['IMPORTED', 'INTEGRATED', 'CANCELED'] } } : 
+                 { not: 'CANCELED' }
             }
           }
         }
@@ -142,7 +145,10 @@ export async function GET(request: NextRequest) {
                   date: { gte: startDate, lte: endDate },
                   type: { in: launchTypes as any },
                   status: {
-                    ...importFilter === 'IMPORTED' ? { equals: 'IMPORTED' } : importFilter === 'MANUAL' ? { not: { in: ['IMPORTED', 'CANCELED'] } } : { not: 'CANCELED' }
+                    ...importFilter === 'IMPORTED' ? { equals: 'IMPORTED' } : 
+                       importFilter === 'INTEGRATED' ? { equals: 'INTEGRATED' } :
+                       importFilter === 'MANUAL' ? { not: { in: ['IMPORTED', 'INTEGRATED', 'CANCELED'] } } : 
+                       { not: 'CANCELED' }
                   }
                 }
               }
@@ -176,6 +182,7 @@ export async function GET(request: NextRequest) {
           return {
             name: contrib.name,
             position: contrib.ecclesiasticalPosition || '-',
+            photoUrl: contrib.photoUrl || null,
             months,
             total
           }
@@ -257,7 +264,7 @@ export async function GET(request: NextRequest) {
     y += 4
     doc.setFontSize(10).text(`TIPOS DE LANÇAMENTO: ${launchTypes.join(', ')}`, margin, y)
     y += 4
-    doc.text(`Origem dos Lançamentos: ${importFilter === 'ALL' ? 'Todos' : importFilter === 'IMPORTED' ? 'Importados' : 'Apenas Digitados'}`, margin, y)
+    doc.text(`Origem dos Lançamentos: ${importFilter === 'ALL' ? 'Todos' : importFilter === 'IMPORTED' ? 'Importados' : importFilter === 'INTEGRATED' ? 'Integrados' : 'Apenas Digitados'}`, margin, y)
 
     // Direita: Usuário e Data (posicionando no yPos original do bloco)
     const rightAlignX = pageWidth - margin
@@ -332,16 +339,29 @@ export async function GET(request: NextRequest) {
       let totalGeralCong = 0
 
 
-      congContributors.forEach((row: any) => {
+      for (const row of congContributors) {
         if (y > 185) { doc.addPage(); y = 20; drawTableHeader(cong.name) }
 
         doc.setTextColor(0).setFont('helvetica', 'normal').setFontSize(7)
 
-        // Zebra/Linha
-        doc.setDrawColor(230).line(margin, y + 6, margin + 277, y + 6)
+        // Linha separadora
+        doc.setDrawColor(230).line(margin, y + 8, margin + 277, y + 8)
 
-        doc.text(row.name.substring(0, 40), cols.nome + 2, y + 4)
-        doc.text(row.ecclesiasticalPosition, cols.cargo + 2, y + 4)
+        // Foto do contribuinte
+        const photoSize = 7
+        if (row.photoUrl) {
+          try {
+            const photoPath = path.join(process.cwd(), 'public', 'uploads', row.photoUrl)
+            if (fs.existsSync(photoPath)) {
+              const photoData = fs.readFileSync(photoPath).toString('base64')
+              const ext = row.photoUrl.toLowerCase().endsWith('.png') ? 'PNG' : 'JPEG'
+              doc.addImage(photoData, ext, cols.nome, y + 0.5, photoSize, photoSize)
+            }
+          } catch { /* ignore photo errors */ }
+        }
+
+        doc.text(row.name.substring(0, 38), cols.nome + photoSize + 1, y + 5)
+        doc.text(row.ecclesiasticalPosition || '-', cols.cargo + 2, y + 5)
 
         let totalAnualRow = 0
         const monthsData = new Array(12).fill(0)
@@ -357,22 +377,22 @@ export async function GET(request: NextRequest) {
 
           // Regra Amarela: Mês passado, mesmo ano, valor zero
           if (year === currentYear && i < currentMonth && val === 0) {
-            doc.setFillColor(255, 255, 180).rect(xCell, y, cols.widthMes, 6, 'F')
+            doc.setFillColor(255, 255, 180).rect(xCell, y, cols.widthMes, 8, 'F')
           }
 
           const txt = formatCurrency(val, showValues)
 
           const displayVal = val > 0 ? (txt) : '-'
-          doc.text(displayVal, xCell + (cols.widthMes / 2), y + 4, { align: 'right' })
+          doc.text(displayVal, xCell + (cols.widthMes / 2), y + 5, { align: 'right' })
           totaisMensais[i] += val
           totalAnualRow += val
         })
 
         doc.setFont('helvetica', 'bold')
-        doc.text(totalAnualRow > 0 ? formatCurrency(totalAnualRow, showValues) : '-', cols.total + (cols.widthMes / 2), y + 4, { align: 'right' })
+        doc.text(totalAnualRow > 0 ? formatCurrency(totalAnualRow, showValues) : '-', cols.total + (cols.widthMes / 2), y + 5, { align: 'right' })
         totalGeralCong += totalAnualRow
-        y += 6
-      })
+        y += 8
+      }
 
       // 6. Rodapé da Tabela (Totais por Mês)
       // doc.setFillColor(240, 240, 240).rect(margin, y, 277, 8, 'F')

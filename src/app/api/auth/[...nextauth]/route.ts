@@ -1,7 +1,7 @@
 // app/lib/authOptions.ts
 import NextAuth, { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import prisma from "@/lib/prisma"
+import { getPrismaClient } from "@/lib/prisma"
 import bcrypt from "bcrypt"
 import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz'
 
@@ -12,12 +12,16 @@ export const authOptions: NextAuthOptions = {
       name: "credentials",
       credentials: {
         login: { label: "Login", type: "text" },
-        password: { label: "Senha", type: "password" }
+        password: { label: "Senha", type: "password" },
+        alias: { label: "Alias", type: "text" }
       },
       async authorize(credentials) {
         if (!credentials?.login || !credentials?.password) {
           return null
         }
+
+        const alias = (credentials.alias || "AGILIZE").toUpperCase()
+        const prisma = getPrismaClient(alias)
 
         const user = await prisma.user.findUnique({
           where: {
@@ -40,6 +44,8 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
+        const dbLogoUrl = process.env[`DB_ALIAS_${alias}_LOGO`] || "/images/LogoDashboard.png"
+
         // Resolver permissões a partir do profile (quando existir)
         const p = user.profile
         const resolved = {
@@ -54,6 +60,8 @@ export const authOptions: NextAuthOptions = {
           canLaunchCircle: !!p?.canLaunchCircle,
           canLaunchServiceOffer: !!p?.canLaunchServiceOffer,
           canLaunchCarneReviver: !!p?.canLaunchCarneReviver,
+          canLaunchCarneAfrica: !!p?.canLaunchCarneAfrica,
+          canLaunchRendaBruta: !!p?.canLaunchRendaBruta,
           canApproveVote: !!p?.canApproveVote,
           canApproveEbd: !!p?.canApproveEbd,
           canApproveCampaign: !!p?.canApproveCampaign,
@@ -63,6 +71,8 @@ export const authOptions: NextAuthOptions = {
           canApproveCircle: !!p?.canApproveCircle,
           canApproveServiceOffer: !!p?.canApproveServiceOffer,
           canApproveCarneReviver: !!p?.canApproveCarneReviver,
+          canApproveCarneAfrica: !!p?.canApproveCarneAfrica,
+          canApproveRendaBruta: !!p?.canApproveRendaBruta,
           canCreate: !!p?.canCreate,
           canEdit: !!p?.canEdit,
           canExclude: !!p?.canExclude,
@@ -79,6 +89,7 @@ export const authOptions: NextAuthOptions = {
           canReportHistoryContribAnalytic: !!p?.canReportHistoryContribAnalytic,
           canReportSummary: !!p?.canReportSummary,
           canReportAudit: !!p?.canReportAudit,
+          canReportAccountability: !!p?.canReportAccountability,
           canDeleteLaunch: !!p?.canDeleteLaunch,
           canImportLaunch: !!p?.canImportLaunch,
           canDeleteSummary: !!p?.canDeleteSummary,
@@ -102,7 +113,9 @@ export const authOptions: NextAuthOptions = {
           profile: user.profile ? { id: user.profile.id, name: user.profile.name } : null,
           ...resolved,
           image: user.image ?? undefined,
-          forceLogoutAt: user.forceLogoutAt
+          forceLogoutAt: user.forceLogoutAt,
+          dbAlias: alias,
+          dbLogoUrl: dbLogoUrl
         } as any
       }
     })
@@ -148,6 +161,8 @@ export const authOptions: NextAuthOptions = {
           canLaunchCircle: (user as any).canLaunchCircle,
           canLaunchServiceOffer: (user as any).canLaunchServiceOffer,
           canLaunchCarneReviver: (user as any).canLaunchCarneReviver,
+          canLaunchCarneAfrica: (user as any).canLaunchCarneAfrica,
+          canLaunchRendaBruta: (user as any).canLaunchRendaBruta,
           canApproveVote: (user as any).canApproveVote,
           canApproveEbd: (user as any).canApproveEbd,
           canApproveCampaign: (user as any).canApproveCampaign,
@@ -157,6 +172,8 @@ export const authOptions: NextAuthOptions = {
           canApproveCircle: (user as any).canApproveCircle,
           canApproveServiceOffer: (user as any).canApproveServiceOffer,
           canApproveCarneReviver: (user as any).canApproveCarneReviver,
+          canApproveCarneAfrica: (user as any).canApproveCarneAfrica,
+          canApproveRendaBruta: (user as any).canApproveRendaBruta,
           canCreate: (user as any).canCreate,
           canEdit: (user as any).canEdit,
           canExclude: (user as any).canExclude,
@@ -173,6 +190,7 @@ export const authOptions: NextAuthOptions = {
           canReportHistoryContribAnalytic: (user as any).canReportHistoryContribAnalytic,
           canReportSummary: (user as any).canReportSummary,
           canReportAudit: (user as any).canReportAudit,
+          canReportAccountability: (user as any).canReportAccountability,
           canDeleteLaunch: (user as any).canDeleteLaunch,
           canImportLaunch: (user as any).canImportLaunch,
           canDeleteSummary: (user as any).canDeleteSummary,
@@ -180,12 +198,15 @@ export const authOptions: NextAuthOptions = {
           canTechnicalIntervention: (user as any).canTechnicalIntervention,
           canManageBankIntegration: (user as any).canManageBankIntegration,
           image: (user as any).image,
-          forceLogoutAt: (user as any).forceLogoutAt ? new Date((user as any).forceLogoutAt).getTime() : null
+          forceLogoutAt: (user as any).forceLogoutAt ? new Date((user as any).forceLogoutAt).getTime() : null,
+          dbAlias: (user as any).dbAlias,
+          dbLogoUrl: (user as any).dbLogoUrl
         }
       }
 
       // Check for forced logout on subsequent requests
-      if (token.sub) {
+      if (token.sub && token.dbAlias) {
+        const prisma = getPrismaClient(token.dbAlias as string)
         const currentUser = await prisma.user.findUnique({
           where: { id: token.sub },
           select: { forceLogoutAt: true }
@@ -233,6 +254,8 @@ export const authOptions: NextAuthOptions = {
         canLaunchCircle: typeof token.canLaunchCircle === "boolean" ? token.canLaunchCircle : undefined,
         canLaunchServiceOffer: typeof token.canLaunchServiceOffer === "boolean" ? token.canLaunchServiceOffer : undefined,
         canLaunchCarneReviver: typeof token.canLaunchCarneReviver === "boolean" ? token.canLaunchCarneReviver : undefined,
+        canLaunchCarneAfrica: typeof token.canLaunchCarneAfrica === "boolean" ? token.canLaunchCarneAfrica : undefined,
+        canLaunchRendaBruta: typeof token.canLaunchRendaBruta === "boolean" ? token.canLaunchRendaBruta : undefined,
         canApproveVote: typeof token.canApproveVote === "boolean" ? token.canApproveVote : undefined,
         canApproveEbd: typeof token.canApproveEbd === "boolean" ? token.canApproveEbd : undefined,
         canApproveCampaign: typeof token.canApproveCampaign === "boolean" ? token.canApproveCampaign : undefined,
@@ -242,6 +265,8 @@ export const authOptions: NextAuthOptions = {
         canApproveCircle: typeof token.canApproveCircle === "boolean" ? token.canApproveCircle : undefined,
         canApproveServiceOffer: typeof token.canApproveServiceOffer === "boolean" ? token.canApproveServiceOffer : undefined,
         canApproveCarneReviver: typeof token.canApproveCarneReviver === "boolean" ? token.canApproveCarneReviver : undefined,
+        canApproveCarneAfrica: typeof token.canApproveCarneAfrica === "boolean" ? token.canApproveCarneAfrica : undefined,
+        canApproveRendaBruta: typeof token.canApproveRendaBruta === "boolean" ? token.canApproveRendaBruta : undefined,
         canCreate: typeof token.canCreate === "boolean" ? token.canCreate : undefined,
         canEdit: typeof token.canEdit === "boolean" ? token.canEdit : undefined,
         canExclude: typeof token.canExclude === "boolean" ? token.canExclude : undefined,
@@ -259,12 +284,15 @@ export const authOptions: NextAuthOptions = {
         canReportHistoryContribAnalytic: typeof token.canReportHistoryContribAnalytic === "boolean" ? token.canReportHistoryContribAnalytic : undefined,
         canReportSummary: typeof token.canReportSummary === "boolean" ? token.canReportSummary : undefined,
         canReportAudit: typeof token.canReportAudit === "boolean" ? token.canReportAudit : undefined,
+        canReportAccountability: typeof token.canReportAccountability === "boolean" ? token.canReportAccountability : undefined,
         canDeleteLaunch: typeof token.canDeleteLaunch === "boolean" ? token.canDeleteLaunch : undefined,
         canImportLaunch: typeof token.canImportLaunch === "boolean" ? token.canImportLaunch : undefined,
         canDeleteSummary: typeof token.canDeleteSummary === "boolean" ? token.canDeleteSummary : undefined,
         defaultLaunchType: typeof token.defaultLaunchType === "string" ? token.defaultLaunchType : 'DIZIMO',
         canTechnicalIntervention: typeof token.canTechnicalIntervention === "boolean" ? token.canTechnicalIntervention : undefined,
         canManageBankIntegration: typeof token.canManageBankIntegration === "boolean" ? token.canManageBankIntegration : undefined,
+        dbAlias: token.dbAlias as string | undefined,
+        dbLogoUrl: token.dbLogoUrl as string | undefined
       }
       // Definir expiração da sessão baseada no token exp
       if (typeof token.exp === 'number') {

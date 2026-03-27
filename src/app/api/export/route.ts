@@ -18,7 +18,24 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { startDate, endDate, type, congregationIds, status } = body
+    const { startDate, endDate, type, congregationIds, approvalStatus, exportedStatus } = body
+
+    let statusArray: any[] = [];
+    if (exportedStatus === 'EXPORTED') {
+      statusArray = ['EXPORTED'];
+    } else {
+      if (approvalStatus === 'APPROVED') {
+        statusArray = ['APPROVED'];
+      } else if (approvalStatus === 'NOT_APPROVED') {
+        statusArray = ['NORMAL'];
+      } else if (approvalStatus === 'BOTH') {
+        statusArray = ['APPROVED', 'NORMAL'];
+      }
+      
+      if (exportedStatus === 'BOTH') {
+        statusArray.push('EXPORTED');
+      }
+    }
 
     const userCongregations = await prisma.userCongregation.findMany({
       where: {
@@ -55,9 +72,9 @@ export async function POST(request: NextRequest) {
         },
         type: { in: type },
         OR: [
-          { status: { in: status } },
+          { status: { in: statusArray } },
           {
-            type: { in: ['CIRCULO', 'CARNE_REVIVER'] },
+            type: { in: ['CIRCULO', 'CARNE_REVIVER', 'CARNE_AFRICA', 'RENDA_BRUTA'] },
             status: 'NORMAL'
           }
         ]
@@ -70,24 +87,26 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    const getFormattedTitle = (launch) => {
-      if (launch.contributorId && !launch.contributor?.ecclesiasticalPosition.includes('MEMBRO', 'CONGREGADO')) {
-        const cargoMap = {
+    const getFormattedTitle = (launch: any) => {
+      const contributor = launch.contributor;
+      if (launch.contributorId && contributor && contributor.ecclesiasticalPosition && !contributor.ecclesiasticalPosition.includes('MEMBRO')) {
+        const cargoMap: Record<string, string> = {
           'AUXILIAR': 'Aux',
           'DIÁCONO': 'Dc',
           'PRESBÍTERO': 'Pb',
           'EVANGELISTA': 'Ev',
           'PASTOR': 'Pr',
         };
-        const cargoAbreviado = cargoMap[launch.contributor.ecclesiasticalPosition] || '';
-        return `DÍZIMOS E OFERTAS DE ${cargoAbreviado} - ${launch.contributor.name} - ${launch.contributor?.cpf}`;
+        const cargoAbreviado = cargoMap[contributor.ecclesiasticalPosition] || '';
+        return `DÍZIMOS E OFERTAS DE ${cargoAbreviado} - ${contributor.name} - ${contributor?.cpf || ''}`;
       } else {
         if (launch.contributorName) {
           return `DÍZIMOS E OFERTAS DE ${launch.contributorName}`;
-        } else {
+        } else if (contributor) {
           // Retorna a string original ou uma variação, caso contributorName não esteja preenchido
-          return `DÍZIMOS E OFERTAS DE ${launch.contributor?.tipo} - ${launch.contributor.name} - ${launch.contributor?.cpf}`
+          return `DÍZIMOS E OFERTAS DE ${contributor.tipo || ''} - ${contributor.name || ''} - ${contributor?.cpf || ''}`
         }
+        return "DÍZIMOS E OFERTAS";
       }
     }
 
@@ -106,47 +125,54 @@ export async function POST(request: NextRequest) {
       const exportDate = new Date(Date.UTC(dt.getFullYear(), dt.getMonth(), dt.getDate(), 12, 0, 0))
       //const exportDate = format(dt, 'yyyy-MM-dd')
 
+      const congregation = launch.congregation as any;
+      const classification = launch.classification as any;
+
       return ({
         "CNPJ/CPF do Fornecedor": launch.type === "SAIDA" ? cpfCnpjValue : "",
-        "Código do Membro": launch.type === "DIZIMO" ? launch.contributor?.tipo === 'MEMBRO' ? parseInt(launch.contributor?.code) : "" : "",
-        "Código do Congregado": launch.type === "DIZIMO" ? launch.contributor?.tipo === 'CONGREGADO' ? parseInt(launch.contributor?.code) : "" : "",
-        "Nome de Outros": launch.type === "DIZIMO" ? launch.contributorName : launch.type === "SAIDA" ? launch.supplierName : launch.type === "OFERTA_CULTO" ? "OFERTA DO CULTO" : "",
-        "Número do Documento": parseInt(launch.talonNumber) || "",
+        "Código do Membro": launch.type === "DIZIMO" ? launch.contributor?.tipo === 'MEMBRO' ? parseInt(launch.contributor?.code || '0') : "" : "",
+        "Código do Congregado": launch.type === "DIZIMO" ? launch.contributor?.tipo === 'CONGREGADO' ? parseInt(launch.contributor?.code || '0') : "" : "",
+        "Nome de Outros": launch.type === "DIZIMO" ? launch.contributorName : launch.type === "SAIDA" ? launch.supplierName : (launch.type === "OFERTA_CULTO" || launch.type === "RENDA_BRUTA") ? (launch.type === "RENDA_BRUTA" ? "RENDA BRUTA" : "OFERTA DO CULTO") : "",
+        "Número do Documento": parseInt(launch.talonNumber || '0') || "",
         "Data de Emissão": exportDate,
         "Data de Vencimento": "",
         //"Codigo da Conta a Pagar": "",
-        "Código do Caixa": launch.type === "OFERTA_CULTO" ? parseInt(launch.congregation?.entradaOfferFinancialEntity) :
-          launch.type === "MISSAO" ? parseInt(launch.congregation?.missionFinancialEntity) :
-            launch.type === "CIRCULO" ? parseInt(launch.congregation?.circleFinancialEntity) :
-              launch.type === "VOTO" ? parseInt(launch.congregation?.entradaVotesFinancialEntity) :
-                launch.type === "EBD" ? parseInt(launch.congregation?.entradaEbdFinancialEntity) :
-                  launch.type === "CAMPANHA" ? parseInt(launch.congregation?.entradaCampaignFinancialEntity) :
-                    launch.type === "DIZIMO" ? parseInt(launch.congregation?.dizimoFinancialEntity) :
-                      launch.type === "SAIDA" ? parseInt(launch.congregation?.saidaFinancialEntity) : "",
-        "Código da Congregação": parseInt(launch.congregation.code),
-        "Código da Forma de Pagamento": launch.type === "OFERTA_CULTO" ? parseInt(launch.congregation?.entradaOfferPaymentMethod) :
-          launch.type === "MISSAO" ? parseInt(launch.congregation?.missionPaymentMethod) :
-            launch.type === "CIRCULO" ? parseInt(launch.congregation?.circlePaymentMethod) :
-              launch.type === "VOTO" ? parseInt(launch.congregation?.entradaVotesPaymentMethod) :
-                launch.type === "EBD" ? parseInt(launch.congregation?.entradaEbdPaymentMethod) :
-                  launch.type === "CAMPANHA" ? parseInt(launch.congregation?.entradaCampaignPaymentMethod) :
-                    launch.type === "DIZIMO" ? parseInt(launch.congregation?.dizimoPaymentMethod) :
-                      launch.type === "SAIDA" ? parseInt(launch.congregation?.saidaPaymentMethod) : "",
+        "Código do Caixa": launch.type === "OFERTA_CULTO" || launch.type === "RENDA_BRUTA" ? parseInt(congregation?.entradaOfferFinancialEntity || '0') :
+          launch.type === "MISSAO" ? parseInt(congregation?.missionFinancialEntity || '0') :
+            launch.type === "CIRCULO" ? parseInt(congregation?.circleFinancialEntity || '0') :
+              launch.type === "VOTO" ? parseInt(congregation?.entradaVotesFinancialEntity || '0') :
+                launch.type === "EBD" ? parseInt(congregation?.entradaEbdFinancialEntity || '0') :
+                  launch.type === "CAMPANHA" ? parseInt(congregation?.entradaCampaignFinancialEntity || '0') :
+                    launch.type === "DIZIMO" ? parseInt(congregation?.dizimoFinancialEntity || '0') :
+                      launch.type === "CARNE_REVIVER" || launch.type === "CARNE_AFRICA" ? parseInt(congregation?.entradaCarneReviverFinancialEntity || '0') :
+                        launch.type === "SAIDA" ? parseInt(congregation?.saidaFinancialEntity || '0') : "",
+        "Código da Congregação": parseInt(congregation.code || '0'),
+        "Código da Forma de Pagamento": launch.type === "OFERTA_CULTO" || launch.type === "RENDA_BRUTA" ? parseInt(congregation?.entradaOfferPaymentMethod || '0') :
+          launch.type === "MISSAO" ? parseInt(congregation?.missionPaymentMethod || '0') :
+            launch.type === "CIRCULO" ? parseInt(congregation?.circlePaymentMethod || '0') :
+              launch.type === "VOTO" ? parseInt(congregation?.entradaVotesPaymentMethod || '0') :
+                launch.type === "EBD" ? parseInt(congregation?.entradaEbdPaymentMethod || '0') :
+                  launch.type === "CAMPANHA" ? parseInt(congregation?.entradaCampaignPaymentMethod || '0') :
+                    launch.type === "DIZIMO" ? parseInt(congregation?.dizimoPaymentMethod || '0') :
+                      launch.type === "CARNE_REVIVER" || launch.type === "CARNE_AFRICA" ? parseInt(congregation?.entradaCarneReviverPaymentMethod || '0') :
+                        launch.type === "SAIDA" ? parseInt(congregation?.saidaPaymentMethod || '0') : "",
         //"Nome da Congregação": launch.congregation.name,
-        "Valor": parseFloat(launch.value) || 0,
-        "Codigo de Conta": launch.type === "OFERTA_CULTO" ? launch.congregation?.entradaOfferAccountPlan :
-          launch.type === "MISSAO" ? launch.congregation?.missionAccountPlan :
-            launch.type === "CIRCULO" ? launch.congregation?.circleAccountPlan :
-              launch.type === "VOTO" ? launch.congregation?.entradaVotesAccountPlan :
-                launch.type === "EBD" ? launch.congregation?.entradaEbdAccountPlan :
-                  launch.type === "CAMPANHA" ? launch.congregation?.entradaCampaignAccountPlan :
-                    launch.type === "DIZIMO" ? launch.congregation?.dizimoAccountPlan :
-                      launch.type === "SAIDA" ? launch.classification?.code : "",
+        "Valor": parseFloat(launch.value as any) || 0,
+        "Codigo de Conta": launch.type === "OFERTA_CULTO" || launch.type === "RENDA_BRUTA" ? congregation?.entradaOfferAccountPlan :
+          launch.type === "MISSAO" ? congregation?.missionAccountPlan :
+            launch.type === "CIRCULO" ? congregation?.circleAccountPlan :
+              launch.type === "VOTO" ? congregation?.entradaVotesAccountPlan :
+                launch.type === "EBD" ? congregation?.entradaEbdAccountPlan :
+                  launch.type === "CAMPANHA" ? congregation?.entradaCampaignAccountPlan :
+                    launch.type === "DIZIMO" ? congregation?.dizimoAccountPlan :
+                      launch.type === "CARNE_REVIVER" || launch.type === "CARNE_AFRICA" ? congregation?.entradaCarneReviverAccountPlan :
+                        launch.type === "SAIDA" ? classification?.code : "",
         "Tipo": launch.type === "SAIDA" ? "D" : "C",
-        "Historico": launch.type !== "DIZIMO" && launch.type !== "OFERTA_CULTO" && launch.type !== "SAIDA" ? launch.description :
+        "Historico": launch.type !== "DIZIMO" && launch.type !== "OFERTA_CULTO" && launch.type !== "RENDA_BRUTA" && launch.type !== "SAIDA" ? launch.description :
           launch.type === "DIZIMO" ? getFormattedTitle(launch) :
             launch.type === "OFERTA_CULTO" ? "OFERTA DO CULTO" :
-              launch.type === "SAIDA" ? launch.classification?.description : "",
+              launch.type === "RENDA_BRUTA" ? "RENDA BRUTA" :
+                launch.type === "SAIDA" ? classification?.description : "",
         "Parcelas": "",
         "Codigo de Departamento": ""
       })

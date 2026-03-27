@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { useSession } from "next-auth/react";
-import prisma from "@/lib/prisma"
-import{ authOptions }from "../auth/[...nextauth]/route";
-
+import { getDb } from "@/lib/getDb"
+import { authOptions } from "../auth/[...nextauth]/route"
 
 export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-
+  const session = await getServerSession(authOptions)
 
   if (!session) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
+
+  const prisma = await getDb(request)
 
   try {
     const { searchParams } = new URL(request.url)
@@ -26,15 +25,18 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(suppliers)
   } catch (error) {
+    console.error('API: Erro ao buscar fornecedores:', error)
     return NextResponse.json({ error: "Erro ao buscar fornecedores" }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptions)
   if (!session) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
+
+  const prisma = await getDb(request)
 
   try {
     const { code, razaoSocial, tipoPessoa, cpfCnpj } = await request.json()
@@ -54,6 +56,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(supplier, { status: 201 })
   } catch (error) {
+    console.error('API: Erro ao criar fornecedor:', error)
     if ((error as any).code === 'P2002') {
       return NextResponse.json({ error: "Código ou CPF/CNPJ já existe" }, { status: 400 })
     }
@@ -62,12 +65,13 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-  const session = await getServerSession(authOptions);  
-
+  const session = await getServerSession(authOptions)
 
   if (!session) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
+
+  const prisma = await getDb(request)
 
   try {
     const { id, code, razaoSocial, tipoPessoa, cpfCnpj, isActive } = await request.json()
@@ -89,6 +93,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json(supplier)
   } catch (error) {
+    console.error('API: Erro ao atualizar fornecedor:', error)
     if ((error as any).code === 'P2002') {
       return NextResponse.json({ error: "Código ou CPF/CNPJ já existe" }, { status: 400 })
     }
@@ -97,11 +102,13 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptions)
 
   if (!session) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
+
+  const prisma = await getDb(request)
 
   try {
     const { searchParams } = new URL(request.url)
@@ -117,6 +124,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ message: "Fornecedor excluído com sucesso" })
   } catch (error) {
+    console.error('API: Erro ao excluir fornecedor:', error)
     return NextResponse.json({ error: "Erro ao excluir fornecedor" }, { status: 500 })
   }
 }

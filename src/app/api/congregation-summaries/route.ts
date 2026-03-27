@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import prisma from "@/lib/prisma"
+import { getDb } from "@/lib/getDb"
 import { zonedTimeToUtc, utcToZonedTime } from 'date-fns-tz';
 import { startOfDay, endOfDay } from 'date-fns';
 
@@ -33,9 +33,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
 
+  const prisma = await getDb(request)
+
   try {
     const { searchParams } = new URL(request.url)
-    // aceitar tanto "congregationIds=1,2,3" quanto múltiplos "congregationId=1&congregationId=2"
     const congregationIdsString = searchParams.get('congregationIds')
     const startSummaryDate = searchParams.get('startSummaryDate')
     const endSummaryDate = searchParams.get('endSummaryDate')
@@ -63,7 +64,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Acesso não autorizado a estas congregações" }, { status: 403 })
     }
 
-    // restringir àquelas congregações que o usuário realmente tem acesso
     const allowedIds = userCongregations.map(c => c.congregationId)
     const filteredIds = congregationIds.filter(id => allowedIds.includes(id))
     if (filteredIds.length === 0) {
@@ -97,9 +97,22 @@ export async function GET(request: NextRequest) {
       ]
     })
 
-    // Serializa datas como ISO UTC para o frontend
+    const allApproverNames = Array.from(new Set(
+      summaries.flatMap(s => [s.approvedByTreasury, s.approvedByAccountant, s.approvedByDirector]).filter(Boolean)
+    )) as string[];
+
+    const approvers = await prisma.user.findMany({
+      where: { name: { in: allApproverNames } },
+      select: { name: true, image: true }
+    });
+
+    const approverImages = Object.fromEntries(approvers.map(a => [a.name, a.image]));
+
     const payload = summaries.map(s => ({
       ...s,
+      treasuryApproverImage: s.approvedByTreasury ? approverImages[s.approvedByTreasury] || null : null,
+      accountantApproverImage: s.approvedByAccountant ? approverImages[s.approvedByAccountant] || null : null,
+      directorApproverImage: s.approvedByDirector ? approverImages[s.approvedByDirector] || null : null,
       startDate: s.startDate ? new Date(s.startDate).toISOString() : null,
       endDate: s.endDate ? new Date(s.endDate).toISOString() : null,
       date: (s as any).date ? new Date((s as any).date).toISOString() : null,
@@ -127,6 +140,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Sem permissão para gerar resumos" }, { status: 403 })
   }
 
+  const prisma = await getDb(request)
+
   try {
     const body = await request.json()
     const { congregationId, startDate, endDate, summaryType } = body
@@ -136,7 +151,6 @@ export async function POST(request: NextRequest) {
     }
     const timezone = body.timezone || 'America/Sao_Paulo'
 
-    // Determinar tipos de lançamento baseado no tipo de resumo
     let allowedTypes: string[] = []
     switch (summaryType) {
       case 'PADRAO':
@@ -154,9 +168,8 @@ export async function POST(request: NextRequest) {
     } catch (err) {
       return NextResponse.json({ error: "Formato de data inválido" }, { status: 400 })
     }
-    endUtc = new Date(endUtc.getTime() - 3 * 60 * 60 * 1000) // Ajuste de +3 horas
+    endUtc = new Date(endUtc.getTime() - 3 * 60 * 60 * 1000)
 
-    // Validação "não futura" comparando com fim do dia atual no timezone do usuário
     const nowZoned = utcToZonedTime(new Date(), timezone)
     const todayEndZoned = endOfDay(nowZoned)
     const todayEndUtc = zonedTimeToUtc(todayEndZoned, timezone)
@@ -173,7 +186,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Acesso não autorizado a esta congregação" }, { status: 403 })
     }
 
-    // Agora, buscar todos os resumos PENDENTES para "limpar"
     const pendingSummaries = await prisma.congregationSummary.findMany({
       where: {
         congregationId,
@@ -185,7 +197,6 @@ export async function POST(request: NextRequest) {
     if (pendingSummaries.length > 0) {
       const summaryIds = pendingSummaries.map(s => s.id)
 
-      // Desvincular todos os lançamentos de todos os resumos pendentes encontrados
       await prisma.launch.updateMany({
         where: { summaryId: { in: summaryIds } },
         data: {
@@ -201,14 +212,11 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      // Deletar os resumos pendentes
       await prisma.congregationSummary.deleteMany({
         where: { id: { in: summaryIds } }
       })
     }
 
-
-    // Buscar lançamentos no período filtrados pelo tipo de resumo
     const launches = await prisma.launch.findMany({
       where: {
         congregationId,
@@ -226,7 +234,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Não há lançamentos do tipo ${typeLabel} no período para criar um resumo.` }, { status: 400 });
     }
 
-    // Calcular totais
     const entradaSummary = { dizimo: 0, oferta: 0, votos: 0, campanha: 0, ebd: 0, mission: 0, circle: 0, carneReviver: 0, total: 0 }
     const saidaSummary = { saida: 0, total: 0 }
 
@@ -301,14 +308,14 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// ...existing code for PUT/DELETE remains unchanged...
-
 export async function PUT(request: NextRequest) {
   const session = await getServerSession(authOptions)
 
   if (!session) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
+
+  const prisma = await getDb(request)
 
   try {
     const body = await request.json()
@@ -327,7 +334,6 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "ID do resumo é obrigatório para atualização" }, { status: 400 })
     }
 
-    //console.log('Atualizando resumo:', body)
     const summary = await prisma.congregationSummary.findUnique({
       where: { id },
       include: { Launch: true }
@@ -337,7 +343,6 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Resumo não encontrado" }, { status: 404 })
     }
 
-    // Verificar se o usuário tem acesso à congregação
     const userCongregation = await prisma.userCongregation.findFirst({
       where: {
         userId: session.user.id,
@@ -348,17 +353,6 @@ export async function PUT(request: NextRequest) {
     if (!userCongregation) {
       return NextResponse.json({ error: "Acesso não autorizado a esta congregação" }, { status: 403 })
     }
-
-    // Verificar permissões para aprovação
-    // if (treasurerApproved && !session.user.canApproveTreasury) {
-    //   return NextResponse.json({ error: "Sem permissão para aprovar como tesoureiro" }, { status: 403 })
-    // }
-    // if (accountantApproved && !session.user.canApproveAccountant) {
-    //   return NextResponse.json({ error: "Sem permissão para aprovar como contador" }, { status: 403 })
-    // }
-    // if (directorApproved && !session.user.canApproveDirector) {
-    //   return NextResponse.json({ error: "Sem permissão para aprovar como dirigente" }, { status: 403 })
-    // }
 
     let approvedByTreasury = null
     let approvedAtTreasury = null
@@ -481,7 +475,7 @@ export async function PUT(request: NextRequest) {
         approvedAtDirector: body.approvedAtDirector || null
       }
     })
-    //console.log("Resumo atualizado:", updatedSummary)
+
     return NextResponse.json(updatedSummary, { status: 200 })
   } catch (error) {
     console.error("Erro ao atualizar resumo:", error)
@@ -500,6 +494,8 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "Sem permissão para excluir resumos" }, { status: 403 })
   }
 
+  const prisma = await getDb(request)
+
   try {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
@@ -516,7 +512,6 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Resumo não encontrado" }, { status: 404 })
     }
 
-    // Verificar se o usuário tem acesso à congregação
     const userCongregation = await prisma.userCongregation.findFirst({
       where: {
         userId: session.user.id,

@@ -1,30 +1,94 @@
 import { NextRequest, NextResponse } from "next/server"
-import prisma from "@/lib/prisma"
+import { getDb } from "@/lib/getDb"
 import { getServerSession } from "next-auth"
 import { authOptions } from "../../../auth/[...nextauth]/route"
 import { evaluateTransformation, TransformContext } from "@/lib/transformation-engine"
 import { parseTransformation } from "@/lib/transformation-types"
 
-function simpleCSVParse(csv: string): Record<string, string>[] {
-    const lines = csv.split(/\r?\n/).map(l => l.trim()).filter(l => l)
+/**
+ * Robustly splits a CSV line considering quoted fields with delimiters inside.
+ */
+function splitCSVLine(line: string, delimiter: string): string[] {
+    const result = []
+    let start = 0
+    let inQuotes = false
+    const sLine = line.trim()
+    
+    for (let i = 0; i < sLine.length; i++) {
+        const char = sLine[i]
+        if (char === '"') {
+            if (inQuotes && sLine[i + 1] === '"') {
+                i++
+                continue
+            }
+            inQuotes = !inQuotes
+        } else if (char === delimiter && !inQuotes) {
+            result.push(sLine.substring(start, i).trim().replace(/^"|"$/g, '').replace(/""/g, '"').trim())
+            start = i + 1
+        }
+    }
+    result.push(sLine.substring(start).trim().replace(/^"|"$/g, '').replace(/""/g, '"').trim())
+    return result
+}
+
+function robustCSVParse(csv: string, sourceConfigs: { code: string, name: string }[]): Record<string, string>[] {
+    const cleanCSV = csv.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim()
+    const lines = cleanCSV.split('\n').map(l => l.trim()).filter(l => l)
     if (lines.length === 0) return []
 
-    // Auto detect delimiter between ',' and ';' based on the first line
     const firstLine = lines[0]
-    const delimiter = (firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length ? ';' : ','
+    const candidates = [';', ',', '\t']
+    let delimiter = ';' 
+    let maxCols = -1
+    
+    candidates.forEach(c => {
+        const cols = firstLine.split(c).length
+        if (cols > maxCols) {
+            maxCols = cols
+            delimiter = c
+        }
+    })
 
-    const headers = lines[0].split(delimiter).map(h => h.trim().replace(/^"|"$/g, ''))
+    const rawHeaders = splitCSVLine(lines[0], delimiter)
+    
+    console.log(`[CSV Import] Delimiter: ${delimiter}`)
+    console.log(`[CSV Import] Raw Headers:`, rawHeaders)
+
+    // Build a map of Header Name -> Index for name-based lookup
+    const headerMap = new Map<string, number>()
+    rawHeaders.forEach((h, i) => headerMap.set(normalizeHeader(h), i))
 
     const data: Record<string, string>[] = []
     for (let i = 1; i < lines.length; i++) {
-        const row = lines[i].split(delimiter).map(v => v.trim().replace(/^"|"$/g, ''))
+        const values = splitCSVLine(lines[i], delimiter)
+        if (values.length < 1) continue
+        
         const obj: Record<string, string> = {}
-        headers.forEach((h, idx) => {
-            obj[h] = row[idx] ?? ""
+        
+        // Strategy: Match by Config Name first, then fallback to positional
+        sourceConfigs.forEach((configCol, idx) => {
+            const normConfigName = normalizeHeader(configCol.name)
+            const normConfigCode = normalizeHeader(configCol.code)
+            
+            let fileIdx = headerMap.get(normConfigName)
+            if (fileIdx === undefined) fileIdx = headerMap.get(normConfigCode)
+            if (fileIdx === undefined) fileIdx = idx // Fallback to positional
+
+            obj[configCol.code] = (values[fileIdx] || "").trim()
+            
+            // Keep track of raw value for debugging
+            if (fileIdx < rawHeaders.length) {
+                obj[`_raw_${rawHeaders[fileIdx]}`] = (values[fileIdx] || "").trim()
+            }
         })
+        
         data.push(obj)
     }
     return data
+}
+
+function normalizeHeader(s: string): string {
+    return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '')
 }
 
 export async function POST(request: NextRequest) {
@@ -33,6 +97,7 @@ export async function POST(request: NextRequest) {
     if (!session || !userId || !(session.user as any)?.canManageBankIntegration) {
         return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
+    const prisma = await getDb(request)
 
     try {
         const formData = await request.formData()
@@ -45,7 +110,10 @@ export async function POST(request: NextRequest) {
 
         const config = await prisma.bankIntegrationConfig.findUnique({
             where: { id: configId },
-            include: { destinationColumns: true, sourceColumns: true }
+            include: { 
+                destinationColumns: { orderBy: { id: 'asc' } }, 
+                sourceColumns: { orderBy: { id: 'asc' } } 
+            }
         })
 
         if (!config) {
@@ -53,17 +121,17 @@ export async function POST(request: NextRequest) {
         }
 
         const text = await file.text()
-        const rows = simpleCSVParse(text)
+        const rows = robustCSVParse(text, config.sourceColumns)
+
+        if (rows.length === 0) {
+            return NextResponse.json({ error: "O arquivo está vazio ou o formato não foi reconhecido." }, { status: 400 })
+        }
 
         let validCount = 0
         let invalidCount = 0
-
         const batchRows = []
-
-        // Create context DB fields lookup cache since it usually doesn't change
         const lookupCache = new Map<string, string | null>()
 
-        // Find congregation context (assume tied to the config's financial entity)
         const entity = await prisma.financialEntity.findUnique({
             where: { id: config.financialEntityId }
         })
@@ -80,12 +148,14 @@ export async function POST(request: NextRequest) {
             }
         }
 
+        console.log(`[CSV Import] Starting transformation for ${rows.length} rows...`)
+
         for (let i = 0; i < rows.length; i++) {
             const rawRow = rows[i]
             const ctx: TransformContext = { ...contextBase, row: rawRow, dbFields: {} }
             const destData: Record<string, string> = {}
-            let isValid = true
-            let errorMsg = ""
+            let isRowValid = true
+            let rowErrorMsg = ""
 
             for (const col of config.destinationColumns) {
                 const step = parseTransformation(col.transformation)
@@ -93,31 +163,83 @@ export async function POST(request: NextRequest) {
                     try {
                         const val = await evaluateTransformation(step, ctx)
                         destData[col.code] = val
+                        
+                        if (!val && step.type !== 'FIXED') {
+                             // console.log(`[Import] Campo vazio p/ destino ${col.code}`)
+                        }
                     } catch (e: any) {
                         destData[col.code] = ""
-                        isValid = false
-                        errorMsg += `Erro em coluna [${col.code}]: ${(e as Error).message}. `
+                        isRowValid = false
+                        rowErrorMsg += `${col.name}: ${(e as Error).message}. `
                     }
                 } else {
                     destData[col.code] = ""
                 }
             }
 
-            // Simple validation: must have values required for Launch (value, date, etc depending on mapping logic)
-            if (isValid) {
-                // Actually, let's just mark valid unless we specifically fail evaluation
-                validCount++
-            } else {
-                invalidCount++
+            if (isRowValid) validCount++
+            else invalidCount++
+
+            // Identification of Contributor for UI cache - Deterministic via Config
+            let rowContributorId: string | null = null
+            let rowContributorName: string | null = null
+
+            // Detect columns mapped to Contributor via LOOKUP
+            const contributorCols = config.destinationColumns.filter(c => {
+                const step = parseTransformation(c.transformation)
+                return step?.type === 'LOOKUP' && step.searchTable === 'Contributor'
+            })
+
+            // 1. Try to find a real ID/Link from LOOKUP results
+            for (const col of contributorCols) {
+                const val = destData[col.code]
+                if (val && val.trim()) {
+                    const step = parseTransformation(col.transformation)
+                    // If the lookup was returning ID or code, try to fetch the actual ID
+                    if (step?.returnField === 'id' || step?.returnField === 'code') {
+                         const s = val.trim()
+                         const ct = await prisma.contributor.findFirst({
+                             where: { OR: [{ id: s }, { code: s }] }
+                         })
+                         if (ct) {
+                             rowContributorId = ct.id
+                             rowContributorName = ct.name
+                             break;
+                         }
+                    }
+                }
+            }
+
+            // 2. If no ID found, try to find a Name from the designated name column
+            if (!rowContributorId) {
+                const nameCol = contributorCols.find(c => {
+                    const step = parseTransformation(c.transformation)
+                    return step?.returnField === 'name'
+                })
+                if (nameCol && destData[nameCol.code]) {
+                    rowContributorName = destData[nameCol.code].trim()
+                } else {
+                    // Fallback to keyword search for Name ONLY if config is ambiguous
+                    const keywords = ['contribuinte', 'nome', 'contributor', 'name']
+                    for (const col of config.destinationColumns) {
+                        const nk = col.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '')
+                        if (keywords.some(kw => nk.includes(kw)) && destData[col.code]) {
+                            rowContributorName = destData[col.code].trim()
+                            break;
+                        }
+                    }
+                }
             }
 
             batchRows.push({
                 rowIndex: i + 1,
                 sourceData: JSON.stringify(rawRow),
                 destinationData: JSON.stringify(destData),
-                isValid,
-                errorMsg: errorMsg || null,
-                isIntegrated: false
+                isValid: isRowValid,
+                errorMsg: rowErrorMsg || null,
+                isIntegrated: false,
+                contributorId: rowContributorId,
+                contributorName: rowContributorName
             })
         }
 
@@ -144,7 +266,7 @@ export async function POST(request: NextRequest) {
         })
 
     } catch (error) {
-        console.error("Erro ao importar CSV:", error)
+        console.error("Erro na importação:", error)
         return NextResponse.json({ error: "Erro interno no servidor" }, { status: 500 })
     }
 }

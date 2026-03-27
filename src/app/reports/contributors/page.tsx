@@ -24,6 +24,7 @@ interface Congregation {
 interface ContributorRow {
     name: string
     position: string
+    photoUrl?: string | null
     months: number[]
     total: number
 }
@@ -58,7 +59,7 @@ export default function ReportsPage() {
     const [selectedYear, setSelectedYear] = useState("")
     const [showValues, setShowValues] = useState(true)
     const [contributionFilter, setContributionFilter] = useState('WITH_LAUNCH') // BOTH, WITH_LAUNCH, WITHOUT_LAUNCH
-    const [importFilter, setImportFilter] = useState<'ALL' | 'IMPORTED' | 'MANUAL'>('MANUAL');
+    const [importFilter, setImportFilter] = useState<'ALL' | 'IMPORTED' | 'INTEGRATED' | 'MANUAL'>('MANUAL');
 
     //const years = Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString())
 
@@ -94,7 +95,8 @@ export default function ReportsPage() {
     const availableLaunchTypes = useMemo(() => {
         return [
             (session?.user as any)?.canLaunchTithe ? { value: 'DIZIMO', label: 'Dízimo' } : null,
-            (session?.user as any)?.canLaunchCarneReviver ? { value: 'CARNE_REVIVER', label: 'Carnê Reviver' } : null
+            (session?.user as any)?.canLaunchCarneReviver ? { value: 'CARNE_REVIVER', label: 'Carnê Reviver' } : null,
+            (session?.user as any)?.canLaunchCarneAfrica ? { value: 'CARNE_AFRICA', label: 'Carnê África' } : null,
         ]
     }, [session]).filter(Boolean) as { value: string; label: string }[]
 
@@ -348,6 +350,7 @@ export default function ReportsPage() {
                                         <SelectContent>
                                             <SelectItem value="ALL">Todos os Lançamentos</SelectItem>
                                             <SelectItem value="IMPORTED">Apenas Importados</SelectItem>
+                                            <SelectItem value="INTEGRATED">Apenas Integrados</SelectItem>
                                             <SelectItem value="MANUAL">Apenas Digitados</SelectItem>
                                         </SelectContent>
                                     </Select>
@@ -530,7 +533,19 @@ export default function ReportsPage() {
                                                 <TableBody>
                                                     {cong.contributors.map((contrib, idx) => (
                                                         <TableRow key={idx}>
-                                                            <TableCell className="font-medium">{contrib.name}</TableCell>
+                                                            <TableCell className="font-medium">
+                                                              <div className="flex items-center gap-2">
+                                                                {contrib.photoUrl && (
+                                                                  <img
+                                                                    src={`/api/uploads/${contrib.photoUrl}`}
+                                                                    alt={contrib.name}
+                                                                    className="w-8 h-8 rounded-full object-cover border border-gray-200 shrink-0"
+                                                                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                                                                  />
+                                                                )}
+                                                                <span>{contrib.name}</span>
+                                                              </div>
+                                                            </TableCell>
                                                             <TableCell>{contrib.position}</TableCell>
                                                             {contrib.months.map((val, monthIdx) => (
                                                                 <TableCell

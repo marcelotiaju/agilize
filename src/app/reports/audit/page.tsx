@@ -58,13 +58,13 @@ export default function AuditReport() {
     const [selectedCongregations, setSelectedCongregations] = useState<string[]>([])
     const [selectedTypes, setSelectedTypes] = useState<string[]>([])
 
-    const [startDate, setStartDate] = useState<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
+    const [startDate, setStartDate] = useState<Date>(new Date())
     const [endDate, setEndDate] = useState<Date>(new Date())
     const [startDateOpen, setStartDateOpen] = useState(false)
     const [endDateOpen, setEndDateOpen] = useState(false)
 
     // Existing filters
-    const [importFilter, setImportFilter] = useState<'ALL' | 'IMPORTED' | 'MANUAL'>('MANUAL')
+    const [importFilter, setImportFilter] = useState<'ALL' | 'IMPORTED' | 'INTEGRATED' | 'MANUAL'>('MANUAL')
 
     // New filters
     const [launchFilter, setLaunchFilter] = useState<'ALL' | 'WITH' | 'WITHOUT'>('WITHOUT')
@@ -83,14 +83,16 @@ export default function AuditReport() {
         const user = session?.user as any
         const types: { value: string; label: string }[] = []
         if (user?.canLaunchTithe) types.push({ value: 'DIZIMO', label: 'Dízimo' })
-        if (user?.canLaunchServiceOffer) types.push({ value: 'OFERTA_CULTO', label: 'Oferta do Culto' })
         if (user?.canLaunchVote) types.push({ value: 'VOTO', label: 'Voto' })
         if (user?.canLaunchEbd) types.push({ value: 'EBD', label: 'EBD' })
         if (user?.canLaunchCampaign) types.push({ value: 'CAMPANHA', label: 'Campanha' })
         if (user?.canLaunchMission) types.push({ value: 'MISSAO', label: 'Missão' })
-        if (user?.canLaunchCircle) types.push({ value: 'CIRCULO', label: 'Círculo de Oração' })
+        if (user?.canLaunchCircle) types.push({ value: 'CIRCULO', label: 'Círculo' })
         if (user?.canLaunchCarneReviver) types.push({ value: 'CARNE_REVIVER', label: 'Carnê Reviver' })
+        if (user?.canLaunchCarneAfrica) types.push({ value: 'CARNE_AFRICA', label: 'Carnê África' })
+        if (user?.canLaunchServiceOffer) types.push({ value: 'OFERTA_CULTO', label: 'Oferta do Culto' })
         if (user?.canLaunchExpense) types.push({ value: 'SAIDA', label: 'Saída' })
+        if (user?.canLaunchRendaBruta) types.push({ value: 'RENDA_BRUTA', label: 'Renda Bruta' })
         return types
     }, [session])
 
@@ -125,7 +127,7 @@ export default function AuditReport() {
 
     // Preview auto-load
     const loadPreview = async () => {
-        if (selectedCongregations.length === 0) { setPreviewData(null); return }
+        if (selectedCongregations.length === 0 || selectedTypes.length === 0) { setPreviewData(null); return }
         setLoadingPreview(true)
         try {
             const params = new URLSearchParams({
@@ -158,6 +160,7 @@ export default function AuditReport() {
     // ── PDF generation ──────────────────────────────────────────────────────────
     const handleGeneratePdf = async () => {
         if (selectedCongregations.length === 0) return alert('Selecione ao menos uma congregação')
+        if (selectedTypes.length === 0) return alert('Selecione ao menos um tipo de lançamento')
         setIsGenerating(true)
         try {
             const params = new URLSearchParams({
@@ -268,7 +271,7 @@ export default function AuditReport() {
                                             </Button>
                                         </PopoverTrigger>
                                         <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar mode="single" selected={startDate} locale={ptBR}
+                                            <Calendar mode="single" selected={startDate} locale={ptBR as any}
                                                 onSelect={d => { if (d) { setStartDate(d); setStartDateOpen(false) } }} />
                                         </PopoverContent>
                                     </Popover>
@@ -284,7 +287,7 @@ export default function AuditReport() {
                                             </Button>
                                         </PopoverTrigger>
                                         <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar mode="single" selected={endDate} locale={ptBR}
+                                            <Calendar mode="single" selected={endDate} locale={ptBR as any}
                                                 onSelect={d => { if (d) { setEndDate(d); setEndDateOpen(false) } }} />
                                         </PopoverContent>
                                     </Popover>
@@ -300,6 +303,7 @@ export default function AuditReport() {
                                         <SelectContent>
                                             <SelectItem value="ALL">Todos</SelectItem>
                                             <SelectItem value="IMPORTED">Apenas Importados</SelectItem>
+                                            <SelectItem value="INTEGRATED">Apenas Integrados</SelectItem>
                                             <SelectItem value="MANUAL">Apenas Digitados</SelectItem>
                                         </SelectContent>
                                     </Select>

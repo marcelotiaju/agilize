@@ -27,9 +27,10 @@ export default function Export() {
   const [formData, setFormData] = useState({
     startDate: format(new Date(new Date().setDate(new Date().getDate() - 1)), 'yyyy-MM-dd'),
     endDate: format(new Date(new Date().setDate(new Date().getDate() - 1)), 'yyyy-MM-dd'),
-    type: ['DIZIMO', 'OFERTA_CULTO', 'MISSAO', 'CIRCULO', 'VOTO', 'EBD', 'CAMPANHA','CARNE_REVIVER', 'SAIDA'],
+    type: ['DIZIMO', 'OFERTA_CULTO', 'RENDA_BRUTA', 'MISSAO', 'CIRCULO', 'VOTO', 'EBD', 'CAMPANHA','CARNE_REVIVER', 'CARNE_AFRICA', 'SAIDA'],
     congregationIds: [] as string[],
-    status: ['APPROVED'] // Apenas lançamentos aprovados
+    approvalStatus: 'APPROVED',
+    exportedStatus: 'NOT_EXPORTED'
   })
   const [isExporting, setIsExporting] = useState(false)
 
@@ -128,8 +129,13 @@ export default function Export() {
       return
     }
 
-    if (formData.status.length === 0) {
-      alert('Selecione pelo menos um status de lançamento');
+    if (!formData.approvalStatus) {
+      alert('Selecione o status de aprovação');
+      return;
+    }
+
+    if (!formData.exportedStatus) {
+      alert('Selecione a situação de exportação');
       return;
     }
 
@@ -169,16 +175,6 @@ export default function Export() {
 
   const allFilteredSelected = filteredCongregations.length > 0 &&
     filteredCongregations.every(c => formData.congregationIds.includes(c.id))
-
-  const handleStatusChange = (status: string, checked: boolean) => {
-    setFormData(prev => {
-      const statuses = checked
-        ? [...prev.status, status]
-        : prev.status.filter(s => s !== status);
-
-      return { ...prev, status: statuses };
-    });
-  };
 
   return (
     <PermissionGuard
@@ -305,6 +301,22 @@ export default function Export() {
                             </div>
                             <div className="flex items-center space-x-2">
                               <Checkbox
+                                id="type-carne-africa"
+                                checked={formData.type.includes('CARNE_AFRICA')}
+                                onCheckedChange={(checked) => handleTypeChange('CARNE_AFRICA', checked as boolean)}
+                              />
+                              <Label htmlFor="type-carne-africa" className="text-sm">Carnê África</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="type-renda-bruta"
+                                checked={formData.type.includes('RENDA_BRUTA')}
+                                onCheckedChange={(checked) => handleTypeChange('RENDA_BRUTA', checked as boolean)}
+                              />
+                              <Label htmlFor="type-renda-bruta" className="text-sm">Renda Bruta</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
                                 id="type-saida"
                                 checked={formData.type.includes('SAIDA')}
                                 onCheckedChange={(checked) => handleTypeChange('SAIDA', checked as boolean)}
@@ -314,25 +326,38 @@ export default function Export() {
                           </div>
                         </div>
 
-                        <div>
-                          <Label className='mb-2 block'>Status dos Lançamentos</Label>
-                          <div className="space-y-2">
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
-                                id="status-approved"
-                                checked={formData.status.includes('APPROVED')}
-                                onCheckedChange={(checked) => handleStatusChange('APPROVED', checked as boolean)}
-                              />
-                              <Label htmlFor="status-approved" className="text-sm">Não Exportados</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
-                                id="status-exported"
-                                checked={formData.status.includes('EXPORTED')}
-                                onCheckedChange={(checked) => handleStatusChange('EXPORTED', checked as boolean)}
-                              />
-                              <Label htmlFor="status-exported" className="text-sm">Exportados</Label>
-                            </div>
+                        <div className="space-y-4">
+                          <div>
+                            <Label htmlFor="approvalStatus" className='mb-2 block'>Status de Aprovação</Label>
+                            <Select
+                              value={formData.approvalStatus}
+                              onValueChange={(value) => handleSelectChange('approvalStatus', value)}
+                            >
+                              <SelectTrigger id="approvalStatus">
+                                <SelectValue placeholder="Selecione o status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="APPROVED">Apenas Aprovado</SelectItem>
+                                <SelectItem value="NOT_APPROVED">Apenas não Aprovado</SelectItem>
+                                <SelectItem value="BOTH">Ambos</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label htmlFor="exportedStatus" className='mb-2 block'>Situação de Exportação</Label>
+                            <Select
+                              value={formData.exportedStatus}
+                              onValueChange={(value) => handleSelectChange('exportedStatus', value)}
+                            >
+                              <SelectTrigger id="exportedStatus">
+                                <SelectValue placeholder="Selecione a situação" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="NOT_EXPORTED">Não Exportados</SelectItem>
+                                <SelectItem value="EXPORTED">Exportados</SelectItem>
+                                <SelectItem value="BOTH">Ambos</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
                         </div>
                       </div>

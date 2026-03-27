@@ -21,6 +21,8 @@ function formatLaunchType(type: string): string {
         MISSAO: 'Missão',
         CIRCULO: 'Círculo de Oração',
         CARNE_REVIVER: 'Carnê Reviver',
+        CARNE_AFRICA: 'Carnê África',
+        RENDA_BRUTA: 'Renda Bruta',
         SAIDA: 'Saída',
     }
     return types[type] || type
@@ -64,9 +66,11 @@ export async function GET(request: NextRequest) {
         const statusFilter: any =
             importFilter === 'IMPORTED'
                 ? { equals: 'IMPORTED' }
-                : importFilter === 'MANUAL'
-                    ? { notIn: ['IMPORTED', 'CANCELED'] }
-                    : { not: 'CANCELED' }
+                : importFilter === 'INTEGRATED'
+                    ? { equals: 'INTEGRATED' }
+                    : importFilter === 'MANUAL'
+                        ? { notIn: ['IMPORTED', 'INTEGRATED', 'CANCELED'] }
+                        : { not: 'CANCELED' }
 
         // Fetch all launches in the period for the selected congregations & types
         const launches = await prisma.launch.findMany({
@@ -221,6 +225,9 @@ export async function GET(request: NextRequest) {
             doc.text(`TIPOS: ${types.map(t => formatLaunchType(t)).join(', ')}`, margin, y)
             y += 5
         }
+
+        doc.text(`ORIGEM: ${importFilter === 'ALL' ? 'Todos' : importFilter === 'IMPORTED' ? 'Importados' : importFilter === 'INTEGRATED' ? 'Integrados' : 'Apenas Digitados'}`, margin, y)
+        y += 5
 
         const now = new Date()
         doc.text(`Usuário: ${session.user?.name || 'N/A'}`, pageWidth - margin, y - 5, { align: 'right' })

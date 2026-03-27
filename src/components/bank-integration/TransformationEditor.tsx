@@ -179,7 +179,7 @@ function StepForm({ step, onChange, sourceColumns, dbFields, compact }: StepForm
             )
 
             case 'DB_FIELD': return (
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-4">
                     <div className="grid gap-1">
                         <Label className="text-xs">Tabela</Label>
                         <Select value={step.table ?? 'Launch'} onValueChange={(v) => up({ table: v, field: '' })}>
@@ -221,26 +221,138 @@ function StepForm({ step, onChange, sourceColumns, dbFields, compact }: StepForm
             )
 
             case 'LOOKUP': return (
-                <div className={compact ? 'grid gap-2' : 'grid grid-cols-2 gap-2'}>
-                    {sourceField('Campo do arquivo (entrada)', 'sourceField')}
-                    <div className="grid gap-1">
-                        <Label className="text-xs">Buscar em</Label>
-                        <Select value={step.searchTable ?? 'Contributor'} onValueChange={(v) => up({ searchTable: v })}>
-                            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Contributor" className="text-xs">Contribuinte</SelectItem>
-                                <SelectItem value="Supplier" className="text-xs">Fornecedor</SelectItem>
-                                <SelectItem value="Congregation" className="text-xs">Congregação</SelectItem>
-                            </SelectContent>
-                        </Select>
+                <div className="space-y-4">
+                    <div className="grid grid-cols-1 gap-4">
+                        {sourceField('Campo do arquivo (entrada)', 'sourceField')}
+                        <div className="grid gap-1">
+                            <Label className="text-xs">Buscar em</Label>
+                            <Select value={step.searchTable ?? 'Contributor'} onValueChange={(v) => up({ searchTable: v })}>
+                                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Contributor" className="text-xs">Contribuinte</SelectItem>
+                                    <SelectItem value="Supplier" className="text-xs">Fornecedor</SelectItem>
+                                    <SelectItem value="Congregation" className="text-xs">Congregação</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="grid gap-1">
+                            <Label className="text-xs">Comparar por campo</Label>
+                            <Select value={step.searchBy ?? 'cpf'} onValueChange={(v) => up({ searchBy: v })}>
+                                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="cpf" className="text-xs">CPF</SelectItem>
+                                    <SelectItem value="code" className="text-xs">Código Interno</SelectItem>
+                                    <SelectItem value="name" className="text-xs">Nome</SelectItem>
+                                    <SelectItem value="cpfCnpj" className="text-xs">CPF/CNPJ (Fornecedor)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="grid gap-1">
+                            <Label className="text-xs">Retornar campo</Label>
+                            <Select disabled={step.returnEmptyIfFound} value={['code', 'name', 'tipo', 'ecclesiasticalPosition'].includes(step.returnField ?? '') ? step.returnField : 'custom'} onValueChange={(v) => up({ returnField: v === 'custom' ? '' : v })}>
+                                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="code" className="text-xs">Código</SelectItem>
+                                    <SelectItem value="name" className="text-xs">Nome</SelectItem>
+                                    <SelectItem value="tipo" className="text-xs">Tipo (Membro/Congregado)</SelectItem>
+                                    <SelectItem value="ecclesiasticalPosition" className="text-xs">Cargo Eclesiástico</SelectItem>
+                                    <SelectItem value="custom" className="text-xs">Outro (especificar abaixo)...</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            {(!['code', 'name', 'tipo', 'ecclesiasticalPosition'].includes(step.returnField ?? '')) && !step.returnEmptyIfFound && (
+                                <Input className="h-8 text-xs mt-1" value={step.returnField ?? ''} onChange={e => up({ returnField: e.target.value })} placeholder="Nome do campo no banco..." />
+                            )}
+                            <div className="flex items-center gap-2 mt-2">
+                                <input
+                                    type="checkbox"
+                                    id="returnEmptyIfFound"
+                                    checked={step.returnEmptyIfFound || false}
+                                    onChange={(e) => up({ returnEmptyIfFound: e.target.checked })}
+                                    className="h-3 w-3 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                />
+                                <Label htmlFor="returnEmptyIfFound" className="text-[10px] text-blue-700 font-medium cursor-pointer">
+                                    Retornar Vazio se encontrar (Útil para filtrar não-cadastrados)
+                                </Label>
+                            </div>
+                        </div>
                     </div>
-                    <div className="grid gap-1">
-                        <Label className="text-xs">Comparar por campo</Label>
-                        <Input className="h-8 text-xs" value={step.searchBy ?? ''} onChange={e => up({ searchBy: e.target.value })} placeholder="ex: cpf" />
-                    </div>
-                    <div className="grid gap-1">
-                        <Label className="text-xs">Retornar campo</Label>
-                        <Input className="h-8 text-xs" value={step.returnField ?? ''} onChange={e => up({ returnField: e.target.value })} placeholder="ex: code" />
+
+                    {!step.returnEmptyIfFound && (
+                        <div className="p-3 bg-blue-50/50 rounded-lg border border-blue-100">
+                            <Label className="text-xs uppercase font-bold text-blue-500 mb-2 block">Transformar Resultado (ex: Abreviações)</Label>
+                            <div className="grid gap-2">
+                                {(step.map ?? []).map((m, idx) => (
+                                    <div key={idx} className="flex gap-2 items-center">
+                                        <div className="flex-1">
+                                            <Label className="text-[10px] text-gray-400">De (Valor no Banco)</Label>
+                                            <Input className="h-8 text-xs" value={m.from} onChange={e => {
+                                                const newMap = [...(step.map || [])]
+                                                newMap[idx].from = e.target.value
+                                                up({ map: newMap })
+                                            }} placeholder="ex: Pastor" />
+                                        </div>
+                                        <span className="text-xs pt-4">→</span>
+                                        <div className="flex-1">
+                                            <Label className="text-[10px] text-gray-400">Para (Resultado Final)</Label>
+                                            <Input className="h-8 text-xs" value={m.to} onChange={e => {
+                                                const newMap = [...(step.map || [])]
+                                                newMap[idx].to = e.target.value
+                                                up({ map: newMap })
+                                            }} placeholder="ex: Pr" />
+                                        </div>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 mt-4" onClick={() => {
+                                            const newMap = (step.map || []).filter((_, i) => i !== idx)
+                                            up({ map: newMap })
+                                        }}>
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                    </div>
+                                ))}
+                                <Button variant="outline" size="sm" className="h-8 text-xs justify-start w-full hover:bg-blue-100 border-dashed border-blue-300" onClick={() => up({ map: [...(step.map || []), { from: '', to: '' }] })}>
+                                    <Plus className="w-3 h-3 mr-2" /> Adicionar Abreviação/Mapeamento
+                                </Button>
+                                <p className="text-[10px] text-gray-500 italic mt-1">Se encontrar o registro, o valor retornado do campo será convertido conforme o mapeamento acima.</p>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-1 gap-4">
+                        {step.searchTable === 'Contributor' && (
+                            <div className="grid gap-1">
+                                <Label className="text-xs">Condição (Tipo)</Label>
+                                <Select value={step.searchCondition ?? 'NONE'} onValueChange={(v) => up({ searchCondition: v as any })}>
+                                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="NONE" className="text-xs">Qualquer Tipo</SelectItem>
+                                        <SelectItem value="MEMBRO" className="text-xs">Apenas Membros</SelectItem>
+                                        <SelectItem value="CONGREGADO" className="text-xs">Apenas Congregados</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+                        <div className="grid gap-1">
+                            <Label className="text-xs">Se não encontrar (Fallback)</Label>
+                            <Select value={step.fallbackType ?? 'EMPTY'} onValueChange={(v) => up({ fallbackType: v as any })}>
+                                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="EMPTY" className="text-xs">Deixar Vazio</SelectItem>
+                                    <SelectItem value="SOURCE" className="text-xs">Usar Campo do Arquivo</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        {step.fallbackType === 'SOURCE' && (
+                            <div className="grid gap-1">
+                                <Label className="text-xs">Campo Fallback</Label>
+                                <Select value={step.fallbackSourceField ?? ''} onValueChange={(v) => up({ fallbackSourceField: v })}>
+                                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                                    <SelectContent>
+                                        {sourceColumns.map(c => (
+                                            <SelectItem key={c.code} value={c.code} className="text-xs">{c.code} — {c.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
                     </div>
                 </div>
             )
@@ -272,9 +384,9 @@ function StepForm({ step, onChange, sourceColumns, dbFields, compact }: StepForm
             )
 
             case 'FORMAT_DATE': return (
-                <div className="grid grid-cols-1 gap-2">
+                <div className="grid grid-cols-1 gap-4">
                     {sourceField('Campo com a data', 'sourceField')}
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 gap-4">
                         <div className="grid gap-1">
                             <Label className="text-xs">Formato de entrada</Label>
                             <Select value={step.inputFormat ?? 'DD/MM/YYYY'} onValueChange={(v) => up({ inputFormat: v })}>
@@ -341,9 +453,9 @@ function StepForm({ step, onChange, sourceColumns, dbFields, compact }: StepForm
             }
 
             case 'REPLACE': return (
-                <div className="grid gap-2">
+                <div className="grid gap-4">
                     {sourceField('Campo do arquivo (entrada)', 'sourceField')}
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 gap-4">
                         <div className="grid gap-1">
                             <Label className="text-xs">Localizar</Label>
                             <Input className="h-8 text-xs" value={step.find ?? ''} onChange={e => up({ find: e.target.value })} placeholder="Texto a localizar" />
@@ -424,7 +536,7 @@ export function TransformationEditor({ value, onChange, sourceColumns, dbFields 
             </Button>
 
             <Dialog open={open} onOpenChange={setOpen}>
-                <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+                <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] flex flex-col">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <Wand2 className="h-5 w-5 text-blue-600" />
@@ -432,7 +544,7 @@ export function TransformationEditor({ value, onChange, sourceColumns, dbFields 
                         </DialogTitle>
                     </DialogHeader>
 
-                    <div className="flex gap-4 min-h-0 flex-1 overflow-hidden">
+                    <div className="flex flex-col sm:flex-row gap-4 min-h-0 flex-1 overflow-x-auto">
                         {/* Left — Type selector */}
                         <div className="w-48 shrink-0 border-r pr-3">
                             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Tipo de transformação</p>

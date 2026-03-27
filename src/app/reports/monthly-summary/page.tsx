@@ -35,10 +35,17 @@ interface CongregationPreview {
     grandTotal: number
 }
 
+interface MonthlyData {
+    income: number
+    expense: number
+    total: number
+}
+
 interface PreviewData {
     congregations: CongregationPreview[]
     totalContributors: number
     totalValue: number
+    monthlyData: MonthlyData[]
 }
 
 const MONTHS = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ']
@@ -52,7 +59,7 @@ export default function ReportsPage() {
     const [selectedTypes, setSelectedTypes] = useState<string[]>([])
     const [selectedLaunchTypes, setSelectedLaunchTypes] = useState<string[]>([])
     const [previewData, setPreviewData] = useState<PreviewData | null>(null)
-    const [importFilter, setImportFilter] = useState<'ALL' | 'IMPORTED' | 'MANUAL'>('MANUAL');
+    const [importFilter, setImportFilter] = useState<'ALL' | 'IMPORTED' | 'MANUAL' | 'INTEGRATED'>('MANUAL');
     const [isGeneratingExcel, setIsGeneratingExcel] = useState(false)
 
     const [availableYears, setAvailableYears] = useState<string[]>([])
@@ -86,9 +93,11 @@ export default function ReportsPage() {
             (session?.user as any)?.canLaunchEbd ? { value: 'EBD', label: 'EBD' } : null,
             (session?.user as any)?.canLaunchMission ? { value: 'MISSAO', label: 'Missão' } : null,
             (session?.user as any)?.canLaunchCampaign ? { value: 'CAMPANHA', label: 'Campanha' } : null,
-            (session?.user as any)?.canLaunchVoto ? { value: 'VOTO', label: 'Voto' } : null,
+            (session?.user as any)?.canLaunchVote ? { value: 'VOTO', label: 'Voto' } : null,
             (session?.user as any)?.canLaunchCircle ? { value: 'CIRCULO', label: 'Círculo de Oração' } : null,
             (session?.user as any)?.canLaunchCarneReviver ? { value: 'CARNE_REVIVER', label: 'Carnê Reviver' } : null,
+            (session?.user as any)?.canLaunchCarneAfrica ? { value: 'CARNE_AFRICA', label: 'Carnê África' } : null,
+            (session?.user as any)?.canLaunchRendaBruta ? { value: 'RENDA_BRUTA', label: 'Renda Bruta' } : null,
             (session?.user as any)?.canLaunchExpense ? { value: 'SAIDA', label: 'Saída' } : null,
         ]
     }, [session]).filter(Boolean) as { value: string, label: string }[]
@@ -255,8 +264,8 @@ export default function ReportsPage() {
         });
 
         // Linha de TOTAIS
-        const totalIncome = previewData.monthlyData?.reduce((acc, d) => acc + (d.income || 0), 0) || 0;
-        const totalExpense = previewData.monthlyData?.reduce((acc, d) => acc + (d.expense || 0), 0) || 0;
+        const totalIncome = previewData.monthlyData?.reduce((acc: number, d: any) => acc + (d.income || 0), 0) || 0;
+        const totalExpense = previewData.monthlyData?.reduce((acc: number, d: any) => acc + (d.expense || 0), 0) || 0;
         const totalGeral = totalIncome - totalExpense;
 
         worksheetData.push({
@@ -350,6 +359,7 @@ export default function ReportsPage() {
                                         <SelectContent>
                                             <SelectItem value="ALL">Todos os Lançamentos</SelectItem>
                                             <SelectItem value="IMPORTED">Apenas Importados</SelectItem>
+                                            <SelectItem value="INTEGRATED">Apenas Integrados</SelectItem>
                                             <SelectItem value="MANUAL">Apenas Digitados</SelectItem>
                                         </SelectContent>
                                     </Select>
@@ -483,15 +493,15 @@ export default function ReportsPage() {
                                                 <TableRow>
                                                     <TableCell>TOTAIS</TableCell>
                                                     <TableCell className="text-right text-green-600">
-                                                        {formatCurrency(previewData?.monthlyData.reduce((acc, d) => acc + d.income, 0) || 0)}
+                                                        {formatCurrency(previewData?.monthlyData.reduce((acc: number, d: any) => acc + d.income, 0) || 0)}
                                                     </TableCell>
                                                     <TableCell className="text-right text-red-600">
-                                                        {formatCurrency(previewData?.monthlyData.reduce((acc, d) => acc + d.expense, 0) || 0)}
+                                                        {formatCurrency(previewData?.monthlyData.reduce((acc: number, d: any) => acc + d.expense, 0) || 0)}
                                                     </TableCell>
-                                                    <TableCell className="text-right" style={{ color: (previewData?.monthlyData.reduce((acc, d) => acc + d.income, 0) || 0) - (previewData?.monthlyData.reduce((acc, d) => acc + d.expense, 0) || 0) >= 0 ? '#16a34a' : '#dc2626' }}>
+                                                    <TableCell className="text-right" style={{ color: (previewData?.monthlyData.reduce((acc: number, d: any) => acc + d.income, 0) || 0) - (previewData?.monthlyData.reduce((acc: number, d: any) => acc + d.expense, 0) || 0) >= 0 ? '#16a34a' : '#dc2626' }}>
                                                         {formatCurrency(
-                                                            (previewData?.monthlyData.reduce((acc, d) => acc + d.income, 0) || 0) -
-                                                            (previewData?.monthlyData.reduce((acc, d) => acc + d.expense, 0) || 0)
+                                                            (previewData?.monthlyData.reduce((acc: number, d: any) => acc + d.income, 0) || 0) -
+                                                            (previewData?.monthlyData.reduce((acc: number, d: any) => acc + d.expense, 0) || 0)
                                                         )}
                                                     </TableCell>
                                                 </TableRow>

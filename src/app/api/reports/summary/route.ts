@@ -1,18 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import prisma from "@/lib/prisma"
+import { getDb } from "@/lib/getDb"
 import { jsPDF } from "jspdf"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { utcToZonedTime } from 'date-fns-tz'
 import path from "path"
-
-const fs = require('fs');
-//const imagePath = path.join(process.cwd(), '../Logo.png');
-
-//const imageFile = fs.readFileSync('../agilize/public/images/Logo.png');
-//const base64String = Buffer.from(imageFile).toString('base64');
+import fs from 'fs'
 
 const formatCurrency = (val: number) => {
   if (val === 0) return '-'
@@ -28,12 +23,16 @@ const typeLabels: Record<string, string> = {
   'MISSAO': 'Missão',
   'CIRCULO': 'Círculo de Oração',
   'CARNE_REVIVER': 'Carnê Reviver',
+  'CARNE_AFRICA': 'Carnê África',
+  'RENDA_BRUTA': 'Renda Bruta',
   'SAIDA': 'Saída'
 }
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+
+  const prisma = await getDb(request)
 
   try {
     const { searchParams } = new URL(request.url)
@@ -44,7 +43,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "ID do resumo é obrigatório" }, { status: 400 })
     }
 
-    // Buscar resumo com lançamentos
     const summary = await prisma.congregationSummary.findUnique({
       where: { id: summaryId },
       select: {
@@ -88,14 +86,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Resumo não encontrado" }, { status: 404 })
     }
 
-    // Iniciar PDF
     const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' })
     const margin = 15
     let y = 15
     const pageWidth = doc.internal.pageSize.getWidth()
     const pageHeight = doc.internal.pageSize.getHeight()
 
-    // Cabeçalho com logo
     try {
       const imgPath = path.join(process.cwd(), 'public', 'images', 'Logo.png')
       if (fs.existsSync(imgPath)) {
@@ -103,7 +99,6 @@ export async function GET(request: NextRequest) {
         doc.addImage(imgData, 'PNG', margin, y, 20, 20)
       }
     } catch {/* ignore */ }
-    //doc.addImage(base64String, 'PNG', margin, y, 18, 18)
 
     doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
@@ -112,19 +107,16 @@ export async function GET(request: NextRequest) {
     doc.setFontSize(10)
     doc.text('RELATÓRIO DE RESUMO', margin + 22, y + 12)
 
-    // Info do resumo
     doc.setFontSize(9)
     doc.setFont('helvetica', 'normal')
     doc.text(`Congregação: ${summary.congregation?.name || 'N/A'}`, margin + 22, y + 18)
 
-    // Data e usuário no canto direito
     const rightX = pageWidth - margin
     doc.text(`Usuário: ${session.user?.name || 'N/A'}`, rightX, y + 6, { align: 'right' })
     doc.text(format(utcToZonedTime(new Date(), timezone), 'dd/MM/yyyy HH:mm', { locale: ptBR }), rightX, y + 12, { align: 'right' })
 
     y += 28
 
-    // Período do resumo
     doc.setFontSize(10)
     doc.setFont('helvetica', 'bold')
     const startDate = format(utcToZonedTime(summary.startDate, timezone), 'dd/MM/yyyy', { locale: ptBR })
@@ -134,7 +126,6 @@ export async function GET(request: NextRequest) {
     doc.text('LANÇAMENTOS', margin, y)
     y += 2
 
-    // Colunas da tabela
     const cols = {
       data: margin,
       contribuinte: margin + 25,
@@ -142,7 +133,6 @@ export async function GET(request: NextRequest) {
       valor: pageWidth - margin - 5
     }
 
-    // Cabeçalho da tabela
     const drawTableHeader = () => {
       doc.setFillColor(0, 51, 102)
       doc.rect(margin, y, pageWidth - margin * 2, 8, 'F')
@@ -158,33 +148,28 @@ export async function GET(request: NextRequest) {
 
     drawTableHeader()
 
-    // Calcular totais e listar lançamentos em um único loop
     const totaisPorTipo: Record<string, number> = {}
     let totalGeral = 0
 
     summary.Launch.forEach((launch: any, index: number) => {
-      // Processar dados do lançamento
       const launchDateZoned = utcToZonedTime(launch.date, timezone)
       const launchDate = format(launchDateZoned, 'dd/MM/yyyy', { locale: ptBR })
-      const contributorName = launch.contributorId ? launch.contributor?.name || launch.contributorName : '---'
-      const supplierName = launch.supplierId ? launch.supplier?.razaoSocial || launch.supplierName || '' : ''
+      const contributorName = launch.contributorId ? launch.contributor?.name || launch.contributorName || '' : launch.contributorName || '---'
+      const supplierName = launch.supplierId ? launch.supplier?.razaoSocial || launch.supplierName || '' : launch.supplierName || ''
       const typeLabel = typeLabels[launch.type] || launch.type
       const value = Number(launch.value)
       const valueFormatted = formatCurrency(value)
 
-      // Atualizar totais
       const effectiveValue = launch.type === 'SAIDA' ? value * -1 : value
       totaisPorTipo[launch.type] = (totaisPorTipo[launch.type] || 0) + effectiveValue
       totalGeral += effectiveValue
 
-      // Verificar quebra de página
       if (y > pageHeight - 40) {
         doc.addPage()
         y = 15
         drawTableHeader()
       }
 
-      // Zebra stripes
       if (index % 2 === 0) {
         doc.setFillColor(248, 248, 248)
         doc.rect(margin, y - 1, pageWidth - margin * 2, 7, 'F')
@@ -196,9 +181,7 @@ export async function GET(request: NextRequest) {
 
       doc.text(launchDate, cols.data + 2, y + 4)
 
-      // Nome do contribuinte ou fornecedor
       const nameToShow = launch.type === 'SAIDA' ? supplierName : contributorName
-      // Truncar nome se muito longo (aprox 45 caracteres)
       doc.text(nameToShow.length > 45 ? nameToShow.substring(0, 45) + '...' : nameToShow, cols.contribuinte, y + 4)
 
       doc.text(typeLabel, cols.tipo, y + 4)
@@ -207,19 +190,16 @@ export async function GET(request: NextRequest) {
       y += 7
     })
 
-    // Linha separadora
     y += 3
     doc.setDrawColor(0, 51, 102)
     doc.line(margin, y, pageWidth - margin, y)
     y += 5
 
-    // Totais por tipo
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(9)
     doc.text('TOTAIS POR TIPO:', margin, y + 4)
     y += 8
 
-    // Calcular totais formatados para exibição
     const totaisFormatados = Object.entries(totaisPorTipo).map(([tipo, valor]) => ({
       tipo,
       valor,
@@ -239,7 +219,6 @@ export async function GET(request: NextRequest) {
       y += 6
     })
 
-    // Total geral
     y += 3
     doc.setFillColor(0, 51, 102)
     doc.rect(margin, y, pageWidth - margin * 2, 8, 'F')
@@ -249,7 +228,6 @@ export async function GET(request: NextRequest) {
     doc.text('TOTAL GERAL:', margin + 2, y + 5.5)
     doc.text(formatCurrency(totalGeral), cols.valor, y + 5.5, { align: 'right' })
 
-    // Numeração de páginas
     const totalPages = doc.getNumberOfPages()
     for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i)
@@ -259,7 +237,6 @@ export async function GET(request: NextRequest) {
       doc.text(`Página ${i} de ${totalPages}`, pageWidth - margin, pageHeight - 10, { align: 'right' })
     }
 
-    //const pdfBlob = doc.output('blob')
     const pdfOutput = doc.output('arraybuffer');
     return new NextResponse(pdfOutput, {
       headers: {

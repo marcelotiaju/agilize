@@ -1,44 +1,39 @@
 import { NextRequest, NextResponse } from "next/server"
-import prisma from "@/lib/prisma"
-import { authOptions } from "../../auth/[...nextauth]/route";
-import { getServerSession } from "next-auth";
+import { getDb } from "@/lib/getDb"
+import { authOptions } from "../../auth/[...nextauth]/route"
+import { getServerSession } from "next-auth"
 
 export async function PUT(request: NextRequest, props: any) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptions)
 
   if (!session) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
 
+  const prisma = await getDb(request)
+
   try {
-    const params = await props.params; // Await the params Promise
-    const id = params.id;
-    const body = await request.json();
-    //console.log(body)
-    // if (body.status !== undefined) {
-    //   body.status = body.status;
-    // }
-    // if (body.approved !== undefined) {
-    //   body.approved = body.approved;
-    // }
+    const params = await props.params
+    const id = params.id
+    const body = await request.json()
 
-    // Se não houver dados para atualizar, retorne um erro
-    // if (Object.keys(updateData).length === 0) {
-    //   return NextResponse.json({ error: "Nenhum campo para atualizar foi fornecido" }, { status: 400 })
-    // }
-
-    // Verifique se o lançamento já foi exportado
     const existingLaunch = await prisma.launch.findUnique({
       where: { id },
-      select: { type: true, status: true, isIntegrated: true }
-    });
+      select: { type: true, status: true, isIntegrated: true, summaryId: true }
+    })
 
     if (!existingLaunch) {
-      return NextResponse.json({ error: "Lançamento não encontrado" }, { status: 404 });
+      return NextResponse.json({ error: "Lançamento não encontrado" }, { status: 404 })
     }
 
-    if (existingLaunch.isIntegrated) {
-      return NextResponse.json({ error: "Lançamento de integração bancária não pode ser alterado diretamente" }, { status: 400 });
+    const canTechnicalIntervention = session.user.canTechnicalIntervention
+
+    if (existingLaunch.isIntegrated && !canTechnicalIntervention) {
+      return NextResponse.json({ error: "Lançamento de integração bancária não pode ser alterado diretamente. Use Intervenção Técnica." }, { status: 400 })
+    }
+    
+    if (existingLaunch.summaryId && !canTechnicalIntervention) {
+        return NextResponse.json({ error: "Lançamento faz parte de um resumo aprovado e não pode ser alterado" }, { status: 400 })
     }
 
     const launchDate = new Date(`${body.date}T12:00:00Z`)
@@ -46,70 +41,19 @@ export async function PUT(request: NextRequest, props: any) {
     today.setHours(0, 0, 0, 0)
     launchDate.setHours(0, 0, 0, 0)
 
-    // const launch = await prisma.launch.findUnique({
-    //   where: { id },
-    //   // include: {
-    //   //   congregation: true,
-    //     // contributor: true,
-    //     // supplier: true
-    //   // }
-    // })
-
-    // if (!launch) {
-    //   return NextResponse.json({ error: "Lançamento não encontrado" }, { status: 404 })
-    // }
-
-    // const userCongregation = await prisma.userCongregation.findFirst({
-    //   where: {
-    //     userId: session.user.id,
-    //     congregationId: launch.congregationId
-    //   }
-    // })
-
-    // if (!userCongregation) {
-    //   return NextResponse.json({ error: "Acesso não autorizado a esta congregação" }, { status: 403 })
-    // }
-
-    const canTechnicalIntervention = session.user.canTechnicalIntervention;
-
     if (!canTechnicalIntervention) {
       if (body.status !== undefined && existingLaunch.status === "EXPORTED") {
         return NextResponse.json({ error: "Lançamento já exportado não pode ser alterado" }, { status: 400 })
       }
 
-      // Verificação para reverter status
       if (body.status === "CANCELED" && body.status === "NORMAL") {
-        return NextResponse.json({ error: "Não é possível reverter um lançamento cancelado" }, { status: 400 });
+        return NextResponse.json({ error: "Não é possível reverter um lançamento cancelado" }, { status: 400 })
       }
     }
 
-
-    // Verificar permissões de aprovação
-    // if (body.approved !== undefined) {
-    //     if (body.type === "ENTRADA" && !session.user.canApproveEntry) {
-    //         return NextResponse.json({ error: "Sem permissão para aprovar entradas" }, { status: 403 });
-    //     }
-    //     if (body.type === "DIZIMO" && !session.user.canApproveTithe) {
-    //         return NextResponse.json({ error: "Sem permissão para aprovar dízimos" }, { status: 403 });
-    //     }
-    //     if (body.type === "SAIDA" && !session.user.canApproveExpense) {
-    //         return NextResponse.json({ error: "Sem permissão para aprovar saídas" }, { status: 403 });
-    //     }
-    // }
-
-    // const updatedLaunch = await prisma.launch.update({
-    //   where: { id },
-    //   data: { status }
-    // })
-
-    //const updateData: any = {}
-    // if (status !== undefined) body.status = status
-    // if (approved !== undefined) body.approved = approved
-
-    // Preparar dados de atualização
     const dataToUpdate: any = {}
 
-    if (body.status !== undefined && canTechnicalIntervention) {
+    if (body.status !== undefined && (canTechnicalIntervention || body.status === 'CANCELED')) {
       dataToUpdate.status = body.status
     }
 
@@ -141,19 +85,15 @@ export async function PUT(request: NextRequest, props: any) {
       dataToUpdate.isRateio = !!body.isRateio
     }
 
-    // Lógica para contribuinte (Dízimo)
     if (body.type === "DIZIMO" || body.type === "CARNE_REVIVER") {
       if (body.isContributorRegistered && body.contributorId) {
-        // Contribuinte cadastrado: salva contributorId e limpa contributorName
         dataToUpdate.contributorId = body.contributorId
         dataToUpdate.contributorName = null
       } else if (body.contributorName !== undefined) {
-        // Contribuinte não cadastrado ou anônimo: salva contributorName e limpa contributorId
         dataToUpdate.contributorName = body.contributorName || null
         dataToUpdate.contributorId = null
       }
     } else {
-      // Para outros tipos, limpar campos de contribuinte se foram enviados
       if (body.contributorId !== undefined) {
         dataToUpdate.contributorId = null
       }
@@ -162,19 +102,15 @@ export async function PUT(request: NextRequest, props: any) {
       }
     }
 
-    // Lógica para fornecedor (Saída)
     if (body.type === "SAIDA") {
       if (body.isSupplierRegistered && body.supplierId) {
-        // Fornecedor cadastrado: salva supplierId e limpa supplierName
         dataToUpdate.supplierId = body.supplierId
         dataToUpdate.supplierName = null
       } else if (body.supplierName !== undefined) {
-        // Fornecedor não cadastrado: salva supplierName e limpa supplierId
         dataToUpdate.supplierName = body.supplierName || null
         dataToUpdate.supplierId = null
       }
     } else {
-      // Para outros tipos, limpar campos de fornecedor se foram enviados
       if (body.supplierId !== undefined) {
         dataToUpdate.supplierId = null
       }
@@ -195,20 +131,23 @@ export async function PUT(request: NextRequest, props: any) {
     })
     return NextResponse.json(updatedLaunch)
   } catch (error) {
+    console.error("Update error:", error)
     return NextResponse.json({ error: "Erro ao atualizar lançamento" }, { status: 500 })
   }
 }
 
 export async function DELETE(request: NextRequest, props: any) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptions)
 
   if (!session) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
 
+  const prisma = await getDb(request)
+
   try {
-    const params = await props.params; // Await the params Promise
-    const id = params.id;
+    const params = await props.params
+    const id = params.id
 
     if (!id) {
       return NextResponse.json({ error: "ID do lançamento é obrigatório" }, { status: 400 })
@@ -216,19 +155,43 @@ export async function DELETE(request: NextRequest, props: any) {
 
     const existingLaunch = await prisma.launch.findUnique({
       where: { id },
-      select: { isIntegrated: true }
-    });
+      select: { isIntegrated: true, summaryId: true, integrationBatchId: true }
+    })
 
-    if (existingLaunch?.isIntegrated) {
-      return NextResponse.json({ error: "Lançamento de integração bancária não pode ser excluído diretamente" }, { status: 400 });
+    if (!existingLaunch) {
+        return NextResponse.json({ error: "Lançamento não encontrado" }, { status: 404 })
     }
 
-    await prisma.launch.delete({
-      where: { id }
+    if (existingLaunch.summaryId && !session.user.canTechnicalIntervention) {
+      return NextResponse.json({ error: "Lançamento faz parte de um resumo e não pode ser excluído diretamente" }, { status: 400 })
+    }
+
+    await prisma.$transaction(async (tx) => {
+        if (existingLaunch.isIntegrated) {
+            await tx.bankIntegrationRow.updateMany({
+                where: { launchId: id },
+                data: {
+                    isIntegrated: false,
+                    launchId: null
+                }
+            })
+
+            if (existingLaunch.integrationBatchId) {
+                await tx.bankIntegrationBatch.update({
+                    where: { id: existingLaunch.integrationBatchId },
+                    data: { status: 'PENDING' }
+                })
+            }
+        }
+
+        await tx.launch.delete({
+            where: { id }
+        })
     })
 
     return NextResponse.json({ message: "Lançamento excluído com sucesso" })
   } catch (error) {
+    console.error("Delete error:", error)
     return NextResponse.json({ error: "Erro ao excluir lançamento" }, { status: 500 })
   }
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import prisma from "@/lib/prisma"
+import { getDb } from "@/lib/getDb"
 import { authOptions } from "../auth/[...nextauth]/route";
 import { getServerSession } from "next-auth/next";
 import { zonedTimeToUtc, utcToZonedTime } from 'date-fns-tz';
@@ -16,6 +16,8 @@ export async function GET(request: NextRequest) {
   if (!session) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
+
+  const prisma = await getDb(request)
 
   try {
     const { searchParams } = new URL(request.url)
@@ -56,7 +58,8 @@ export async function GET(request: NextRequest) {
         },
         include: {
           congregation: true,
-          contributor: true
+          contributor: true,
+          financialEntity: true
         },
         orderBy: [
           { date: 'desc' },
@@ -80,6 +83,8 @@ export async function GET(request: NextRequest) {
     if (session.user.canLaunchCircle) allowedTypes.push('CIRCULO');
     if (session.user.canLaunchServiceOffer) allowedTypes.push('OFERTA_CULTO');
     if (session.user.canLaunchExpense) allowedTypes.push('SAIDA');
+    if (session.user.canLaunchCarneAfrica) allowedTypes.push('CARNE_AFRICA');
+    if (session.user.canLaunchRendaBruta) allowedTypes.push('RENDA_BRUTA');
 
     // Se o usuário não tem nenhuma permissão de lançamento, retorna lista vazia
     if (allowedTypes.length === 0) {
@@ -118,8 +123,12 @@ export async function GET(request: NextRequest) {
       where.status = 'IMPORTED'
     }
 
+    if (importFilter === 'INTEGRATED') {
+      where.status = 'INTEGRATED'
+    }
+
     if (importFilter === 'MANUAL') {
-      where.status = { not: 'IMPORTED' }
+      where.status = { notIn: ['IMPORTED', 'INTEGRATED'] }
     }
 
     // Filtrar apenas registros ativos de congregation, contributor, supplier e classification
@@ -132,38 +141,26 @@ export async function GET(request: NextRequest) {
       },
       {
         OR: [
-          {
-            contributor: null
-          },
-          {
-            contributor: {
-              isActive: true
-            }
-          }
+          { contributor: null },
+          { contributor: { isActive: true } },
+          { status: 'INTEGRATED' },
+          { status: 'IMPORTED' }
         ]
       },
       {
         OR: [
-          {
-            supplier: null
-          },
-          {
-            supplier: {
-              isActive: true
-            }
-          }
+          { supplier: null },
+          { supplier: { isActive: true } },
+          { status: 'INTEGRATED' },
+          { status: 'IMPORTED' }
         ]
       },
       {
         OR: [
-          {
-            classification: null
-          },
-          {
-            classification: {
-              isActive: true
-            }
-          }
+          { classification: null },
+          { classification: { isActive: true } },
+          { status: 'INTEGRATED' },
+          { status: 'IMPORTED' }
         ]
       }
     ]
@@ -234,7 +231,8 @@ export async function GET(request: NextRequest) {
           congregation: true,
           contributor: true,
           supplier: true,
-          classification: true
+          classification: true,
+          financialEntity: true
         },
         orderBy: [
           { date: 'desc' },
@@ -302,7 +300,8 @@ export async function GET(request: NextRequest) {
           congregation: true,
           contributor: true,
           supplier: true,
-          classification: true
+          classification: true,
+          financialEntity: true
         },
         orderBy: [
           { date: 'desc' },
@@ -343,6 +342,8 @@ export async function POST(request: NextRequest) {
   if (!session) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
+
+  const prisma = await getDb(request)
 
   try {
     const body = await request.json()
@@ -453,15 +454,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Validação para contribuinte obrigatório em dízimos e carne reviver
-    if ((type === "DIZIMO" || type === "CARNE_REVIVER") && !contributorId && !contributorName) {
-      return NextResponse.json({ error: `Nome do contribuinte é obrigatório para lançamentos do tipo ${type === "DIZIMO" ? "Dízimo" : "Carne Reviver"}` }, { status: 400 })
+    if ((type === "DIZIMO" || type === "CARNE_REVIVER" || type === "CARNE_AFRICA") && !contributorId && !contributorName) {
+      return NextResponse.json({ error: `Nome do contribuinte é obrigatório para lançamentos do tipo ${type === "DIZIMO" ? "Dízimo" : type === "CARNE_REVIVER" ? "Carne Reviver" : "Carne África"}` }, { status: 400 })
     }
 
     // Validação de duplicidade baseada no tipo de lançamento
     const numericValue = parseFloat(value) || 0
 
     // Para DÍZIMO e CARNE_REVIVER: verificar Congregação + Data + Valor + Contribuinte apenas se contributorId estiver preenchido
-    if (type === "DIZIMO" || type === "CARNE_REVIVER") {
+    if (type === "DIZIMO" || type === "CARNE_REVIVER" || type === "CARNE_AFRICA") {
       // Validação de duplicidade apenas se o contribuinte estiver registrado (contributorId preenchido)
       if (isContributorRegistered && contributorId) {
         const whereClause: any = {
@@ -479,7 +480,7 @@ export async function POST(request: NextRequest) {
 
         if (existingLaunch) {
           return NextResponse.json({
-            error: `Já existe um lançamento de ${type === "DIZIMO" ? "Dízimo" : "Carne Reviver"} com a mesma congregação, data, valor e contribuinte`
+            error: `Já existe um lançamento de ${type === "DIZIMO" ? "Dízimo" : type === "CARNE_REVIVER" ? "Carne Reviver" : "Carne África"} com a mesma congregação, data, valor e contribuinte`
           }, { status: 400 })
         }
       }
@@ -590,15 +591,15 @@ export async function POST(request: NextRequest) {
         description,
         status: "NORMAL",
         // Lógica ajustada para o Dízimo e Carne Reviver
-        contributorId: (type === "DIZIMO" || type === "CARNE_REVIVER") && isContributorRegistered ? contributorId : null,
-        contributorName: (type === "DIZIMO" || type === "CARNE_REVIVER") && !isContributorRegistered ? contributorName : null,
+        contributorId: (type === "DIZIMO" || type === "CARNE_REVIVER" || type === "CARNE_AFRICA") && isContributorRegistered ? contributorId : null,
+        contributorName: (type === "DIZIMO" || type === "CARNE_REVIVER" || type === "CARNE_AFRICA") && !isContributorRegistered ? contributorName : null,
         // Lógica ajustada para a Saída
         supplierName: type === "SAIDA" && !isSupplierRegistered ? supplierName : null,
         supplierId: type === "SAIDA" && isSupplierRegistered ? supplierId : null,
         classificationId: type === "SAIDA" ? classificationId : null, // Apenas para saída
         createdBy: session.user.name,
         attachmentUrl,
-        isRateio: type === "CARNE_REVIVER" ? !!isRateio : false
+        isRateio: type === "CARNE_REVIVER" || type === "CARNE_AFRICA" ? !!isRateio : false
       },
       include: {
         congregation: true,
@@ -620,6 +621,8 @@ export async function PUT(request: NextRequest) {
   if (!session) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
+
+  const prisma = await getDb(request)
 
   // ler o body uma vez e usar
   const body = await request.json();
