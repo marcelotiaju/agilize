@@ -6,7 +6,7 @@ const clientCache = new Map<string, PrismaClient>()
 /**
  * Retorna o alias padrão configurado no DB_ALIASES (primeiro da lista)
  */
-function getDefaultAlias(): string {
+export function getDefaultAlias(): string {
   const aliases = process.env.DB_ALIASES || ""
   const firstPair = aliases.split(',')[0]
   return firstPair ? firstPair.split(':')[0].trim() : "AGILIZE"

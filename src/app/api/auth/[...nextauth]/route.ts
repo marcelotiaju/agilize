@@ -1,7 +1,7 @@
 // app/lib/authOptions.ts
 import NextAuth, { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { getPrismaClient } from "@/lib/prisma"
+import { getPrismaClient, getDefaultAlias } from "@/lib/prisma"
 import bcrypt from "bcrypt"
 import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz'
 
@@ -20,8 +20,9 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
-        const alias = (credentials.alias || "AGILIZE").toUpperCase()
-        const prisma = getPrismaClient(alias)
+        const aliasTrimmed = credentials.alias?.trim()
+        const prisma = getPrismaClient(aliasTrimmed || undefined)
+        const alias = (aliasTrimmed || getDefaultAlias()).toUpperCase()
 
         const user = await prisma.user.findUnique({
           where: {

@@ -460,7 +460,7 @@ export default function Launches() {
   const fetchContributors = async () => {
     try {
       // Para lançamentos importados, permitimos ver contribuinte de qualquer congregação
-      const url = importFilter === 'IMPORTED'
+      const url = importFilter === 'IMPORTED' || importFilter === 'INTEGRATED'
         ? '/api/contributors?filterByUserCongregations=false'
         : '/api/contributors'
 
@@ -864,9 +864,23 @@ export default function Launches() {
     }).format(numValue)
   }
 
-  const filteredContributors = contributors.filter(c =>
-    !formData.congregationId || c.congregationId === formData.congregationId || c.id === formData.contributorId || (editingLaunch?.status === 'IMPORTED')
-  )
+  // Função para obter contribuintes filtrados com base no contexto
+  const getFilteredContributors = () => {
+    return contributors.filter(c => {
+      // Se está editando um lançamento IMPORTED ou INTEGRATED, não filtra por congregação
+      if (editingLaunch?.status === 'IMPORTED' || editingLaunch?.status === 'INTEGRATED') {
+        return true
+      }
+      // Se não selecionou congregação, não mostra nada
+      if (!formData.congregationId) return false
+      // Se é o contribuinte já selecionado, mostra
+      if (c.id === formData.contributorId) return true
+      // Caso contrário, mostra apenas os ativos da congregação selecionada
+      return c.congregationId === formData.congregationId && c.isActive
+    })
+  }
+  
+  const filteredContributors = getFilteredContributors()
 
   // Função helper para obter a cor da borda baseada no tipo de lançamento
   const getLaunchTypeBorderColor = (type: string) => {
@@ -1561,21 +1575,25 @@ export default function Launches() {
                                     <div className="mt-2 w-full">
                                       <Label htmlFor="contributorId">Contribuinte</Label>
                                       <SearchableSelect
-                                        key={formData.contributorId}
+                                        key={`${formData.congregationId}-${editingLaunch?.status}`}
                                         label="Buscar Contribuinte"
                                         placeholder="Selecione o contribuinte"
                                         value={formData.contributorId ?? ''}
                                         disabled={isFieldDisabledDuringEdit()}
                                         onChange={(value) => handleSelectChange('contributorId', value)}
                                         name="contributorId"
-                                        data={contributors.filter(f => (
-                                          editingLaunch?.status === 'IMPORTED' ||
-                                          editingLaunch?.status === 'INTEGRATED' ||
-                                          importFilter === 'IMPORTED' ||
-                                          importFilter === 'INTEGRATED' ||
-                                          f.isActive ||
-                                          f.id === formData.contributorId
-                                        )).map(c => ({ key: c.id, id: c.id, name: c.name, document: c.cpf, cargo: c.ecclesiasticalPosition, photoUrl: c.photoUrl, photoExists: c.photoExists }))}
+                                        data={contributors.filter(f => {
+                                          // Se está editando um lançamento IMPORTED ou INTEGRATED, não filtra por congregação
+                                          if (editingLaunch?.status === 'IMPORTED' || editingLaunch?.status === 'INTEGRATED') {
+                                            return true
+                                          }
+                                          // Se não selecionou congregação, não mostra nada
+                                          if (!formData.congregationId) return false
+                                          // Se é o contribuinte já selecionado, mostra
+                                          if (f.id === formData.contributorId) return true
+                                          // Caso contrário, mostra apenas os ativos da congregação selecionada
+                                          return f.congregationId === formData.congregationId && f.isActive
+                                        }).map(c => ({ key: c.id, id: c.id, name: c.name, document: c.cpf, cargo: c.ecclesiasticalPosition, photoUrl: c.photoUrl, photoExists: c.photoExists }))}
                                         searchKeys={['name', 'document']}
                                       />
                                     </div>

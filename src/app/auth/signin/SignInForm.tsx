@@ -26,6 +26,7 @@ export default function SignInForm() {
   const [error, setError] = useState('')
   const [aliases, setAliases] = useState<{ key: string, label: string }[]>([])
   const [selectedAlias, setSelectedAlias] = useState<string>('')
+  const [aliasesReady, setAliasesReady] = useState(false)
 
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -41,6 +42,7 @@ export default function SignInForm() {
         }
       })
       .catch(err => console.error('Erro ao buscar aliases:', err))
+      .finally(() => setAliasesReady(true))
   }, [])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -57,7 +59,11 @@ export default function SignInForm() {
       })
 
       if (result && result.error) {
-        setError('Login ou senha incorretos')
+        setError(
+          result.error === 'CredentialsSignin'
+            ? 'Login ou senha incorretos (ou usuário inexistente nesta base).'
+            : result.error
+        )
       } else
         if (result) {
           const session = await getSession()
@@ -167,9 +173,9 @@ export default function SignInForm() {
           <Button
             type="submit"
             className="w-full"
-            disabled={isLoading}
+            disabled={isLoading || !aliasesReady}
           >
-            {isLoading ? 'Entrando...' : 'Entrar'}
+            {isLoading ? 'Entrando...' : !aliasesReady ? 'Carregando...' : 'Entrar'}
           </Button>
         </form>
       </CardContent>

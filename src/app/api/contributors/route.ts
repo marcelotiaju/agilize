@@ -21,9 +21,8 @@ export async function GET(request: NextRequest) {
     const congregationId = searchParams.get('congregationId')
     const filterByUserCongregations = searchParams.get('filterByUserCongregations') !== 'false'
     const activeOnly = searchParams.get('activeOnly') === 'true'
-
     let where: any = {}
-
+    
     if (filterByUserCongregations) {
       const userCongregations = await prisma.userCongregation.findMany({
         where: {
@@ -33,12 +32,12 @@ export async function GET(request: NextRequest) {
           congregationId: true
         }
       })
-
+      
       where.congregationId = {
         in: userCongregations.map(uc => uc.congregationId)
       }
     }
-
+    
     if (congregationId) {
       where.congregationId = congregationId
     }
