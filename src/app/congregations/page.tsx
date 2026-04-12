@@ -15,6 +15,13 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SearchInput } from '@/components/ui/search-input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 
 interface Congregation {
@@ -39,6 +46,14 @@ interface Congregation {
   entradaCarneReviverAccountPlan?: string
   entradaCarneReviverFinancialEntity?: string
   entradaCarneReviverPaymentMethod?: string
+  // Campos para Carnê Africa
+  entradaCarneAfricaAccountPlan?: string
+  entradaCarneAfricaFinancialEntity?: string
+  entradaCarneAfricaPaymentMethod?: string
+  // Campos para Renda Bruta
+  entradaRendaBrutaAccountPlan?: string
+  entradaRendaBrutaFinancialEntity?: string
+  entradaRendaBrutaPaymentMethod?: string
   // Campos para Dízimo
   dizimoAccountPlan?: string
   dizimoFinancialEntity?: string
@@ -71,6 +86,9 @@ export default function Congregations() {
     saida: false
   })
   const [searchTerm, setSearchTerm] = useState('')
+  const [financialEntities, setFinancialEntities] = useState<any[]>([])
+  const [paymentMethods, setPaymentMethods] = useState<any[]>([])
+  const [loadingEntities, setLoadingEntities] = useState(false)
   const [formData, setFormData] = useState({
     code: '',
     name: '',
@@ -91,6 +109,14 @@ export default function Congregations() {
     entradaCarneReviverAccountPlan: '',
     entradaCarneReviverFinancialEntity: '',
     entradaCarneReviverPaymentMethod: '',
+    // Campos para Carnê Africa
+    entradaCarneAfricaAccountPlan: '',
+    entradaCarneAfricaFinancialEntity: '',
+    entradaCarneAfricaPaymentMethod: '',
+    // Campos para Renda Bruta
+    entradaRendaBrutaAccountPlan: '',
+    entradaRendaBrutaFinancialEntity: '',
+    entradaRendaBrutaPaymentMethod: '',
     // Campos para Dízimo
     dizimoAccountPlan: '',
     dizimoFinancialEntity: '',
@@ -123,7 +149,33 @@ export default function Congregations() {
 
   useEffect(() => {
     fetchCongregations()
+    fetchFinancialEntities()
+    fetchPaymentMethods()
   }, [])
+
+  const fetchFinancialEntities = async () => {
+    try {
+      const response = await fetch('/api/financial-entities?congregationId=all')
+      if (response.ok) {
+        const data = await response.json()
+        setFinancialEntities(data)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar entidades financeiras:', error)
+    }
+  }
+
+  const fetchPaymentMethods = async () => {
+    try {
+      const response = await fetch('/api/payment-methods')
+      if (response.ok) {
+        const data = await response.json()
+        setPaymentMethods(data)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar formas de pagamento:', error)
+    }
+  }
 
   const fetchCongregations = async () => {
     try {
@@ -221,6 +273,14 @@ export default function Congregations() {
       entradaCarneReviverAccountPlan: congregation.entradaCarneReviverAccountPlan || '',
       entradaCarneReviverFinancialEntity: congregation.entradaCarneReviverFinancialEntity || '',
       entradaCarneReviverPaymentMethod: congregation.entradaCarneReviverPaymentMethod || '',
+      // Campos para Carnê Africa
+      entradaCarneAfricaAccountPlan: congregation.entradaCarneAfricaAccountPlan || '',
+      entradaCarneAfricaFinancialEntity: congregation.entradaCarneAfricaFinancialEntity || '',
+      entradaCarneAfricaPaymentMethod: congregation.entradaCarneAfricaPaymentMethod || '',
+      // Campos para Renda Bruta
+      entradaRendaBrutaAccountPlan: congregation.entradaRendaBrutaAccountPlan || '',
+      entradaRendaBrutaFinancialEntity: congregation.entradaRendaBrutaFinancialEntity || '',
+      entradaRendaBrutaPaymentMethod: congregation.entradaRendaBrutaPaymentMethod || '',
       // Campos para Dízimo
       dizimoAccountPlan: congregation.dizimoAccountPlan || '',
       dizimoFinancialEntity: congregation.dizimoFinancialEntity || '',
@@ -307,6 +367,14 @@ export default function Congregations() {
       entradaCarneReviverAccountPlan: '',
       entradaCarneReviverFinancialEntity: '',
       entradaCarneReviverPaymentMethod: '',
+      // Campos para Carnê Africa
+      entradaCarneAfricaAccountPlan: '',
+      entradaCarneAfricaFinancialEntity: '',
+      entradaCarneAfricaPaymentMethod: '',
+      // Campos para Renda Bruta
+      entradaRendaBrutaAccountPlan: '',
+      entradaRendaBrutaFinancialEntity: '',
+      entradaRendaBrutaPaymentMethod: '',
       // Campos para Dízimo
       dizimoAccountPlan: '',
       dizimoFinancialEntity: '',
@@ -386,7 +454,7 @@ export default function Congregations() {
 
       <div className="lg:pl-64">
         <div className="p-6">
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Congregações</h1>
               {/* <p className="text-gray-600">Gerencie as congregações da igreja</p> */}
@@ -401,7 +469,7 @@ export default function Congregations() {
                     Nova Congregação
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px] max-h-[80vh] overflow-y-auto">
+                <DialogContent className="w-screen sm:w-full max-w-sm sm:max-w-2xl lg:max-w-4xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>
                       {editingCongregation ? 'Editar Congregação' : 'Nova Congregação'}
@@ -411,9 +479,9 @@ export default function Congregations() {
                     </DialogDescription>
                   </DialogHeader>
                   <form onSubmit={handleSubmit}>
-                    <div className="grid gap-4 py-2">
-                      <div className="grid grid-cols-4 items-center gap-2">
-                        <Label htmlFor="code" className="text-right">
+                    <div className="grid gap-2 py-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                        <Label htmlFor="code" className="text-left sm:min-w-fit">
                           Código
                         </Label>
                         <Input
@@ -421,14 +489,13 @@ export default function Congregations() {
                           name="code"
                           value={formData.code}
                           onChange={handleInputChange}
-                          className="col-span-3"
+                          className="flex-1"
                           required
-                        //placeholder="Ex: CG001"
                         />
                       </div>
 
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="name" className="text-right">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                        <Label htmlFor="name" className="text-left sm:min-w-fit">
                           Nome
                         </Label>
                         <Input
@@ -436,14 +503,14 @@ export default function Congregations() {
                           name="name"
                           value={formData.name}
                           onChange={handleInputChange}
-                          className="col-span-3"
+                          className="flex-1"
                           required
                           placeholder="Nome da congregação"
                         />
                       </div>
 
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="regionalName" className="text-Left">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                        <Label htmlFor="regionalName" className="text-left sm:min-w-fit">
                           Nome Regional
                         </Label>
                         <Input
@@ -451,14 +518,14 @@ export default function Congregations() {
                           name="regionalName"
                           value={formData.regionalName}
                           onChange={handleInputChange}
-                          className="col-span-3"
+                          className="flex-1"
                           required
                           placeholder="Nome Regional"
                         />
                       </div>
 
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="isActive" className="text-right">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                        <Label htmlFor="isActive" className="text-left">
                           Ativo
                         </Label>
                         <Input
@@ -467,376 +534,583 @@ export default function Congregations() {
                           name="isActive"
                           checked={formData.isActive}
                           onChange={handleInputChange}
-                          className="h-4 w-4"
+                          className="h-4 w-4 flex-1"
                         />
                       </div>
                     </div>
 
-                    <Tabs defaultValue="dizimo" className="w-full mt-4 space-x-10">
-                      <TabsList className="grid w-full grid-cols-5">
+                    <Tabs defaultValue="dizimo" className="w-full mt-4">
+                      <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1 mb-36 sm:mb-20 bg-slate-100 p-1 rounded-lg">
                         <TabsTrigger value="dizimo">Dízimo</TabsTrigger>
-                        <TabsTrigger value="ofertaCulto">Oferta</TabsTrigger>
+                        <TabsTrigger value="ofertaCulto">Oferta do Culto</TabsTrigger>
                         <TabsTrigger value="mission">Missão</TabsTrigger>
-                        <TabsTrigger value="circulo">Círculo</TabsTrigger>
+                        <TabsTrigger value="circulo">Círculo de Oração</TabsTrigger>
                         <TabsTrigger value="votos">Votos</TabsTrigger>
                         <TabsTrigger value="ebd">EBD</TabsTrigger>
                         <TabsTrigger value="campaign">Campanha</TabsTrigger>
-                        <TabsTrigger value="carneReviver">Carnê R.</TabsTrigger>
+                        <TabsTrigger value="carneReviver">Carnê Reviver</TabsTrigger>
+                        <TabsTrigger value="carneAfrica">Carnê África</TabsTrigger>
+                        <TabsTrigger value="rendaBruta">Renda Bruta</TabsTrigger>
                         <TabsTrigger value="saida">Saídas</TabsTrigger>
                         <TabsTrigger value="outros">Outros</TabsTrigger>
                       </TabsList>
 
+                      <div className="space-y-4">
+
                       {/* Nova aba dedicada para Oferta do Culto */}
-                      <TabsContent value="ofertaCulto" className="space-y-4 mt-6">
-                        <div>
-                          <Label htmlFor="entradaOfferAccountPlan">Plano de Contas</Label>
-                          <Input
-                            id="entradaOfferAccountPlan"
-                            name="entradaOfferAccountPlan"
-                            value={formData.entradaOfferAccountPlan}
-                            onChange={handleInputChange}
-                            placeholder=""
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="entradaOfferFinancialEntity">Entidade Financeira</Label>
-                          <Input
-                            id="entradaOfferFinancialEntity"
-                            name="entradaOfferFinancialEntity"
-                            value={formData.entradaOfferFinancialEntity}
-                            onChange={handleInputChange}
-                            placeholder=""
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="entradaOfferPaymentMethod">Método de Pagamento</Label>
-                          <Input
-                            id="entradaOfferPaymentMethod"
-                            name="entradaOfferPaymentMethod"
-                            value={formData.entradaOfferPaymentMethod}
-                            onChange={handleInputChange}
-                            placeholder=""
-                          />
-                        </div>
-                      </TabsContent>
-
-                      <TabsContent value="ebd" className="space-y-4 mt-6">
-                        <div>
-                          <Label htmlFor="entradaEbdAccountPlan">Plano de Contas</Label>
-                          <Input
-                            id="entradaEbdAccountPlan"
-                            name="entradaEbdAccountPlan"
-                            value={formData.entradaEbdAccountPlan}
-                            onChange={handleInputChange}
-                            placeholder=""
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="entradaEbdFinancialEntity">Entidade Financeira</Label>
-                          <Input
-                            id="entradaEbdFinancialEntity"
-                            name="entradaEbdFinancialEntity"
-                            value={formData.entradaEbdFinancialEntity}
-                            onChange={handleInputChange}
-                            placeholder=""
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="entradaEbdPaymentMethod">Método de Pagamento</Label>
-                          <Input
-                            id="entradaEbdPaymentMethod"
-                            name="entradaEbdPaymentMethod"
-                            value={formData.entradaEbdPaymentMethod}
-                            onChange={handleInputChange}
-                            placeholder=""
-                          />
+                      <TabsContent value="ofertaCulto" className="space-y-3 mt-6">
+                        <div className="flex flex-col sm:flex-row sm:items-end gap-2 sm:gap-3">
+                          <div className="flex-1">
+                            <Label htmlFor="entradaOfferAccountPlan" className="text-sm">Plano de Contas</Label>
+                            <Input
+                              id="entradaOfferAccountPlan"
+                              name="entradaOfferAccountPlan"
+                              value={formData.entradaOfferAccountPlan}
+                              onChange={handleInputChange}
+                              placeholder=""
+                              className="w-full text-sm"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <Label htmlFor="entradaOfferFinancialEntity" className="text-sm">Entidade Financeira</Label>
+                            <Select value={formData.entradaOfferFinancialEntity} onValueChange={(value) => setFormData(prev => ({ ...prev, entradaOfferFinancialEntity: value }))}>
+                              <SelectTrigger id="entradaOfferFinancialEntity" className="text-sm">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {financialEntities.map((entity) => (
+                                  <SelectItem key={entity.id} value={entity.id.toString()} className="text-sm">
+                                    {entity.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex-1">
+                            <Label htmlFor="entradaOfferPaymentMethod" className="text-sm">Forma de Pagamento</Label>
+                            <Select value={formData.entradaOfferPaymentMethod} onValueChange={(value) => setFormData(prev => ({ ...prev, entradaOfferPaymentMethod: value }))}>
+                              <SelectTrigger id="entradaOfferPaymentMethod" className="text-sm">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {paymentMethods.map((method) => (
+                                  <SelectItem key={method.id} value={method.id.toString()} className="text-sm">
+                                    {method.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                       </TabsContent>
 
-                      <TabsContent value="campaign" className="space-y-4 mt-6">
-                        <div>
-                          <Label htmlFor="entradaCampaignAccountPlan">Plano de Contas</Label>
-                          <Input
-                            id="entradaCampaignAccountPlan"
-                            name="entradaCampaignAccountPlan"
-                            value={formData.entradaCampaignAccountPlan}
-                            onChange={handleInputChange}
-                            placeholder=""
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="entradaCampaignFinancialEntity">Entidade Financeira</Label>
-                          <Input
-                            id="entradaCampaignFinancialEntity"
-                            name="entradaCampaignFinancialEntity"
-                            value={formData.entradaCampaignFinancialEntity}
-                            onChange={handleInputChange}
-                            placeholder=""
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="entradaCampaignPaymentMethod">Método de Pagamento</Label>
-                          <Input
-                            id="entradaCampaignPaymentMethod"
-                            name="entradaCampaignPaymentMethod"
-                            value={formData.entradaCampaignPaymentMethod}
-                            onChange={handleInputChange}
-                            placeholder=""
-                          />
-                        </div>
-                      </TabsContent>
-                      <TabsContent value="votos" className="space-y-4 mt-6">
-                        <div>
-                          <Label htmlFor="entradaVotesAccountPlan">Plano de Contas</Label>
-                          <Input
-                            id="entradaVotesAccountPlan"
-                            name="entradaVotesAccountPlan"
-                            value={formData.entradaVotesAccountPlan}
-                            onChange={handleInputChange}
-                            placeholder=""
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="entradaVotesFinancialEntity">Entidade Financeira</Label>
-                          <Input
-                            id="entradaVotesFinancialEntity"
-                            name="entradaVotesFinancialEntity"
-                            value={formData.entradaVotesFinancialEntity}
-                            onChange={handleInputChange}
-                            placeholder=""
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="entradaVotesPaymentMethod">Método de Pagamento</Label>
-                          <Input
-                            id="entradaVotesPaymentMethod"
-                            name="entradaVotesPaymentMethod"
-                            value={formData.entradaVotesPaymentMethod}
-                            onChange={handleInputChange}
-                            placeholder=""
-                          />
+                      <TabsContent value="ebd" className="space-y-3 mt-6">
+                        <div className="flex flex-col sm:flex-row sm:items-end gap-2 sm:gap-3">
+                          <div className="flex-1">
+                            <Label htmlFor="entradaEbdAccountPlan" className="text-sm">Plano de Contas</Label>
+                            <Input
+                              id="entradaEbdAccountPlan"
+                              name="entradaEbdAccountPlan"
+                              value={formData.entradaEbdAccountPlan}
+                              onChange={handleInputChange}
+                              placeholder=""
+                              className="w-full text-sm"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <Label htmlFor="entradaEbdFinancialEntity" className="text-sm">Entidade Financeira</Label>
+                            <Select value={formData.entradaEbdFinancialEntity} onValueChange={(value) => setFormData(prev => ({ ...prev, entradaEbdFinancialEntity: value }))}>
+                              <SelectTrigger id="entradaEbdFinancialEntity" className="text-sm">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {financialEntities.map((entity) => (
+                                  <SelectItem key={entity.id} value={entity.id.toString()} className="text-sm">
+                                    {entity.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex-1">
+                            <Label htmlFor="entradaEbdPaymentMethod" className="text-sm">Forma de Pagamento</Label>
+                            <Select value={formData.entradaEbdPaymentMethod} onValueChange={(value) => setFormData(prev => ({ ...prev, entradaEbdPaymentMethod: value }))}>
+                              <SelectTrigger id="entradaEbdPaymentMethod" className="text-sm">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {paymentMethods.map((method) => (
+                                  <SelectItem key={method.id} value={method.id.toString()} className="text-sm">
+                                    {method.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                       </TabsContent>
 
-                      <TabsContent value="dizimo" className="space-y-4 mt-6">
-                        <div>
-                          <Label htmlFor="dizimoAccountPlan">Plano de Contas</Label>
-                          <Input
-                            id="dizimoAccountPlan"
-                            name="dizimoAccountPlan"
-                            value={formData.dizimoAccountPlan}
-                            onChange={handleInputChange}
-                            placeholder=""
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="dizimoFinancialEntity">Entidade Financeira</Label>
-                          <Input
-                            id="dizimoFinancialEntity"
-                            name="dizimoFinancialEntity"
-                            value={formData.dizimoFinancialEntity}
-                            onChange={handleInputChange}
-                            placeholder=""
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="dizimoPaymentMethod">Método de Pagamento</Label>
-                          <Input
-                            id="dizimoPaymentMethod"
-                            name="dizimoPaymentMethod"
-                            value={formData.dizimoPaymentMethod}
-                            onChange={handleInputChange}
-                            placeholder=""
-                          />
-                        </div>
-                      </TabsContent>
-                      <TabsContent value="mission" className="space-y-4 mt-6">
-                        <div>
-                          <Label htmlFor="missionAccountPlan">Plano de Contas</Label>
-                          <Input
-                            id="missionAccountPlan"
-                            name="missionAccountPlan"
-                            value={formData.missionAccountPlan}
-                            onChange={handleInputChange}
-                            placeholder=""
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="missionFinancialEntity">Entidade Financeira</Label>
-                          <Input
-                            id="missionFinancialEntity"
-                            name="missionFinancialEntity"
-                            value={formData.missionFinancialEntity}
-                            onChange={handleInputChange}
-                            placeholder=""
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="missionPaymentMethod">Método de Pagamento</Label>
-                          <Input
-                            id="missionPaymentMethod"
-                            name="missionPaymentMethod"
-                            value={formData.missionPaymentMethod}
-                            onChange={handleInputChange}
-                            placeholder=""
-                          />
+                      <TabsContent value="campaign" className="space-y-3 mt-6">
+                        <div className="flex flex-col sm:flex-row sm:items-end gap-2 sm:gap-3">
+                          <div className="flex-1">
+                            <Label htmlFor="entradaCampaignAccountPlan" className="text-sm">Plano de Contas</Label>
+                            <Input
+                              id="entradaCampaignAccountPlan"
+                              name="entradaCampaignAccountPlan"
+                              value={formData.entradaCampaignAccountPlan}
+                              onChange={handleInputChange}
+                              placeholder=""
+                              className="w-full text-sm"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <Label htmlFor="entradaCampaignFinancialEntity" className="text-sm">Entidade Financeira</Label>
+                            <Select value={formData.entradaCampaignFinancialEntity} onValueChange={(value) => setFormData(prev => ({ ...prev, entradaCampaignFinancialEntity: value }))}>
+                              <SelectTrigger id="entradaCampaignFinancialEntity" className="text-sm">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {financialEntities.map((entity) => (
+                                  <SelectItem key={entity.id} value={entity.id.toString()} className="text-sm">
+                                    {entity.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex-1">
+                            <Label htmlFor="entradaCampaignPaymentMethod" className="text-sm">Forma de Pagamento</Label>
+                            <Select value={formData.entradaCampaignPaymentMethod} onValueChange={(value) => setFormData(prev => ({ ...prev, entradaCampaignPaymentMethod: value }))}>
+                              <SelectTrigger id="entradaCampaignPaymentMethod" className="text-sm">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {paymentMethods.map((method) => (
+                                  <SelectItem key={method.id} value={method.id.toString()} className="text-sm">
+                                    {method.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                       </TabsContent>
-                      <TabsContent value="circulo" className="space-y-4 mt-6">
-                        <div>
-                          <Label htmlFor="circleAccountPlan">Plano de Contas</Label>
-                          <Input
-                            id="circleAccountPlan"
-                            name="circleAccountPlan"
-                            value={formData.circleAccountPlan}
-                            onChange={handleInputChange}
-                            placeholder=""
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="circleFinancialEntity">Entidade Financeira</Label>
-                          <Input
-                            id="circleFinancialEntity"
-                            name="circleFinancialEntity"
-                            value={formData.circleFinancialEntity}
-                            onChange={handleInputChange}
-                            placeholder=""
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="circlePaymentMethod">Método de Pagamento</Label>
-                          <Input
-                            id="circlePaymentMethod"
-                            name="circlePaymentMethod"
-                            value={formData.circlePaymentMethod}
-                            onChange={handleInputChange}
-                            placeholder=""
-                          />
+                      <TabsContent value="votos" className="space-y-3 mt-6">
+                        <div className="flex flex-col sm:flex-row sm:items-end gap-2 sm:gap-3">
+                          <div className="flex-1">
+                            <Label htmlFor="entradaVotesAccountPlan" className="text-sm">Plano de Contas</Label>
+                            <Input
+                              id="entradaVotesAccountPlan"
+                              name="entradaVotesAccountPlan"
+                              value={formData.entradaVotesAccountPlan}
+                              onChange={handleInputChange}
+                              placeholder=""
+                              className="w-full text-sm"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <Label htmlFor="entradaVotesFinancialEntity" className="text-sm">Entidade Financeira</Label>
+                            <Select value={formData.entradaVotesFinancialEntity} onValueChange={(value) => setFormData(prev => ({ ...prev, entradaVotesFinancialEntity: value }))}>
+                              <SelectTrigger id="entradaVotesFinancialEntity" className="text-sm">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {financialEntities.map((entity) => (
+                                  <SelectItem key={entity.id} value={entity.id.toString()} className="text-sm">
+                                    {entity.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex-1">
+                            <Label htmlFor="entradaVotesPaymentMethod" className="text-sm">Forma de Pagamento</Label>
+                            <Select value={formData.entradaVotesPaymentMethod} onValueChange={(value) => setFormData(prev => ({ ...prev, entradaVotesPaymentMethod: value }))}>
+                              <SelectTrigger id="entradaVotesPaymentMethod" className="text-sm">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {paymentMethods.map((method) => (
+                                  <SelectItem key={method.id} value={method.id.toString()} className="text-sm">
+                                    {method.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                       </TabsContent>
 
-                      <TabsContent value="carneReviver" className="space-y-4 mt-6">
-                        <div>
-                          <Label htmlFor="entradaCarneReviverAccountPlan">Plano de Contas</Label>
-                          <Input
-                            id="entradaCarneReviverAccountPlan"
-                            name="entradaCarneReviverAccountPlan"
-                            value={formData.entradaCarneReviverAccountPlan}
-                            onChange={handleInputChange}
-                            placeholder=""
-                          />
+                      <TabsContent value="dizimo" className="space-y-3 mt-6">
+                        <div className="flex flex-col sm:flex-row sm:items-end gap-2 sm:gap-3">
+                          <div className="flex-1">
+                            <Label htmlFor="dizimoAccountPlan" className="text-sm">Plano de Contas</Label>
+                            <Input
+                              id="dizimoAccountPlan"
+                              name="dizimoAccountPlan"
+                              value={formData.dizimoAccountPlan}
+                              onChange={handleInputChange}
+                              placeholder=""
+                              className="w-full text-sm"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <Label htmlFor="dizimoFinancialEntity" className="text-sm">Entidade Financeira</Label>
+                            <Select value={formData.dizimoFinancialEntity} onValueChange={(value) => setFormData(prev => ({ ...prev, dizimoFinancialEntity: value }))}>
+                              <SelectTrigger id="dizimoFinancialEntity" className="text-sm">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {financialEntities.map((entity) => (
+                                  <SelectItem key={entity.id} value={entity.id.toString()} className="text-sm">
+                                    {entity.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex-1">
+                            <Label htmlFor="dizimoPaymentMethod" className="text-sm">Forma de Pagamento</Label>
+                            <Select value={formData.dizimoPaymentMethod} onValueChange={(value) => setFormData(prev => ({ ...prev, dizimoPaymentMethod: value }))}>
+                              <SelectTrigger id="dizimoPaymentMethod" className="text-sm">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {paymentMethods.map((method) => (
+                                  <SelectItem key={method.id} value={method.id.toString()} className="text-sm">
+                                    {method.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
-                        <div>
-                          <Label htmlFor="entradaCarneReviverFinancialEntity">Entidade Financeira</Label>
-                          <Input
-                            id="entradaCarneReviverFinancialEntity"
-                            name="entradaCarneReviverFinancialEntity"
-                            value={formData.entradaCarneReviverFinancialEntity}
-                            onChange={handleInputChange}
-                            placeholder=""
-                          />
+                      </TabsContent>
+                      <TabsContent value="mission" className="space-y-3 mt-6">
+                        <div className="flex flex-col sm:flex-row sm:items-end gap-2 sm:gap-3">
+                          <div className="flex-1">
+                            <Label htmlFor="missionAccountPlan" className="text-sm">Plano de Contas</Label>
+                            <Input
+                              id="missionAccountPlan"
+                              name="missionAccountPlan"
+                              value={formData.missionAccountPlan}
+                              onChange={handleInputChange}
+                              placeholder=""
+                              className="w-full text-sm"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <Label htmlFor="missionFinancialEntity" className="text-sm">Entidade Financeira</Label>
+                            <Select value={formData.missionFinancialEntity} onValueChange={(value) => setFormData(prev => ({ ...prev, missionFinancialEntity: value }))}>
+                              <SelectTrigger id="missionFinancialEntity" className="text-sm">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {financialEntities.map((entity) => (
+                                  <SelectItem key={entity.id} value={entity.id.toString()} className="text-sm">
+                                    {entity.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex-1">
+                            <Label htmlFor="missionPaymentMethod" className="text-sm">Forma de Pagamento</Label>
+                            <Select value={formData.missionPaymentMethod} onValueChange={(value) => setFormData(prev => ({ ...prev, missionPaymentMethod: value }))}>
+                              <SelectTrigger id="missionPaymentMethod" className="text-sm">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {paymentMethods.map((method) => (
+                                  <SelectItem key={method.id} value={method.id.toString()} className="text-sm">
+                                    {method.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
-                        <div>
-                          <Label htmlFor="entradaCarneReviverPaymentMethod">Método de Pagamento</Label>
-                          <Input
-                            id="entradaCarneReviverPaymentMethod"
-                            name="entradaCarneReviverPaymentMethod"
-                            value={formData.entradaCarneReviverPaymentMethod}
-                            onChange={handleInputChange}
-                            placeholder=""
-                          />
+                      </TabsContent>
+                      <TabsContent value="circulo" className="space-y-3 mt-6">
+                        <div className="flex flex-col sm:flex-row sm:items-end gap-2 sm:gap-3">
+                          <div className="flex-1">
+                            <Label htmlFor="circleAccountPlan" className="text-sm">Plano de Contas</Label>
+                            <Input
+                              id="circleAccountPlan"
+                              name="circleAccountPlan"
+                              value={formData.circleAccountPlan}
+                              onChange={handleInputChange}
+                              placeholder=""
+                              className="w-full text-sm"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <Label htmlFor="circleFinancialEntity" className="text-sm">Entidade Financeira</Label>
+                            <Select value={formData.circleFinancialEntity} onValueChange={(value) => setFormData(prev => ({ ...prev, circleFinancialEntity: value }))}>
+                              <SelectTrigger id="circleFinancialEntity" className="text-sm">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {financialEntities.map((entity) => (
+                                  <SelectItem key={entity.id} value={entity.id.toString()} className="text-sm">
+                                    {entity.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex-1">
+                            <Label htmlFor="circlePaymentMethod" className="text-sm">Forma de Pagamento</Label>
+                            <Select value={formData.circlePaymentMethod} onValueChange={(value) => setFormData(prev => ({ ...prev, circlePaymentMethod: value }))}>
+                              <SelectTrigger id="circlePaymentMethod" className="text-sm">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {paymentMethods.map((method) => (
+                                  <SelectItem key={method.id} value={method.id.toString()} className="text-sm">
+                                    {method.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                       </TabsContent>
 
-                      <TabsContent value="saida" className="space-y-4 mt-6">
-                        {/*<div>
-                              <Label htmlFor="saidaAccountPlan">Plano de Contas</Label>
-                              <Input
-                                  id="saidaAccountPlan"
-                                  name="saidaAccountPlan"
-                                  value={formData.saidaAccountPlan}
-                                  onChange={handleInputChange}
-                                  placeholder=""
-                              />
-                          </div>*/}
-                        <div>
-                          <Label htmlFor="saidaFinancialEntity">Entidade Financeira</Label>
-                          <Input
-                            id="saidaFinancialEntity"
-                            name="saidaFinancialEntity"
-                            value={formData.saidaFinancialEntity}
-                            onChange={handleInputChange}
-                            placeholder=""
-                          />
+                      <TabsContent value="carneReviver" className="space-y-3 mt-6">
+                        <div className="flex flex-col sm:flex-row sm:items-end gap-2 sm:gap-3">
+                          <div className="flex-1">
+                            <Label htmlFor="entradaCarneReviverAccountPlan" className="text-sm">Plano de Contas</Label>
+                            <Input
+                              id="entradaCarneReviverAccountPlan"
+                              name="entradaCarneReviverAccountPlan"
+                              value={formData.entradaCarneReviverAccountPlan}
+                              onChange={handleInputChange}
+                              placeholder=""
+                              className="w-full text-sm"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <Label htmlFor="entradaCarneReviverFinancialEntity" className="text-sm">Entidade Financeira</Label>
+                            <Select value={formData.entradaCarneReviverFinancialEntity} onValueChange={(value) => setFormData(prev => ({ ...prev, entradaCarneReviverFinancialEntity: value }))}>
+                              <SelectTrigger id="entradaCarneReviverFinancialEntity" className="text-sm">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {financialEntities.map((entity) => (
+                                  <SelectItem key={entity.id} value={entity.id.toString()} className="text-sm">
+                                    {entity.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex-1">
+                            <Label htmlFor="entradaCarneReviverPaymentMethod" className="text-sm">Forma de Pagamento</Label>
+                            <Select value={formData.entradaCarneReviverPaymentMethod} onValueChange={(value) => setFormData(prev => ({ ...prev, entradaCarneReviverPaymentMethod: value }))}>
+                              <SelectTrigger id="entradaCarneReviverPaymentMethod" className="text-sm">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {paymentMethods.map((method) => (
+                                  <SelectItem key={method.id} value={method.id.toString()} className="text-sm">
+                                    {method.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
-                        <div>
-                          <Label htmlFor="saidaPaymentMethod">Método de Pagamento</Label>
-                          <Input
-                            id="saidaPaymentMethod"
-                            name="saidaPaymentMethod"
-                            value={formData.saidaPaymentMethod}
-                            onChange={handleInputChange}
-                            placeholder=""
-                          />
+                      </TabsContent>
+
+                      <TabsContent value="carneAfrica" className="space-y-3 mt-6">
+                        <div className="flex flex-col sm:flex-row sm:items-end gap-2 sm:gap-3">
+                          <div className="flex-1">
+                            <Label htmlFor="entradaCarneAfricaAccountPlan" className="text-sm">Plano de Contas</Label>
+                            <Input
+                              id="entradaCarneAfricaAccountPlan"
+                              name="entradaCarneAfricaAccountPlan"
+                              value={formData.entradaCarneAfricaAccountPlan}
+                              onChange={handleInputChange}
+                              placeholder=""
+                              className="w-full text-sm"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <Label htmlFor="entradaCarneAfricaFinancialEntity" className="text-sm">Entidade Financeira</Label>
+                            <Select value={formData.entradaCarneAfricaFinancialEntity} onValueChange={(value) => setFormData(prev => ({ ...prev, entradaCarneAfricaFinancialEntity: value }))}>                          
+                              <SelectTrigger id="entradaCarneAfricaFinancialEntity" className="text-sm">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {financialEntities.map((entity) => (
+                                  <SelectItem key={entity.id} value={entity.id.toString()} className="text-sm">
+                                    {entity.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex-1">
+                            <Label htmlFor="entradaCarneAfricaPaymentMethod" className="text-sm">Forma de Pagamento</Label>
+                            <Select value={formData.entradaCarneAfricaPaymentMethod} onValueChange={(value) => setFormData(prev => ({ ...prev, entradaCarneAfricaPaymentMethod: value }))}>                         
+                              <SelectTrigger id="entradaCarneAfricaPaymentMethod" className="text-sm">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {paymentMethods.map((method) => (
+                                  <SelectItem key={method.id} value={method.id.toString()} className="text-sm">
+                                    {method.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </TabsContent>
+
+                      <TabsContent value="rendaBruta" className="space-y-3 mt-6">
+                        <div className="flex flex-col sm:flex-row sm:items-end gap-2 sm:gap-3">
+                          <div className="flex-1">
+                            <Label htmlFor="entradaRendaBrutaAccountPlan" className="text-sm">Plano de Contas</Label>
+                            <Input
+                              id="entradaRendaBrutaAccountPlan"
+                              name="entradaRendaBrutaAccountPlan"
+                              value={formData.entradaRendaBrutaAccountPlan}
+                              onChange={handleInputChange}
+                              placeholder=""
+                              className="w-full text-sm"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <Label htmlFor="entradaRendaBrutaFinancialEntity" className="text-sm">Entidade Financeira</Label>
+                            <Select value={formData.entradaRendaBrutaFinancialEntity} onValueChange={(value) => setFormData(prev => ({ ...prev, entradaRendaBrutaFinancialEntity: value }))}>                           
+                              <SelectTrigger id="entradaRendaBrutaFinancialEntity" className="text-sm">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {financialEntities.map((entity) => (
+                                  <SelectItem key={entity.id} value={entity.id.toString()} className="text-sm">
+                                    {entity.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex-1">
+                            <Label htmlFor="entradaRendaBrutaPaymentMethod" className="text-sm">Forma de Pagamento</Label>
+                            <Select value={formData.entradaRendaBrutaPaymentMethod} onValueChange={(value) => setFormData(prev => ({ ...prev, entradaRendaBrutaPaymentMethod: value }))}>                            
+                              <SelectTrigger id="entradaRendaBrutaPaymentMethod" className="text-sm">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {paymentMethods.map((method) => (
+                                  <SelectItem key={method.id} value={method.id.toString()} className="text-sm">
+                                    {method.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </TabsContent>
+
+                      <TabsContent value="saida" className="space-y-3 mt-6">
+                        <div className="flex flex-col sm:flex-row sm:items-end gap-2 sm:gap-3">
+                          <div className="flex-1">
+                            <Label htmlFor="saidaFinancialEntity" className="text-sm">Entidade Financeira</Label>
+                            <Select value={formData.saidaFinancialEntity} onValueChange={(value) => setFormData(prev => ({ ...prev, saidaFinancialEntity: value }))}>
+                              <SelectTrigger id="saidaFinancialEntity" className="text-sm">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {financialEntities.map((entity) => (
+                                  <SelectItem key={entity.id} value={entity.id.toString()} className="text-sm">
+                                    {entity.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex-1">
+                            <Label htmlFor="saidaPaymentMethod" className="text-sm">Forma de Pagamento</Label>
+                            <Select value={formData.saidaPaymentMethod} onValueChange={(value) => setFormData(prev => ({ ...prev, saidaPaymentMethod: value }))}>
+                              <SelectTrigger id="saidaPaymentMethod" className="text-sm">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {paymentMethods.map((method) => (
+                                  <SelectItem key={method.id} value={method.id.toString()} className="text-sm">
+                                    {method.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                       </TabsContent>
 
                       <TabsContent value="outros" className="space-y-4 mt-6">
-                        <div>
-                          <Label>Matriculas Energisa</Label>
-                          <div className="space-y-2">
-                            {matriculaEnergisaList.map((m, idx) => (
-                              <div key={idx} className="flex items-center space-x-2">
-                                <Input
-                                  value={m}
-                                  onChange={(e) => {
-                                    const next = [...matriculaEnergisaList]
-                                    next[idx] = e.target.value
-                                    setMatriculaEnergisaList(next)
-                                  }}
-                                  placeholder="Informe uma matrícula"
-                                />
-                                <Button variant="ghost" size="sm" onClick={() => {
-                                  setMatriculaEnergisaList(prev => prev.filter((_, i) => i !== idx))
-                                }}>
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ))}
-                            <Button type="button" onClick={() => setMatriculaEnergisaList(prev => [...prev, ''])}>
-                              <Plus className="mr-2 h-4 w-4" /> Adicionar matrícula
-                            </Button>
+                        <div className="flex flex-col lg:flex-row gap-6">
+                          <div className="flex-1">
+                            <Label>Matrículas Energisa</Label>
+                            <div className="space-y-2 mt-2">
+                              {matriculaEnergisaList.map((m, idx) => (
+                                <div key={idx} className="flex items-center gap-2">
+                                  <Input
+                                    value={m}
+                                    onChange={(e) => {
+                                      const next = [...matriculaEnergisaList]
+                                      next[idx] = e.target.value
+                                      setMatriculaEnergisaList(next)
+                                    }}
+                                    placeholder="Informe uma matrícula"
+                                    className="text-sm"
+                                  />
+                                  <Button variant="ghost" size="sm" onClick={() => {
+                                    setMatriculaEnergisaList(prev => prev.filter((_, i) => i !== idx))
+                                  }}>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                              <Button type="button" onClick={() => setMatriculaEnergisaList(prev => [...prev, ''])} className="text-xs">
+                                <Plus className="mr-2 h-3 w-3" /> Adicionar
+                              </Button>
+                            </div>
                           </div>
-                        </div>
 
-                        <div>
-                          <Label>Matriculas Iguá</Label>
-                          <div className="space-y-2">
-                            {matriculaIguaList.map((m, idx) => (
-                              <div key={idx} className="flex items-center space-x-2">
-                                <Input
-                                  value={m}
-                                  onChange={(e) => {
-                                    const next = [...matriculaIguaList]
-                                    next[idx] = e.target.value
-                                    setMatriculaIguaList(next)
-                                  }}
-                                  placeholder="Informe uma matrícula"
-                                />
-                                <Button variant="ghost" size="sm" onClick={() => {
-                                  setMatriculaIguaList(prev => prev.filter((_, i) => i !== idx))
-                                }}>
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ))}
-                            <Button type="button" onClick={() => setMatriculaIguaList(prev => [...prev, ''])}>
-                              <Plus className="mr-2 h-4 w-4" /> Adicionar matrícula
-                            </Button>
+                          <div className="flex-1">
+                            <Label>Matrículas Iguá</Label>
+                            <div className="space-y-2 mt-2">
+                              {matriculaIguaList.map((m, idx) => (
+                                <div key={idx} className="flex items-center gap-2">
+                                  <Input
+                                    value={m}
+                                    onChange={(e) => {
+                                      const next = [...matriculaIguaList]
+                                      next[idx] = e.target.value
+                                      setMatriculaIguaList(next)
+                                    }}
+                                    placeholder="Informe uma matrícula"
+                                    className="text-sm"
+                                  />
+                                  <Button variant="ghost" size="sm" onClick={() => {
+                                    setMatriculaIguaList(prev => prev.filter((_, i) => i !== idx))
+                                  }}>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                              <Button type="button" onClick={() => setMatriculaIguaList(prev => [...prev, ''])} className="text-xs">
+                                <Plus className="mr-2 h-3 w-3" /> Adicionar
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       </TabsContent>
 
+                      </div>
                     </Tabs>
                     <DialogFooter className='mt-2'>
                       <Button type="submit">
@@ -849,7 +1123,7 @@ export default function Congregations() {
 
               <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" onClick={resetImportForm}>
+                  <Button variant="outline" onClick={resetImportForm} className="ml-2">
                     <Upload className="mr-2 h-4 w-4" />
                     Importar CSV
                   </Button>

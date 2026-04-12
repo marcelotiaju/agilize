@@ -97,6 +97,8 @@ export const authOptions: NextAuthOptions = {
           defaultLaunchType: p?.defaultLaunchType ?? 'DIZIMO',
           canTechnicalIntervention: !!p?.canTechnicalIntervention,
           canManageBankIntegration: !!p?.canManageBankIntegration,
+          canBankIntegrationConfigure: !!p?.canBankIntegrationConfigure,
+          canBankIntegrationExecute: !!p?.canBankIntegrationExecute,
         }
 
         return {
@@ -198,6 +200,8 @@ export const authOptions: NextAuthOptions = {
           defaultLaunchType: (user as any).defaultLaunchType ?? 'DIZIMO',
           canTechnicalIntervention: (user as any).canTechnicalIntervention,
           canManageBankIntegration: (user as any).canManageBankIntegration,
+          canBankIntegrationConfigure: (user as any).canBankIntegrationConfigure,
+          canBankIntegrationExecute: (user as any).canBankIntegrationExecute,
           image: (user as any).image,
           forceLogoutAt: (user as any).forceLogoutAt ? new Date((user as any).forceLogoutAt).getTime() : null,
           dbAlias: (user as any).dbAlias,
@@ -292,6 +296,8 @@ export const authOptions: NextAuthOptions = {
         defaultLaunchType: typeof token.defaultLaunchType === "string" ? token.defaultLaunchType : 'DIZIMO',
         canTechnicalIntervention: typeof token.canTechnicalIntervention === "boolean" ? token.canTechnicalIntervention : undefined,
         canManageBankIntegration: typeof token.canManageBankIntegration === "boolean" ? token.canManageBankIntegration : undefined,
+        canBankIntegrationConfigure: typeof token.canBankIntegrationConfigure === "boolean" ? token.canBankIntegrationConfigure : undefined,
+        canBankIntegrationExecute: typeof token.canBankIntegrationExecute === "boolean" ? token.canBankIntegrationExecute : undefined,
         dbAlias: token.dbAlias as string | undefined,
         dbLogoUrl: token.dbLogoUrl as string | undefined
       }

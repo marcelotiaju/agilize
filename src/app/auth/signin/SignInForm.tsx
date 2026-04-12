@@ -16,12 +16,13 @@ import {
 } from "@/components/ui/select"
 import Link from 'next/link'
 import Image from 'next/image';
-import { User, Lock, Building2 } from 'lucide-react'
+import { User, Lock, Building2, Eye, EyeOff } from 'lucide-react'
 import packageJson from '../../../../package.json';
 
 export default function SignInForm() {
   const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [aliases, setAliases] = useState<{ key: string, label: string }[]>([])
@@ -61,7 +62,7 @@ export default function SignInForm() {
       if (result && result.error) {
         setError(
           result.error === 'CredentialsSignin'
-            ? 'Login ou senha incorretos (ou usuário inexistente nesta base).'
+            ? 'Login ou senha incorretos.'
             : result.error
         )
       } else
@@ -134,12 +135,23 @@ export default function SignInForm() {
               <Input
                 id="password"
                 name="password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="pl-10"
+                className="pl-10 pr-10"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                {!showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
             </div>
           </div>
 
@@ -180,7 +192,7 @@ export default function SignInForm() {
         </form>
       </CardContent>
       <div className="pt- pb-0">
-        <div className="text-sm text-gray-500 text-center mt-[-20px]">Versão {packageJson.version}</div>
+        <div className="text-sm text-gray-500 text-center -mt-5">Versão {packageJson.version}</div>
       </div>
     </Card>
   )

@@ -150,12 +150,48 @@ export async function POST(request: NextRequest) {
 
         console.log(`[CSV Import] Starting transformation for ${rows.length} rows...`)
 
+        const filters = (config.filters as any[]) || []
+        const getRowValue = (row: Record<string, string>, field: string): string => {
+            if (!field) return ''
+            const val = row[field];
+            if (val !== undefined) return String(val).trim();
+            const normalize = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9]/g, '')
+            const targetNorm = normalize(field)
+            for (const key of Object.keys(row)) {
+                if (normalize(key) === targetNorm) return String(row[key]).trim()
+            }
+            return ''
+        }
+
         for (let i = 0; i < rows.length; i++) {
             const rawRow = rows[i]
+            
+            // Apply Filters
+            let isRowFiltered = true
+            let filterReason = ""
+            for (const filter of filters) {
+                const val = getRowValue(rawRow, filter.field)
+                const target = String(filter.value || '').trim()
+                let match = false
+                switch (filter.operator) {
+                    case '=': match = val === target; break
+                    case '!=': match = val !== target; break
+                    case 'startsWith': match = val.toLowerCase().startsWith(target.toLowerCase()); break
+                    case 'contains': match = val.toLowerCase().includes(target.toLowerCase()); break
+                    case 'present': match = !!val; break
+                    default: match = true
+                }
+                if (!match) {
+                    isRowFiltered = false
+                    filterReason = `Filtro: ${filter.field} ${filter.operator} "${filter.value}"`
+                    break
+                }
+            }
+
             const ctx: TransformContext = { ...contextBase, row: rawRow, dbFields: {} }
             const destData: Record<string, string> = {}
-            let isRowValid = true
-            let rowErrorMsg = ""
+            let isRowValid = isRowFiltered
+            let rowErrorMsg = filterReason
 
             for (const col of config.destinationColumns) {
                 const step = parseTransformation(col.transformation)

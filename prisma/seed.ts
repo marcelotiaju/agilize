@@ -40,19 +40,19 @@ async function main() {
   const hashedPassword = await bcrypt.hash('19321932', 10)
 const isPasswordValid = await bcrypt.compare('19321932', hashedPassword)
   console.log('✅ Senha hash gerada:', hashedPassword)
-  // const user1 = await prisma.user.upsert({
-  //   where: { email: 'admin@igreja.com' },
-  //   update: {},
-  //   create: {
-  //     name: 'Administrador',
-  //     email: 'admin@igreja.com',
-  //     phone: '(11) 99999-9999',
-  //     password: hashedPassword,
-  //     validFrom: new Date(),
-  //     validTo: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
-  //     historyDays: 30,
-  //   }
-  // })
+  const user1 = await prisma.user.upsert({
+    where: { email: 'admin@igreja.com' },
+    update: {},
+    create: {
+      name: 'Administrador',
+      email: 'admin@igreja.com',
+      phone: '(11) 99999-9999',
+      password: hashedPassword,
+      validFrom: new Date(),
+      validTo: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+      historyDays: 30,
+    }
+  })
 
   // const profile1 = await prisma.profile.create({
   //   data: {

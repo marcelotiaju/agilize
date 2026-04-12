@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import prisma from "@/lib/prisma"
 import { jsPDF } from "jspdf"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { zonedTimeToUtc, utcToZonedTime } from 'date-fns-tz'
 import path from "path"
+import { getDb } from "@/lib/getDb"
 
 const fs = require('fs');
 //const imagePath = path.join(process.cwd(), '../Logo.png');
@@ -24,6 +24,8 @@ const formatCurrency = (val: number, showValues: boolean) => {
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+
+  const prisma = await getDb(request)
 
   try {
     const { searchParams } = new URL(request.url)

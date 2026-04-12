@@ -14,17 +14,18 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Senha", type: "password" }
       },
       async authorize(credentials) {
-        if (!credentials?.login || !credentials?.password) return null
+        try {
+          if (!credentials?.login || !credentials?.password) return null
 
-        const user = await prisma.user.findUnique({
-          where: { login: credentials.login },
-          include: { profile: true }
-        })
+          const user = await prisma.user.findUnique({
+            where: { login: credentials.login },
+            include: { profile: true }
+          })
 
-        if (!user) return null
+          if (!user) return null
 
-        const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
-        if (!isPasswordValid) return null
+          const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
+          if (!isPasswordValid) return null
 
         // Preferir permissões do profile quando existir
         const p = user.profile
@@ -72,6 +73,8 @@ export const authOptions: NextAuthOptions = {
           canDeleteSummary: !!p?.canDeleteSummary,
           canTechnicalIntervention: !!p?.canTechnicalIntervention,
           canManageBankIntegration: !!p?.canManageBankIntegration,
+          canBankIntegrationConfigure: !!p?.canBankIntegrationConfigure,
+          canBankIntegrationExecute: !!p?.canBankIntegrationExecute,
           defaultLaunchType: p?.defaultLaunchType ?? 'DIZIMO'
         }
 
@@ -90,6 +93,10 @@ export const authOptions: NextAuthOptions = {
           profile: user.profile ? { id: user.profile.id, name: user.profile.name } : null,
           ...resolved
         } as any
+        } catch (error) {
+          console.error('[authOptions] Erro no authorize:', error)
+          return null
+        }
       }
     })
   ],
@@ -167,6 +174,8 @@ export const authOptions: NextAuthOptions = {
           defaultLaunchType: (user as any).defaultLaunchType ?? 'DIZIMO',
           canTechnicalIntervention: (user as any).canTechnicalIntervention,
           canManageBankIntegration: (user as any).canManageBankIntegration,
+          canBankIntegrationConfigure: (user as any).canBankIntegrationConfigure,
+          canBankIntegrationExecute: (user as any).canBankIntegrationExecute,
         }
       }
       return token
@@ -229,6 +238,8 @@ export const authOptions: NextAuthOptions = {
         defaultLaunchType: typeof token.defaultLaunchType === "string" ? token.defaultLaunchType : 'DIZIMO',
         canTechnicalIntervention: typeof token.canTechnicalIntervention === "boolean" ? token.canTechnicalIntervention : undefined,
         canManageBankIntegration: typeof token.canManageBankIntegration === "boolean" ? token.canManageBankIntegration : undefined,
+        canBankIntegrationConfigure: typeof token.canBankIntegrationConfigure === "boolean" ? token.canBankIntegrationConfigure : undefined,
+        canBankIntegrationExecute: typeof token.canBankIntegrationExecute === "boolean" ? token.canBankIntegrationExecute : undefined,
       }
       if (typeof token.exp === 'number') {
         session.expires = new Date(token.exp * 1000).toISOString()

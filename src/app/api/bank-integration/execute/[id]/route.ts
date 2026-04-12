@@ -21,7 +21,8 @@ export async function GET(
                 config: {
                     include: {
                         destinationColumns: { orderBy: { id: 'asc' } },
-                        sourceColumns: { orderBy: { id: 'asc' } }
+                        sourceColumns: { orderBy: { id: 'asc' } },
+                        launchIntegrationRules: { orderBy: { id: 'asc' } }
                     }
                 },
                 financialEntity: true,
@@ -32,7 +33,18 @@ export async function GET(
 
         if (!batch) return NextResponse.json({ error: "Lote não encontrado" }, { status: 404 })
 
-        return NextResponse.json(batch)
+        // Buscar lançamentos integrados para esta batch
+        const integratedLaunches = await prisma.launch.findMany({
+            where: { integrationBatchId: id },
+            include: {
+                paymentMethod: true,
+                classification: true,
+                contributor: true,
+                financialEntity: true
+            }
+        })
+
+        return NextResponse.json({ ...batch, integratedLaunches })
     } catch (error) {
         console.error("Erro ao buscar lote:", error)
         return NextResponse.json({ error: "Erro interno" }, { status: 500 })

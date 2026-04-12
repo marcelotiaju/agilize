@@ -49,7 +49,7 @@ export function Footer() {
     'canApproveServiceOffer',
     'canApproveExpense'];
   const canAccesSummary = ['canListSummary', 'canGenerateSummary'];
-  const canGenerateReport = ['canReportLaunches', 'canReportContributors', 'canReportMonthlySummary', 'canReportHistoryContribSynthetic', 'canReportHistoryContribAnalytic', 'canReportAudit'];
+  const canGenerateReport = ['canReportLaunches', 'canReportContributors', 'canReportMonthlySummary', 'canReportHistoryContribSynthetic', 'canReportHistoryContribAnalytic', 'canReportAudit', 'canReportAccountability'];
 
   const hasLaunchPermission = Boolean(canAccessLaunches.find(perm => session?.user?.[perm]));
   const hasSummaryPermission = Boolean(canAccesSummary.find(perm => session?.user?.[perm]));
@@ -61,6 +61,7 @@ export function Footer() {
   const canReportHistoryContribSynthetic = Boolean(session?.user?.canReportHistoryContribSynthetic)
   const canReportHistoryContribAnalytic = Boolean(session?.user?.canReportHistoryContribAnalytic)
   const canReportAudit = Boolean(session?.user?.canReportAudit)
+    const canReportAccountability = Boolean(session?.user?.canReportAccountability)
 
   const handleSignOut = () => {
     signOut({ callbackUrl: '/' })
@@ -217,6 +218,16 @@ export function Footer() {
                     <span>Relatório de Auditoria</span>
                   </Link>
                 )}
+                {canReportAudit && (
+                  <Link
+                    href="/reports/accountability"
+                    className="px-3 py-2 text-sm hover:bg-indigo-50 flex items-center gap-2 transition-colors"
+                    onClick={() => setIsReportsOpen(false)}
+                  >
+                    <Printer className="h-4 w-4" />
+                    <span>Relatório de Prestação de Contas</span>
+                  </Link>
+                )}                
               </div>
             </PopoverContent>
           </Popover>

@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Plus, Trash2, ChevronDown, ChevronUp, Wand2 } from 'lucide-react'
-import type { TransformStep, TransformType, ConvertMap } from '@/lib/transformation-types'
+import type { TransformStep, TransformType, ConvertMap, ConditionalRule } from '@/lib/transformation-types'
 import { describeTransformation } from '@/lib/transformation-types'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -37,6 +37,7 @@ const TRANSFORM_LABELS: Record<TransformType, string> = {
     FORMAT_DATE: 'Formatar Data',
     CONVERT: 'Converter Valores',
     REPLACE: 'Substituir Texto',
+    CONDITIONAL: 'Condicional (Se/Então)',
 }
 
 const TRANSFORM_DESCRIPTIONS: Record<TransformType, string> = {
@@ -50,6 +51,7 @@ const TRANSFORM_DESCRIPTIONS: Record<TransformType, string> = {
     FORMAT_DATE: 'Converte formato de data (ex: DDMMYYYY → YYYY-MM-DD)',
     CONVERT: 'Troca valores por mapeamento (ex: D → DEBIT, C → CREDIT)',
     REPLACE: 'Substitui texto dentro de um campo',
+    CONDITIONAL: 'Define múltiplas condições (Se campo = valor, então resultado X)',
 }
 
 // ─── Default empty steps per type ─────────────────────────────────────────
@@ -66,6 +68,7 @@ function defaultStep(type: TransformType): TransformStep {
         case 'FORMAT_DATE': return { type, sourceField: '', inputFormat: 'DD/MM/YYYY', outputFormat: 'YYYY-MM-DD' }
         case 'CONVERT': return { type, sourceField: '', map: [{ from: '', to: '' }], default: '' }
         case 'REPLACE': return { type, sourceField: '', find: '', replaceWith: '' }
+        case 'CONDITIONAL': return { type, conditions: [{ field: '', operator: '=', value: '', result: { type: 'FIXED', value: '' } }], fallback: { type: 'FIXED', value: '' } }
     }
 }
 
@@ -224,6 +227,22 @@ function StepForm({ step, onChange, sourceColumns, dbFields, compact }: StepForm
                 <div className="space-y-4">
                     <div className="grid grid-cols-1 gap-4">
                         {sourceField('Campo do arquivo (entrada)', 'sourceField')}
+                        
+                        <div className="p-3 bg-orange-50/50 rounded-lg border border-orange-100">
+                            <Label className="text-xs uppercase font-bold text-orange-600 mb-2 block">Limpeza de dados (Pré-busca)</Label>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div className="grid gap-1">
+                                    <Label className="text-[10px] text-gray-500">Localizar/Remover</Label>
+                                    <Input className="h-8 text-xs" value={step.find ?? ''} onChange={e => up({ find: e.target.value })} placeholder="ex: REC PIX " />
+                                </div>
+                                <div className="grid gap-1">
+                                    <Label className="text-[10px] text-gray-500">Substituir por</Label>
+                                    <Input className="h-8 text-xs" value={step.replaceWith ?? ''} onChange={e => up({ replaceWith: e.target.value })} placeholder="vazio = remove" />
+                                </div>
+                            </div>
+                            <p className="text-[10px] text-gray-500 italic mt-1">Opcional: limpa o texto do campo antes de buscar no banco.</p>
+                        </div>
+
                         <div className="grid gap-1">
                             <Label className="text-xs">Buscar em</Label>
                             <Select value={step.searchTable ?? 'Contributor'} onValueChange={(v) => up({ searchTable: v })}>
@@ -337,6 +356,7 @@ function StepForm({ step, onChange, sourceColumns, dbFields, compact }: StepForm
                                 <SelectContent>
                                     <SelectItem value="EMPTY" className="text-xs">Deixar Vazio</SelectItem>
                                     <SelectItem value="SOURCE" className="text-xs">Usar Campo do Arquivo</SelectItem>
+                                    <SelectItem value="FIXED" className="text-xs">Valor Fixo</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -351,6 +371,26 @@ function StepForm({ step, onChange, sourceColumns, dbFields, compact }: StepForm
                                         ))}
                                     </SelectContent>
                                 </Select>
+                            </div>
+                        )}
+                        {step.fallbackType === 'FIXED' && (
+                            <div className="grid gap-1">
+                                <Label className="text-xs">Valor Fixo (Fallback)</Label>
+                                <Input className="h-8 text-xs" value={step.fallbackValue ?? ''} onChange={(e) => up({ fallbackValue: e.target.value })} placeholder="Digite o valor fixo..." />
+                            </div>
+                        )}
+                        {step.fallbackType !== 'EMPTY' && step.find && (
+                            <div className="flex items-center gap-2 mt-1">
+                                <input
+                                    type="checkbox"
+                                    id="cleanFallback"
+                                    checked={step.cleanFallback || false}
+                                    onChange={(e) => up({ cleanFallback: e.target.checked })}
+                                    className="h-3 w-3 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                                />
+                                <Label htmlFor="cleanFallback" className="text-[10px] text-orange-700 font-medium cursor-pointer">
+                                    Aplicar limpeza também no Fallback
+                                </Label>
                             </div>
                         )}
                     </div>
@@ -467,6 +507,127 @@ function StepForm({ step, onChange, sourceColumns, dbFields, compact }: StepForm
                     </div>
                 </div>
             )
+
+            case 'CONDITIONAL': {
+                const conditions = step.conditions ?? []
+                const addCondition = () => onChange({
+                    ...step,
+                    conditions: [...conditions, { field: '', operator: '=', value: '', result: { type: 'FIXED', value: '' } }]
+                })
+                const removeCondition = (i: number) => onChange({
+                    ...step,
+                    conditions: conditions.filter((_, idx) => idx !== i)
+                })
+                const updateCondition = (i: number, k: string, v: any) => {
+                    const next = [...conditions]
+                    next[i] = { ...next[i], [k]: v }
+                    onChange({ ...step, conditions: next })
+                }
+
+                return (
+                    <div className="space-y-4">
+                        <div className="grid gap-2">
+                            <Label className="text-xs font-semibold">Condições (Se-Então)</Label>
+                            {conditions.length === 0 ? (
+                                <div className="text-xs text-gray-400 italic p-3 bg-gray-50 rounded border border-gray-200">
+                                    Nenhuma condição definida. Clique abaixo para adicionar.
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {conditions.map((cond, i) => (
+                                        <div key={i} className="p-3 bg-blue-50/50 rounded-lg border border-blue-100 space-y-2">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <Label className="text-[10px] font-bold text-blue-700">Condição #{i + 1}</Label>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6 text-red-500"
+                                                    onClick={() => removeCondition(i)}
+                                                >
+                                                    <Trash2 className="h-3 w-3" />
+                                                </Button>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-2">
+                                                <div className="grid gap-1">
+                                                    <Label className="text-[10px] text-gray-600">Campo</Label>
+                                                    <Select value={cond.field} onValueChange={v => updateCondition(i, 'field', v)}>
+                                                        <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Campo..." /></SelectTrigger>
+                                                        <SelectContent className="text-xs">
+                                                            {sourceColumns.map(col => (
+                                                                <SelectItem key={col.code} value={col.code} className="text-xs">{col.name}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="grid gap-1">
+                                                    <Label className="text-[10px] text-gray-600">Operador</Label>
+                                                    <Select value={cond.operator} onValueChange={v => updateCondition(i, 'operator', v)}>
+                                                        <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                                                        <SelectContent className="text-xs">
+                                                            <SelectItem value="=" className="text-xs">=</SelectItem>
+                                                            <SelectItem value="<" className="text-xs">{'<'}</SelectItem>
+                                                            <SelectItem value=">" className="text-xs">{'>'}</SelectItem>
+                                                            <SelectItem value="<=" className="text-xs">{'<='}</SelectItem>
+                                                            <SelectItem value=">=" className="text-xs">{'>='}</SelectItem>
+                                                            <SelectItem value="contains" className="text-xs">contém</SelectItem>
+                                                            <SelectItem value="startsWith" className="text-xs">começa com</SelectItem>
+                                                            <SelectItem value="endsWith" className="text-xs">termina com</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="grid gap-1">
+                                                    <Label className="text-[10px] text-gray-600">Valor</Label>
+                                                    <Input
+                                                        className="h-7 text-xs"
+                                                        value={cond.value}
+                                                        onChange={e => updateCondition(i, 'value', e.target.value)}
+                                                        placeholder="Ex: 15"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="pt-2 border-t border-blue-100">
+                                                <Label className="text-[10px] font-bold text-blue-700 mb-2 block">Resultado se verdadeiro:</Label>
+                                                <div className="bg-white p-2 rounded border border-blue-100">
+                                                    <StepForm
+                                                        step={cond.result}
+                                                        onChange={v => updateCondition(i, 'result', v)}
+                                                        sourceColumns={sourceColumns}
+                                                        dbFields={dbFields}
+                                                        compact={true}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="text-xs mt-2"
+                                onClick={addCondition}
+                            >
+                                <Plus className="h-3 w-3 mr-1" /> Adicionar condição
+                            </Button>
+                        </div>
+                        <Separator className="bg-blue-100" />
+                        <div className="grid gap-2">
+                            <Label className="text-xs font-semibold">Padrão (se nenhuma condição atender)</Label>
+                            <div className="bg-gray-50 p-3 rounded border border-gray-200">
+                                <StepForm
+                                    step={step.fallback ?? { type: 'FIXED', value: '' }}
+                                    onChange={v => up({ fallback: v })}
+                                    sourceColumns={sourceColumns}
+                                    dbFields={dbFields}
+                                    compact={true}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
 
             default: return null
         }

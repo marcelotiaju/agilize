@@ -16,9 +16,31 @@ export interface TransformContext {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+export function getMappedOffice(record: any): string {
+    if (!record) return ''
+    const normalize = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()
+    const pos = record.ecclesiasticalPosition || ''
+    const tipo = record.tipo || ''
+    
+    const officeMap: Record<string, string> = {
+        'auxiliar': 'Aux',
+        'diacono': 'Dc',
+        'presbitero': 'Pb',
+        'evangelista': 'Ev',
+        'pastor': 'Pr',
+    }
+    
+    let cargo = officeMap[normalize(pos)] || ''
+    if (!cargo) {
+        if (normalize(pos) === 'congregado' || normalize(tipo) === 'congregado') cargo = 'Congregado'
+        else if (pos || tipo) cargo = 'Membro'
+    }
+    return cargo
+}
+
 function getRowValue(row: Record<string, string>, field: string): string {
     if (!field) return ''
-    
+
     // 1. Direct match (Fast)
     const val = row[field];
     if (val !== undefined) return String(val).trim();
@@ -26,7 +48,7 @@ function getRowValue(row: Record<string, string>, field: string): string {
     // 2. Normalization match (Slow but safe)
     const normalize = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9]/g, '')
     const targetNorm = normalize(field)
-    
+
     for (const key of Object.keys(row)) {
         if (normalize(key) === targetNorm) return String(row[key]).trim()
     }
@@ -66,19 +88,39 @@ export async function evaluateTransformation(
         }
 
         case 'LOOKUP': {
-            const srcField = step.sourceField ?? step.field ?? ''
-            let sourceVal = getRowValue(ctx.row, srcField)
-            
-            const handleFallback = () => {
-                if (step.fallbackType === 'SOURCE' && step.fallbackSourceField) {
-                    return getRowValue(ctx.row, step.fallbackSourceField)
+            const applyCleanup = (val: string) => {
+                if (!step.find) return val.trim()
+                try {
+                    const searchRegex = new RegExp(step.find, 'gi')
+                    const replacement = step.replaceWith === 'remove' ? '' : (step.replaceWith || '')
+                    return val.replace(searchRegex, replacement).trim()
+                } catch (e) {
+                    return val.split(step.find).join(step.replaceWith === 'remove' ? '' : (step.replaceWith || '')).trim()
                 }
-                return ''
             }
 
+            const handleFallback = () => {
+                let fbVal = ''
+                if (step.fallbackType === 'SOURCE' && step.fallbackSourceField) {
+                    fbVal = getRowValue(ctx.row, step.fallbackSourceField)
+                } else if (step.fallbackType === 'FIXED') {
+                    fbVal = step.fallbackValue || ''
+                }
+
+                if (step.cleanFallback) {
+                    return applyCleanup(fbVal)
+                }
+                return fbVal.trim()
+            }
+
+            const srcField = step.sourceField ?? step.field ?? ''
+            let sourceVal = getRowValue(ctx.row, srcField)
             if (!sourceVal) return handleFallback()
 
             const searchBy = (step.searchBy ?? 'cpf').trim()
+
+            // Pre-replacement for cleaning source values before lookup
+            sourceVal = applyCleanup(sourceVal)
 
             // Handle numeric scientific notation
             if (sourceVal.toUpperCase().includes('E+') && !isNaN(Number(sourceVal))) {
@@ -95,7 +137,8 @@ export async function evaluateTransformation(
                 }
             }
 
-            const cacheKey = `${step.searchTable}:${searchBy}:${sourceVal}:${step.searchCondition ?? 'ALL'}:${ctx.congregationId || 'global'}`
+            const retFieldKey = (step.returnField || '').trim().toLowerCase()
+            const cacheKey = `${step.searchTable}:${searchBy}:${sourceVal}:${step.searchCondition ?? 'ALL'}:${retFieldKey}:${ctx.congregationId || 'global'}`
             if (!ctx.lookupCache) ctx.lookupCache = new Map()
 
             if (ctx.lookupCache.has(cacheKey)) {
@@ -108,47 +151,64 @@ export async function evaluateTransformation(
                     // Try with congregation first
                     let where: any = { [searchBy]: sourceVal }
                     if (ctx.congregationId) where.congregationId = ctx.congregationId
-                    
+
                     // Add condition filter if specified
                     if (step.searchCondition && step.searchCondition !== 'NONE') {
                         where.tipo = step.searchCondition
                     }
 
                     let record = await (prisma.contributor as any).findFirst({ where })
-                    
+
                     // Fallback to global
                     if (!record) {
                         let globalWhere: any = { [searchBy]: sourceVal }
                         if (step.searchCondition && step.searchCondition !== 'NONE') {
                             globalWhere.tipo = step.searchCondition
                         }
-                        record = await (prisma.contributor as any).findFirst({ 
-                            where: globalWhere 
+                        record = await (prisma.contributor as any).findFirst({
+                            where: globalWhere
                         })
                     }
 
-                    if (record && (step.returnField === 'name' || !step.returnField)) {
-                        const pos = (record.ecclesiasticalPosition || '').trim().toUpperCase()
-                        const tipo = (record.tipo || '').trim().toUpperCase()
+                    const retField = (step.returnField || '').trim().toLowerCase()
+                    const isName = retField === 'name'
+                    const isRichDesc = !retField || retField === 'rich_description'
+                    const isOfficeField = ['ecclesiasticalposition', 'cargo', 'office', 'mappedposition', 'posicao', 'posicaoeclesiastica'].includes(retField)
+
+                    if (record && isRichDesc) {
+                        let cargo = getMappedOffice(record)
                         
-                        const officeMap: Record<string, string> = {
-                            'AUXILIAR': 'Aux',
-                            'DIÁCONO': 'Dc',
-                            'PRESBÍTERO': 'Pb',
-                            'EVANGELISTA': 'Ev',
-                            'PASTOR': 'Pr',
+                        // Try to apply custom mapping from step.map to the raw office
+                        const rawOffice = record.ecclesiasticalPosition || ''
+                        if (rawOffice && step.map && step.map.length > 0) {
+                            const normRaw = rawOffice.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()
+                            const customMapped = step.map.find(m => {
+                                const nm = (m.from || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()
+                                return nm === normRaw
+                            })
+                            if (customMapped) cargo = customMapped.to
                         }
-                        
-                        let cargo = officeMap[pos] || ''
-                        if (!cargo) {
-                            if (pos === 'CONGREGADO' || tipo === 'CONGREGADO') cargo = 'Congregado'
-                            else cargo = 'Membro'
-                        }
-                        
+
                         // "DÍZIMOS E OFERTAS DE  -[CARGO] -[NOME] -[CPF]"
-                        result = `DÍZIMOS E OFERTAS DE  -${cargo} -${record.name} -${record.cpf || ''}`
+                        const normalizedName = record.name.toUpperCase()
+                        result = `DÍZIMOS E OFERTAS DE  -${cargo} -${normalizedName} -${record.cpf || ''}`
+                    } else if (record && isName) {
+                        result = record.name
+                    } else if (record && isOfficeField) {
+                        // Return raw value so that step.map can be correctly applied at the end of lookup
+                        const raw = record.ecclesiasticalPosition || ''
+                        
+                        // BUT, if there's no map in the step, we want the default mapping!
+                        if (!step.map || step.map.length === 0) {
+                            result = getMappedOffice(record)
+                        } else {
+                            result = raw
+                        }
                     } else {
-                        result = record ? String(record[step.returnField ?? 'code'] ?? '') : null
+                        // Find the field in record. If not found, only fallback to code if returnField was not specified
+                        const fieldName = step.returnField || 'code'
+                        const val = record[fieldName]
+                        result = val !== undefined && val !== null ? String(val) : null
                     }
                 } else if (step.searchTable === 'Supplier') {
                     const record = await (prisma.supplier as any).findFirst({
@@ -175,10 +235,14 @@ export async function evaluateTransformation(
 
             if (result !== null) {
                 console.log(`[Engine] Found: ${step.searchTable}.${searchBy}='${sourceVal}' -> ${result}`);
-                
+
                 // Optional: Map the result (e.g. for abbreviations)
                 if (step.map && step.map.length > 0) {
-                    const mapped = step.map.find(m => m.from === result)
+                    const normResult = result.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()
+                    const mapped = step.map.find(m => {
+                        const nm = (m.from || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()
+                        return nm === normResult
+                    })
                     if (mapped) result = mapped.to
                 }
 
@@ -239,6 +303,36 @@ export async function evaluateTransformation(
             const rawVal = getRowValue(ctx.row, srcField)
             if (!step.find) return rawVal
             return rawVal.split(step.find).join(step.replaceWith ?? '')
+        }
+
+        case 'CONDITIONAL': {
+            if (!step.conditions || step.conditions.length === 0) {
+                return step.fallback ? await evaluateTransformation(step.fallback, ctx) : ''
+            }
+
+            for (const rule of step.conditions) {
+                const rowVal = getRowValue(ctx.row, rule.field)
+                let match = false
+
+                const ruleVal = rule.value || ''
+
+                switch (rule.operator) {
+                    case '=': match = rowVal === ruleVal; break;
+                    case 'contains': match = rowVal.toLowerCase().includes(ruleVal.toLowerCase()); break;
+                    case 'startsWith': match = rowVal.toLowerCase().startsWith(ruleVal.toLowerCase()); break;
+                    case 'endsWith': match = rowVal.toLowerCase().endsWith(ruleVal.toLowerCase()); break;
+                    case '>': match = parseFloat(rowVal) > parseFloat(ruleVal); break;
+                    case '<': match = parseFloat(rowVal) < parseFloat(ruleVal); break;
+                    case '>=': match = parseFloat(rowVal) >= parseFloat(ruleVal); break;
+                    case '<=': match = parseFloat(rowVal) <= parseFloat(ruleVal); break;
+                }
+
+                if (match) {
+                    return await evaluateTransformation(rule.result, ctx)
+                }
+            }
+
+            return step.fallback ? await evaluateTransformation(step.fallback, ctx) : ''
         }
 
         default: return ''

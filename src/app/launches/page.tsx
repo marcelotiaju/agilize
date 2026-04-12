@@ -44,6 +44,7 @@ export default function Launches() {
   const [contributors, setContributors] = useState<Contributor[]>([])
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [classifications, setClassifications] = useState<Classification[]>([])
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
   const [isTechnicalIntervention, setIsTechnicalIntervention] = useState(false)
@@ -83,6 +84,7 @@ export default function Launches() {
   type Contributor = { id: string; name: string; cpf: string; congregationId: string; ecclesiasticalPosition: string, tipo: string, photoUrl: string, photoExists: boolean, isActive: boolean }
   type Supplier = { id: string; razaoSocial: string; cpfcnpj: string }
   type Classification = { id: string; description: string }
+  type PaymentMethod = { id: number; name: string }
 
   type Launch = {
     id: string
@@ -105,6 +107,8 @@ export default function Launches() {
     classification?: { id: string; description: string }
     financialEntityId?: string
     financialEntity?: { id: string; name: string }
+    paymentMethodId?: number
+    paymentMethod?: { id: number; name: string }
     //approved?: boolean
     summaryId?: string
     createdBy?: string
@@ -199,7 +203,8 @@ export default function Launches() {
     status: 'NORMAL',
     attachmentUrl: '',
     isRateio: false,
-    financialEntityName: ''
+    financialEntityName: '',
+    paymentMethodId: undefined
   })
 
   function truncateString(str: string | null | undefined, num: number) {
@@ -242,6 +247,7 @@ export default function Launches() {
     fetchContributors()
     fetchSuppliers()
     fetchClassifications()
+    fetchPaymentMethods()
   }, [currentPage, itemsPerPage, searchTerm, selectedCongregation, selectedType, startDate, endDate, importFilter])
 
   useEffect(() => {
@@ -500,6 +506,18 @@ export default function Launches() {
     }
   }
 
+  const fetchPaymentMethods = async () => {
+    try {
+      const response = await fetch('/api/payment-methods')
+      if (response.ok) {
+        const data = await response.json()
+        setPaymentMethods(data)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar formas de pagamento:', error)
+    }
+  }
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type, checked } = e.target
 
@@ -698,7 +716,8 @@ export default function Launches() {
       status: launch.status || 'NORMAL',
       attachmentUrl: launch.attachmentUrl || '',
       isRateio: !!launch.isRateio,
-      financialEntityName: launch.financialEntity?.name || ''
+      financialEntityName: launch.financialEntity?.name || '',
+      paymentMethodId: launch.paymentMethodId || undefined
     })
     setIsDialogOpen(true)
   }
@@ -725,7 +744,8 @@ export default function Launches() {
       status: launch.status || 'NORMAL',
       attachmentUrl: launch.attachmentUrl || '',
       isRateio: !!launch.isRateio,
-      financialEntityName: launch.financialEntity?.name || ''
+      financialEntityName: launch.financialEntity?.name || '',
+      paymentMethodId: launch.paymentMethodId || undefined
     })
     setIsDialogOpen(true)
   }
@@ -848,7 +868,8 @@ export default function Launches() {
       status: 'NORMAL',
       attachmentUrl: '',
       isRateio: false,
-      financialEntityName: ''
+      financialEntityName: '',
+      paymentMethodId: undefined
     })
     setError(null)
   }
@@ -879,7 +900,7 @@ export default function Launches() {
       return c.congregationId === formData.congregationId && c.isActive
     })
   }
-  
+
   const filteredContributors = getFilteredContributors()
 
   // Função helper para obter a cor da borda baseada no tipo de lançamento
@@ -1065,7 +1086,7 @@ export default function Launches() {
 
           {launch.talonNumber && launch.type !== 'CARNE_REVIVER' && launch.type !== 'CARNE_AFRICA' && launch.type !== 'MISSAO' && (
             <div className="flex justify-start">
-              <span className="text-sm font-normal">{launch.type === 'SAIDA' ? 'Nr. Doc:' : 'Nr. Talão:'}</span>
+              <span className="text-sm font-normal">{launch.type === 'SAIDA' || launch.type === 'RENDA_BRUTA' ? 'Nr. Doc:' : 'Nr. Talão:'}</span>
               <span className="text-sm font-medium">{launch.talonNumber}</span>
             </div>
           )}
@@ -1382,7 +1403,7 @@ export default function Launches() {
                                   </Select>
                                 </div>
 
-                                {formData.type === 'SAIDA' && (
+                                {(formData.type === 'SAIDA' || formData.status === 'INTEGRATED') && (
                                   <div className="w-full">
                                     <Label htmlFor="classificationId">Classificação</Label>
                                     <SearchableSelect
@@ -1416,7 +1437,7 @@ export default function Launches() {
                                 </div>
 
                                 <div>
-                                  {formData.type === 'SAIDA' ? <Label htmlFor="talonNumber">Nr. Doc</Label> : formData.type === 'CARNE_REVIVER' || formData.type === 'CARNE_AFRICA' || formData.type === 'MISSAO' ? '' : <Label htmlFor="talonNumber">Nr. Talão</Label>}
+                                  {formData.type === 'SAIDA' || formData.type === 'RENDA_BRUTA' ? <Label htmlFor="talonNumber">Nr. Doc</Label> : formData.type === 'CARNE_REVIVER' || formData.type === 'CARNE_AFRICA' || formData.type === 'MISSAO' ? '' : <Label htmlFor="talonNumber">Nr. Talão</Label>}
                                   {(formData.type !== 'CARNE_REVIVER' && formData.type !== 'CARNE_AFRICA' && formData.type !== 'MISSAO') && (
                                     <>
                                       <Input
@@ -1689,6 +1710,47 @@ export default function Launches() {
                                     className="bg-gray-100"
                                   />
                                 </div>
+                              )}
+
+                              {editingLaunch && editingLaunch.status === 'INTEGRATED' && (
+                                <>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                      <Label htmlFor="paymentMethodId">Forma de Pagamento</Label>
+                                      <Select
+                                        value={formData.paymentMethodId?.toString() || ''}
+                                        onValueChange={(value) => handleSelectChange('paymentMethodId', parseInt(value))}
+                                        disabled={isFieldDisabledDuringEdit()}
+                                      >
+                                        <SelectTrigger className="w-full">
+                                          <SelectValue placeholder="Selecione a forma de pagamento" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {paymentMethods.map(pm => (
+                                            <SelectItem key={pm.id} value={pm.id.toString()}>
+                                              {pm.name}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+
+                                    {/* <div>
+                                      <Label htmlFor="classificationId">Conta Contábil</Label>
+                                      <SearchableSelect
+                                        label="Buscar Conta Contábil"
+                                        placeholder="Selecione a conta contábil"
+                                        value={formData.classificationId}
+                                        disabled={isFieldDisabledDuringEdit()}
+                                        onChange={(value) => handleSelectChange('classificationId', value)}
+                                        name="classificationId"
+                                        data={classifications.map(c => ({ id: c.id, name: c.description }))}
+                                        itemRenderMode="classification"
+                                        searchKeys={['name']}
+                                      />
+                                    </div> */}
+                                  </div>
+                                </>
                               )}
 
                               <div>

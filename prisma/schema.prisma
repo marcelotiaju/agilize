@@ -125,6 +125,8 @@ model Profile {
   canDeleteSummary                 Boolean @default(false)
   canTechnicalIntervention         Boolean @default(false)
   canManageBankIntegration         Boolean @default(false)
+  canBankIntegrationConfigure      Boolean @default(false)
+  canBankIntegrationExecute        Boolean @default(false)
   defaultLaunchType                String? @default("DIZIMO")
 
   users     User[]
@@ -141,6 +143,7 @@ model PaymentMethod {
 
   BankIntegrationConfig  BankIntegrationConfig[]
   bankIntegrationBatches BankIntegrationBatch[]
+  launches               Launch[]
 }
 
 model FinancialEntity {
@@ -170,9 +173,11 @@ model BankIntegrationConfig {
   launchType         String // DEBIT, CREDIT
   launchTypeSource   String          @default("FIXED") // FIXED or FROM_FILE
   congregationSource String          @default("FIXED") // FIXED or FROM_FILE
+  filters            Json?           // Array of filter objects
 
   sourceColumns      SourceFileColumn[]
   destinationColumns DestinationFileColumn[]
+  launchIntegrationRules LaunchIntegrationRule[]
 
   createdAt              DateTime               @default(now()) @db.DateTime(0)
   updatedAt              DateTime               @updatedAt @db.DateTime(0)
@@ -200,6 +205,25 @@ model DestinationFileColumn {
   code           String
   name           String
   transformation String?               @db.Text // TransformStep JSON serialized
+
+  @@unique([configId, code])
+  @@index([configId])
+}
+
+model LaunchIntegrationRule {
+  id       String                @id @default(cuid())
+  configId String
+  config   BankIntegrationConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+
+  // Campo do Launch que vai ser preenchido (ex: launchType, paymentMethodId, etc)
+  code String
+  name String
+  
+  // Transformação que define como preencher este campo com condições
+  transformation Json?
+
+  createdAt DateTime @default(now()) @db.DateTime(0)
+  updatedAt DateTime @updatedAt @db.DateTime(0)
 
   @@unique([configId, code])
   @@index([configId])
@@ -299,6 +323,8 @@ model Launch {
   integrationBatch     BankIntegrationBatch? @relation(fields: [integrationBatchId], references: [id])
   financialEntityId    Int?
   financialEntity      FinancialEntity?      @relation(fields: [financialEntityId], references: [id])
+  paymentMethodId      Int?
+  paymentMethod        PaymentMethod?        @relation(fields: [paymentMethodId], references: [id])
 
   @@index([financialEntityId])
   @@index([congregationId])
@@ -307,6 +333,7 @@ model Launch {
   @@index([supplierId])
   @@index([classificationId])
   @@index([integrationBatchId])
+  @@index([paymentMethodId])
 }
 
 model Contributor {

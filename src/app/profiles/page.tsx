@@ -78,7 +78,9 @@ export default function Profiles() {
     canReportAudit: false,
     canReportAccountability: false,
     canTechnicalIntervention: false,
-    canManageBankIntegration: false
+    canManageBankIntegration: false,
+    canBankIntegrationConfigure: false,
+    canBankIntegrationExecute: false
   })
 
   useEffect(() => {
@@ -150,7 +152,9 @@ export default function Profiles() {
       canReportAccountability: false,
       canDeleteSummary: false,
       canTechnicalIntervention: false,
-      canManageBankIntegration: false
+      canManageBankIntegration: false,
+      canBankIntegrationConfigure: false,
+      canBankIntegrationExecute: false
     })
   }
 
@@ -442,6 +446,14 @@ export default function Profiles() {
                           <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canManageBankIntegration} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canManageBankIntegration: v as boolean }))} />
                             <Label>Gerenciar Integração Bancária</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox checked={profileForm.canBankIntegrationConfigure} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canBankIntegrationConfigure: v as boolean }))} />
+                            <Label>Integração Bancária - Configurar</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox checked={profileForm.canBankIntegrationExecute} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canBankIntegrationExecute: v as boolean }))} />
+                            <Label>Integração Bancária - Executar</Label>
                           </div>
                         </div>
                       </div>

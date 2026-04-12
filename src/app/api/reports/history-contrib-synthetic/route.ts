@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import prisma from "@/lib/prisma"
 import { jsPDF } from "jspdf"
 import autoTable from "jspdf-autotable"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { utcToZonedTime } from 'date-fns-tz'
 import path from "path"
+import { getDb } from "@/lib/getDb"
 
 const fs = require('fs');
 
@@ -45,6 +45,8 @@ async function handleRequest(request: NextRequest) {
   if (!session || !session.user.canReportMonthlySummary) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
+
+  const prisma = await getDb(request)  
 
   try {
     // Determine input source (GET params or POST body)

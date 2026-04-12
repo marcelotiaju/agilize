@@ -3,6 +3,9 @@ import { getDb } from "@/lib/getDb"
 import { getServerSession } from "next-auth"
 import { authOptions } from "../../../../auth/[...nextauth]/route"
 import { LaunchType, LaunchStatus } from "@prisma/client"
+import { evaluateTransformation } from "@/lib/transformation-engine"
+import { parseTransformation } from "@/lib/transformation-types"
+import { getMappedOffice } from "@/lib/transformation-engine"
 
 export async function POST(
     request: NextRequest,
@@ -11,7 +14,7 @@ export async function POST(
     const { id } = await params
     const session = await getServerSession(authOptions)
     const userName = session?.user?.name || "Sistema"
-    
+
     if (!session || !(session.user as any)?.canManageBankIntegration) {
         return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
@@ -23,10 +26,13 @@ export async function POST(
             where: { id },
             include: {
                 config: {
-                    include: { destinationColumns: true }
+                    include: {
+                        destinationColumns: true,
+                        launchIntegrationRules: true
+                    }
                 },
                 financialEntity: true,
-                rows: { 
+                rows: {
                     where: { isValid: true, isIntegrated: false },
                     orderBy: { rowIndex: 'asc' }
                 },
@@ -43,16 +49,16 @@ export async function POST(
 
         let classificationId = batch.config.accountPlan || null
         if (classificationId) {
-             const cls = await prisma.classification.findFirst({ 
-                 where: { 
-                     OR: [
-                         { id: classificationId },
-                         { code: classificationId },
-                         { shortCode: classificationId }
-                     ]
-                 } 
-             })
-             classificationId = cls ? cls.id : null 
+            const cls = await prisma.classification.findFirst({
+                where: {
+                    OR: [
+                        { id: classificationId },
+                        { code: classificationId },
+                        { shortCode: classificationId }
+                    ]
+                }
+            })
+            classificationId = cls ? cls.id : null
         }
 
         const launchesToProcess: any[] = []
@@ -78,12 +84,91 @@ export async function POST(
 
         for (const row of batch.rows) {
             const dest = JSON.parse(row.destinationData || "{}")
+            const source = JSON.parse(row.sourceData || "{}")
 
-            const rawDate = getVal(dest, ['data', 'emissao', 'vencimento', 'date'])
-            const rawValue = getVal(dest, ['valor', 'total', 'amount', 'vl'])
-            const rawDesc = getVal(dest, ['hist', 'desc', 'obs']) || getVal(dest, ['nome'])
-            const rawContributorCode = getVal(dest, ['codigo', 'matricula', 'cod', 'lookup', 'id'])
-            const rawContributorName = getVal(dest, ['contribuinte', 'nome', 'contributor', 'name'])
+            const filters = (batch.config as any).filters || []
+            const getRowValue = (row: Record<string, string>, field: string): string => {
+                if (!field) return ''
+                const val = row[field];
+                if (val !== undefined) return String(val).trim();
+                const normalize = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9]/g, '')
+                const targetNorm = normalize(field)
+                for (const key of Object.keys(row)) {
+                    if (normalize(key) === targetNorm) return String(row[key]).trim()
+                }
+                return ''
+            }
+
+            let matchesFilters = true
+            for (const filter of filters) {
+                const val = getRowValue(source, filter.field)
+                const target = String(filter.value || '').trim()
+                let match = false
+                switch (filter.operator) {
+                    case '=': match = val === target; break
+                    case '!=': match = val !== target; break
+                    case 'startsWith': match = val.toLowerCase().startsWith(target.toLowerCase()); break
+                    case 'contains': match = val.toLowerCase().includes(target.toLowerCase()); break
+                    case 'present': match = !!val; break
+                    default: match = true
+                }
+                if (!match) {
+                    matchesFilters = false
+                    break
+                }
+            }
+
+            if (!matchesFilters) continue
+
+            // Prepare context for launch integration rules evaluation
+            const dbFields: Record<string, any> = {}
+            const ctxForLaunchRules = {
+                row: source,
+                dbFields,
+                config: {
+                    financialEntityId: batch.config.financialEntityId,
+                    paymentMethodId: batch.config.paymentMethodId,
+                    accountPlan: batch.config.accountPlan,
+                    launchType: batch.config.launchType
+                },
+                congregationId: batch.financialEntity.congregationId
+            }
+
+            // Evaluate launchIntegrationRules to get dynamic launch field values
+            const launchRuleValues: Record<string, string> = {}
+            for (const rule of (batch.config as any).launchIntegrationRules || []) {
+                const step = parseTransformation(rule.transformation)
+                if (step) {
+                    try {
+                        const val = await evaluateTransformation(step, ctxForLaunchRules)
+                        launchRuleValues[rule.code] = val
+                    } catch (e) {
+                        console.error(`Error evaluating rule ${rule.code}:`, e)
+                        launchRuleValues[rule.code] = ''
+                    }
+                }
+            }
+
+            // Helper to find a rule value by keywords (name or code)
+            const findRuleValue = (keywords: string[]) => {
+                for (const rule of (batch.config as any).launchIntegrationRules || []) {
+                    const nk = normalizeKey(rule.name || rule.code)
+                    if (keywords.some(k => nk.includes(k))) {
+                        return launchRuleValues[rule.code]
+                    }
+                }
+                // Try direct code match as fallback
+                for (const k of keywords) {
+                    if (launchRuleValues[k]) return launchRuleValues[k]
+                }
+                return null
+            }
+
+            const rawDate = findRuleValue(['data', 'emissao', 'vencimento', 'date']) || getVal(dest, ['data', 'emissao', 'vencimento', 'date'])
+            const rawValue = findRuleValue(['valor', 'total', 'amount', 'vl']) || getVal(dest, ['valor', 'total', 'amount', 'vl'])
+            const rawDesc = findRuleValue(['descricao', 'description', 'historico', 'hist', 'obs']) || getVal(dest, ['hist', 'desc', 'obs']) || getVal(dest, ['nome'])
+            const rawContributorCode = findRuleValue(['codigo', 'matricula', 'cod', 'codcontribuinte', 'contribuinte', 'contributor']) || getVal(dest, ['codigo', 'matricula', 'cod', 'codcontribuinte'])
+            const rawContributorName = findRuleValue(['nome', 'contribuinte', 'contributor', 'name']) || getVal(dest, ['contribuinte', 'nome', 'contributor', 'name'])
             const rawCongregationData = getVal(dest, ['congregacao', 'unidade', 'congregation', 'unit', 'filial'])
 
             let parsedDate = new Date();
@@ -92,7 +177,7 @@ export async function POST(
                 const sDate = String(rawDate).trim();
                 const dateOnly = sDate.split('T')[0].split(' ')[0];
                 let day = 0, month = 0, year = 0;
-                
+
                 if (dateOnly.includes('/')) {
                     const parts = dateOnly.split('/');
                     if (parts.length === 3) {
@@ -109,7 +194,7 @@ export async function POST(
                         day = parseInt(parts[2], 10);
                     }
                 }
-                
+
                 if (day > 0 && year > 1900) {
                     const dt = new Date(year, month, day, 12, 0, 0);
                     if (!isNaN(dt.getTime())) parsedDate = dt;
@@ -124,22 +209,63 @@ export async function POST(
 
             let numValue = 0
             if (rawValue) {
-                let sVal = String(rawValue).trim().replace('R$', '').replace(/\s/g, '')
-                if (sVal.includes('.') && sVal.includes(',')) {
-                    sVal = sVal.replace(/\./g, '').replace(',', '.')
-                } else {
-                    sVal = sVal.replace(',', '.')
+                let s = String(rawValue).trim().replace('R$', '').replace(/\s/g, '')
+                if (!s) numValue = 0
+                else {
+                    if (s.includes(',')) {
+                        if (s.includes('.')) s = s.replace(/\./g, '')
+                        s = s.replace(',', '.')
+                    } else if (s.includes('.')) {
+                        const parts = s.split('.')
+                        if (parts.length > 2) {
+                            const lastPart = parts[parts.length - 1]
+                            if (lastPart.length === 2 || lastPart.length === 1) {
+                                const leading = parts.slice(0, -1).join('')
+                                s = leading + '.' + lastPart
+                            } else {
+                                s = s.replace(/\./g, '')
+                            }
+                        } else {
+                            const lastPart = parts[parts.length - 1]
+                            if (lastPart.length === 3) s = s.replace(/\./g, '')
+                        }
+                    }
+                    numValue = parseFloat(s)
+                    if (isNaN(numValue)) numValue = 0
                 }
-                numValue = parseFloat(sVal)
-                if (isNaN(numValue)) numValue = 0
             }
 
             let currentLaunchCongregationId = congregationId
-            if ((batch.config as any).congregationSource === 'FROM_FILE' && rawCongregationData) {
+
+            // 1. Try to get from rules first (if defined)
+            const ruleCongregation = findRuleValue(['congregacao', 'unidade', 'congregation', 'unit', 'filial'])
+            if (ruleCongregation) {
+                const s = String(ruleCongregation).trim()
+                if (s) {
+                    const cong = await prisma.congregation.findFirst({
+                        where: {
+                            OR: [
+                                { id: s },
+                                { code: { equals: s } },
+                                { name: { contains: s } }
+                            ]
+                        }
+                    })
+                    if (cong) currentLaunchCongregationId = cong.id
+                }
+            }
+            // 2. Fallback to FROM_FILE logic if not set by rules and configured
+            else if ((batch.config as any).congregationSource === 'FROM_FILE' && rawCongregationData) {
                 const s = String(rawCongregationData).trim()
                 if (s) {
                     const cong = await prisma.congregation.findFirst({
-                        where: { OR: [{ id: s }, { code: s }, { name: s }] }
+                        where: {
+                            OR: [
+                                { id: s },
+                                { code: { equals: s } },
+                                { name: { contains: s } }
+                            ]
+                        }
                     })
                     if (cong) {
                         currentLaunchCongregationId = cong.id
@@ -151,52 +277,144 @@ export async function POST(
             let cName = row.contributorName || null
             let finalDesc = ''
 
-            // Se tiver vínculo (cId), buscar no banco para gerar a descrição rica
+            // If ID is missing, try to get name from rules (which includes cleaned results)
+            if (!cId && !cName) {
+                cName = rawContributorName
+            }
+
+            // Smart Contributor Lookup: If not already mapped, try finding by code from file
+            if (!cId && rawContributorCode) {
+                const sCode = String(rawContributorCode).trim()
+                if (sCode && sCode !== '0' && sCode !== 'undefined' && sCode !== 'null') {
+                    // Try to find contributor by code AND congregation to be safer
+                    const ct = await prisma.contributor.findFirst({
+                        where: {
+                            code: sCode,
+                            OR: [
+                                { congregationId: currentLaunchCongregationId },
+                                { congregationId: null }
+                            ]
+                        }
+                    })
+                    if (ct) {
+                        cId = ct.id
+                        cName = null
+                    }
+                }
+            }
+
+            // If we have an ID, clearing the name is better according to user request
             if (cId) {
+                cName = null
+            }
+
+            const ruleDescription = findRuleValue(['descricao', 'description', 'historico', 'hist', 'obs'])
+
+            if (ruleDescription) {
+                finalDesc = ruleDescription.trim()
+            } else if (cId) {
+                // Descrição rica apenas se NÃO houver regra de descrição manual
                 const ct = await prisma.contributor.findUnique({ where: { id: cId } })
                 if (ct) {
-                    const pos = (ct.ecclesiasticalPosition || '').trim().toUpperCase()
-                    const tipo = (ct.tipo || '').trim().toUpperCase()
-                    
-                    const officeMap: Record<string, string> = {
-                        'AUXILIAR': 'Aux',
-                        'DIÁCONO': 'Dc',
-                        'PRESBÍTERO': 'Pb',
-                        'EVANGELISTA': 'Ev',
-                        'PASTOR': 'Pr',
-                    }
-                    
-                    let cargo = officeMap[pos] || ''
-                    if (!cargo) {
-                        if (pos === 'CONGREGADO' || tipo === 'CONGREGADO') cargo = 'Congregado'
-                        else cargo = 'Membro'
-                    }
-                    
-                    finalDesc = `DÍZIMOS E OFERTAS DE  -${cargo} -${ct.name} -${ct.cpf || ''}`
+                    const ruleCargo = findRuleValue(['cargo', 'posicao', 'office', 'vposition'])
+                    const cargo = ruleCargo || getMappedOffice(ct)
+                    const normalizedName = ct.name.toUpperCase()
+                    finalDesc = `DÍZIMOS E OFERTAS DE  -${cargo} -${normalizedName} -${ct.cpf || ''}`
                 }
             }
 
             if (!finalDesc) {
-                const baseName = cName || rawDesc || `Importação Bancária #${batch.sequentialNumber}`
+                const baseName = cName || rawContributorName || rawDesc || `Importação Bancária #${batch.sequentialNumber}`
                 finalDesc = String(baseName).substring(0, 200)
             }
 
-            finalDesc = `${finalDesc} (Integrado p/ ${userName.split(' ')[0]})`
+            //finalDesc = `${finalDesc} (Integrado p/ ${userName.split(' ')[0]})`
+
+            // Apply launchIntegrationRules to override/set launch fields
+            let launchType: LaunchType = 'DIZIMO' as LaunchType
+            let launchPaymentMethodId = batch.config.paymentMethodId
+            let launchClassificationId = classificationId
+            let launchDescription = finalDesc
+
+            // Check if any rule sets a specific launch field
+            const ruleLaunchType = findRuleValue(['tipo', 'type', 'launchtype'])
+            if (ruleLaunchType) {
+                const val = ruleLaunchType.toUpperCase().trim()
+                if (val === 'C' || val === 'CREDIT' || val === 'CREDITO') {
+                    launchType = 'DIZIMO'
+                } else if (val === 'D' || val === 'DEBIT' || val === 'DEBITO' || val === 'SAIDA') {
+                    launchType = 'SAIDA'
+                } else if (['CARNE_REVIVER', 'CARNE_AFRICA', 'CAMPANHA', 'MISSAO', 'CIRCULO', 'ENTRADA', 'EBD', 'VOTO', 'OFERTA_CULTO', 'DIZIMO'].includes(val)) {
+                    launchType = val as LaunchType
+                }
+            }
+
+            const rulePaymentMethod = findRuleValue(['pagamento', 'forma', 'payment', 'method', 'formapagamento', 'paymentmethodid'])
+            if (rulePaymentMethod) {
+                const val = rulePaymentMethod.trim()
+                // Try as ID first
+                const pmId = parseInt(val, 10)
+                if (!isNaN(pmId)) {
+                    launchPaymentMethodId = pmId
+                } else {
+                    // Try to resolution by name
+                    const pm = await prisma.paymentMethod.findFirst({
+                        where: { name: { contains: val, mode: 'insensitive' } }
+                    })
+                    if (pm) launchPaymentMethodId = pm.id
+                }
+            }
+
+            const ruleClassification = findRuleValue(['conta', 'plano', 'classification', 'idconta', 'classificationid', 'classificacao'])
+            if (ruleClassification) {
+                const val = ruleClassification.trim()
+                if (val) {
+                    const cls = await prisma.classification.findFirst({
+                        where: {
+                            OR: [
+                                { id: val },
+                                { code: val },
+                                { shortCode: val }
+                            ]
+                        }
+                    })
+                    if (cls) launchClassificationId = cls.id
+                }
+            } else {
+                // Try from file columns if no rule
+                const fileCls = getVal(dest, ['conta', 'plano', 'classification', 'classificacao', 'codcontabil'])
+                if (fileCls) {
+                    const s = String(fileCls).trim()
+                    const cls = await prisma.classification.findFirst({
+                        where: {
+                            OR: [
+                                { id: s },
+                                { code: s },
+                                { shortCode: s }
+                            ]
+                        }
+                    })
+                    if (cls) launchClassificationId = cls.id
+                }
+            }
+
+            launchDescription = finalDesc.substring(0, 255)
 
             launchesToProcess.push({
                 rowData: row,
                 launchData: {
                     congregationId: currentLaunchCongregationId,
-                    type: numValue === 15.00 ? 'CARNE_REVIVER' : 'DIZIMO' as LaunchType,
+                    type: launchType,
                     date: parsedDate,
                     value: numValue,
-                    description: finalDesc.substring(0, 255),
+                    description: launchDescription.substring(0, 255),
                     status: 'INTEGRATED' as LaunchStatus,
                     isIntegrated: true,
                     integrationBatchId: batch.id,
                     contributorId: cId,
                     contributorName: cName,
-                    classificationId,
+                    classificationId: launchClassificationId,
+                    paymentMethodId: launchPaymentMethodId,
                     financialEntityId: batch.config.financialEntityId,
                     createdBy: session.user.name
                 }
@@ -206,10 +424,10 @@ export async function POST(
         await prisma.$transaction(async (tx) => {
             for (const item of launchesToProcess) {
                 const newLaunch = await tx.launch.create({ data: item.launchData })
-                
+
                 await tx.bankIntegrationRow.update({
                     where: { id: item.rowData.id },
-                    data: { 
+                    data: {
                         isIntegrated: true,
                         launchId: newLaunch.id
                     }

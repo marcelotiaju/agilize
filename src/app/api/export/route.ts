@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import prisma from "@/lib/prisma"
 import * as XLSX from 'xlsx-js-style'
 import { authOptions } from "../auth/[...nextauth]/route";
-import { format } from "date-fns";
+import { getDb } from "@/lib/getDb";
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -15,6 +14,8 @@ export async function POST(request: NextRequest) {
   if (!session.user.canExport) {
     return NextResponse.json({ error: "Sem permissão para exportar dados" }, { status: 403 })
   }
+
+  const prisma = await getDb(request)  
 
   try {
     const body = await request.json()

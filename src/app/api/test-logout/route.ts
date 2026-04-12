@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { getDb } from "@/lib/getDb"
 
 export async function GET(request: NextRequest) {
+
+  const prisma = await getDb(request)    
     try {
         // Update all users with current timestamp as logout time
         await prisma.user.updateMany({

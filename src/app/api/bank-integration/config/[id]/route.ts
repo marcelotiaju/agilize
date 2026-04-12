@@ -16,7 +16,8 @@ export async function GET(
             where: { id },
             include: {
                 sourceColumns: true,
-                destinationColumns: true
+                destinationColumns: true,
+                launchIntegrationRules: true
             }
         })
 
@@ -50,14 +51,42 @@ export async function PUT(
             launchTypeSource,
             congregationSource,
             sourceColumns,
-            destinationColumns
+            destinationColumns,
+            launchIntegrationRules,
+            filters
         } = body
+        
+        console.log('📥 Recebido launchIntegrationRules:', JSON.stringify(launchIntegrationRules, null, 2))
 
         // Transaction to update config and columns
         const updatedConfig = await prisma.$transaction(async (tx) => {
             // Delete existing columns to recreate them (simpler than syncing)
             await tx.sourceFileColumn.deleteMany({ where: { configId: id } })
             await tx.destinationFileColumn.deleteMany({ where: { configId: id } })
+            await tx.launchIntegrationRule.deleteMany({ where: { configId: id } })
+
+            // Filter launch rules to only include those with non-empty code and remove duplicates
+            const validRules = Array.from(
+                new Map(
+                    (launchIntegrationRules || [])
+                        .filter((rule: any) => rule.code && rule.code.trim())
+                        .map((rule: any) => [rule.code, rule])
+                ).values()
+            )
+            
+            console.log('✅ Valid rules after filtering:', validRules.length)
+            
+            const rulesToCreate = validRules.map((rule: any) => ({
+                code: rule.code,
+                name: rule.name,
+                transformation: rule.transformation
+                    ? (typeof rule.transformation === 'string'
+                        ? JSON.parse(rule.transformation)
+                        : rule.transformation)
+                    : null
+            }))
+            
+            console.log('📝 Rules to create:', JSON.stringify(rulesToCreate, null, 2))
 
             return tx.bankIntegrationConfig.update({
                 where: { id },
@@ -69,6 +98,7 @@ export async function PUT(
                     launchType,
                     launchTypeSource: launchTypeSource || "FIXED",
                     congregationSource: congregationSource || "FIXED",
+                    filters: filters || [],
                     sourceColumns: {
                         create: sourceColumns?.map((col: any) => ({
                             code: col.code,
@@ -85,14 +115,20 @@ export async function PUT(
                                     : JSON.stringify(col.transformation))
                                 : null
                         })) || []
+                    },
+                    launchIntegrationRules: {
+                        create: rulesToCreate
                     }
                 },
                 include: {
                     sourceColumns: true,
-                    destinationColumns: true
+                    destinationColumns: true,
+                    launchIntegrationRules: true
                 }
             })
         })
+
+        console.log('💾 Saved launchIntegrationRules:', JSON.stringify(updatedConfig.launchIntegrationRules, null, 2))
 
         return NextResponse.json(updatedConfig)
     } catch (error) {

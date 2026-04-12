@@ -59,7 +59,9 @@ export async function GET(request: NextRequest) {
         include: {
           congregation: true,
           contributor: true,
-          financialEntity: true
+          financialEntity: true,
+          paymentMethod: true,
+          classification: true
         },
         orderBy: [
           { date: 'desc' },
@@ -301,7 +303,8 @@ export async function GET(request: NextRequest) {
           contributor: true,
           supplier: true,
           classification: true,
-          financialEntity: true
+          financialEntity: true,
+          paymentMethod: true
         },
         orderBy: [
           { date: 'desc' },
@@ -361,6 +364,7 @@ export async function POST(request: NextRequest) {
       supplierId,
       supplierName,
       classificationId,
+      paymentMethodId,
       isContributorRegistered,
       isSupplierRegistered,
       attachmentUrl,
@@ -597,6 +601,7 @@ export async function POST(request: NextRequest) {
         supplierName: type === "SAIDA" && !isSupplierRegistered ? supplierName : null,
         supplierId: type === "SAIDA" && isSupplierRegistered ? supplierId : null,
         classificationId: type === "SAIDA" ? classificationId : null, // Apenas para saída
+        paymentMethodId: paymentMethodId || null,
         createdBy: session.user.name,
         attachmentUrl,
         isRateio: type === "CARNE_REVIVER" || type === "CARNE_AFRICA" ? !!isRateio : false
@@ -605,7 +610,8 @@ export async function POST(request: NextRequest) {
         congregation: true,
         contributor: true,
         supplier: true,
-        classification: true
+        classification: true,
+        paymentMethod: true
       }
     })
 
@@ -714,6 +720,9 @@ export async function PUT(request: NextRequest) {
     }
     if (updateData.classificationId !== undefined) {
       dataToUpdate.classificationId = updateData.classificationId || null
+    }
+    if (updateData.paymentMethodId !== undefined) {
+      dataToUpdate.paymentMethodId = updateData.paymentMethodId || null
     }
     if (updateData.talonNumber !== undefined) {
       dataToUpdate.talonNumber = updateData.talonNumber || null
@@ -862,7 +871,10 @@ export async function PUT(request: NextRequest) {
       include: {
         congregation: true,
         contributor: true,
-        supplier: true
+        supplier: true,
+        classification: true,
+        paymentMethod: true,
+        financialEntity: true
       }
     })
     return NextResponse.json(updatedLaunch)

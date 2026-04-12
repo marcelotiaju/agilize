@@ -17,7 +17,9 @@ import {
     Loader2,
     Settings,
     Database,
-    FileType
+    FileType,
+    Zap,
+    Filter
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useParams } from 'next/navigation'
@@ -34,6 +36,13 @@ import type { TransformStep } from '@/lib/transformation-types'
 import { parseTransformation } from '@/lib/transformation-types'
 
 interface Column {
+    id?: string
+    code: string
+    name: string
+    transformation?: TransformStep | null
+}
+
+interface LaunchIntegrationRule {
     id?: string
     code: string
     name: string
@@ -77,6 +86,8 @@ export default function ConfigDetailPage() {
 
     const [sourceColumns, setSourceColumns] = useState<Column[]>([])
     const [destinationColumns, setDestinationColumns] = useState<Column[]>([])
+    const [launchIntegrationRules, setLaunchIntegrationRules] = useState<LaunchIntegrationRule[]>([])
+    const [filters, setFilters] = useState<any[]>([])
 
     const canManage = Boolean((session?.user as any)?.canManageBankIntegration)
 
@@ -125,6 +136,11 @@ export default function ConfigDetailPage() {
                     ...col,
                     transformation: parseTransformation(col.transformation)
                 })))
+                setLaunchIntegrationRules((data.launchIntegrationRules || []).map((rule: any) => ({
+                    ...rule,
+                    transformation: parseTransformation(rule.transformation)
+                })))
+                setFilters(data.filters || [])
             }
         } catch (error) {
             console.error('Erro ao buscar configuração:', error)
@@ -166,6 +182,38 @@ export default function ConfigDetailPage() {
         setDestinationColumns(updated)
     }
 
+    const addLaunchIntegrationRule = () => {
+        setLaunchIntegrationRules([...launchIntegrationRules, {
+            code: '',
+            name: '',
+            transformation: null
+        }])
+    }
+
+    const removeLaunchIntegrationRule = (index: number) => {
+        setLaunchIntegrationRules(launchIntegrationRules.filter((_, i) => i !== index))
+    }
+
+    const updateLaunchIntegrationRule = (index: number, field: keyof LaunchIntegrationRule, value: any) => {
+        const updated = [...launchIntegrationRules]
+        updated[index] = { ...updated[index], [field]: value }
+        setLaunchIntegrationRules(updated)
+    }
+
+    const addFilter = () => {
+        setFilters([...filters, { field: '', operator: '=', value: '' }])
+    }
+
+    const removeFilter = (index: number) => {
+        setFilters(filters.filter((_, i) => i !== index))
+    }
+
+    const updateFilter = (index: number, field: string, value: string) => {
+        const updated = [...filters]
+        updated[index] = { ...updated[index], [field]: value }
+        setFilters(updated)
+    }
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsSaving(true)
@@ -174,14 +222,31 @@ export default function ConfigDetailPage() {
             const method = isNew ? 'POST' : 'PUT'
             const url = isNew ? '/api/bank-integration/config' : `/api/bank-integration/config/${id}`
 
+            // Serializar as transformations das launchIntegrationRules
+            const serializedRules = launchIntegrationRules.map(rule => ({
+                code: rule.code,
+                name: rule.name,
+                transformation: rule.transformation
+                    ? (typeof rule.transformation === 'string'
+                        ? rule.transformation
+                        : JSON.stringify(rule.transformation))
+                    : null
+            }))
+
+            console.log('📤 Enviando launchIntegrationRules:', serializedRules)
+
+            const payload = {
+                ...formData,
+                sourceColumns,
+                destinationColumns,
+                launchIntegrationRules: serializedRules,
+                filters
+            }
+
             const response = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ...formData,
-                    sourceColumns,
-                    destinationColumns
-                })
+                body: JSON.stringify(payload)
             })
 
             if (response.ok) {
@@ -239,8 +304,14 @@ export default function ConfigDetailPage() {
                                         <TabsTrigger value="source" className="flex-1 flex items-center justify-center gap-2">
                                             <FileType className="h-4 w-4" /> <span className="hidden sm:inline">Arquivo Origem</span><span className="sm:hidden">Origem</span>
                                         </TabsTrigger>
+                                        <TabsTrigger value="filters" className="flex-1 flex items-center justify-center gap-2">
+                                            <Filter className="h-4 w-4" /> <span className="hidden sm:inline">Filtros</span><span className="sm:hidden">Filtros</span>
+                                        </TabsTrigger>
                                         <TabsTrigger value="destination" className="flex-1 flex items-center justify-center gap-2">
                                             <Database className="h-4 w-4" /> <span className="hidden sm:inline">Arquivo Destino</span><span className="sm:hidden">Destino</span>
+                                        </TabsTrigger>
+                                        <TabsTrigger value="launch-integration" className="flex-1 flex items-center justify-center gap-2">
+                                            <Zap className="h-4 w-4" /> <span className="hidden sm:inline">Integração Lançamento</span><span className="sm:hidden">Lançamento</span>
                                         </TabsTrigger>
                                     </TabsList>
                                 </div>
@@ -261,6 +332,7 @@ export default function ConfigDetailPage() {
                                                         value={formData.code}
                                                         onChange={handleInputChange}
                                                         disabled={!isNew}
+                                                        autoComplete="off"
                                                         placeholder="Ex: ITAU_SISPAG"
                                                         required
                                                     />
@@ -272,6 +344,7 @@ export default function ConfigDetailPage() {
                                                         name="name"
                                                         value={formData.name}
                                                         onChange={handleInputChange}
+                                                        autoComplete="off"
                                                         placeholder="Ex: Itaú Sispag Fornecedores"
                                                         required
                                                     />
@@ -363,6 +436,93 @@ export default function ConfigDetailPage() {
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </TabsContent>
+
+                                <TabsContent value="filters">
+                                    <Card className="border-none shadow-sm bg-white">
+                                        <CardHeader className="flex flex-row items-center justify-between">
+                                            <div>
+                                                <CardTitle>Filtros de Importação</CardTitle>
+                                                <CardDescription>Defina quais linhas do arquivo origem devem ser processadas.</CardDescription>
+                                            </div>
+                                            <Button type="button" onClick={addFilter} size="sm" variant="outline">
+                                                <Plus className="mr-2 h-4 w-4" /> Adicionar Filtro
+                                            </Button>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="overflow-x-auto">
+                                                <Table className="min-w-[600px] md:min-w-full">
+                                                    <TableHeader>
+                                                        <TableRow>
+                                                            <TableHead>Campo Origem</TableHead>
+                                                            <TableHead className="w-[180px]">Operador</TableHead>
+                                                            <TableHead>Valor</TableHead>
+                                                            <TableHead className="w-[60px]"></TableHead>
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {filters.map((f, idx) => (
+                                                            <TableRow key={idx}>
+                                                                <TableCell>
+                                                                    <Select value={f.field} onValueChange={(v) => updateFilter(idx, 'field', v)}>
+                                                                        <SelectTrigger className="h-8 text-xs">
+                                                                            <SelectValue placeholder="Selecione o campo..." />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            {sourceColumns.map(c => (
+                                                                                <SelectItem key={c.code} value={c.code} className="text-xs">{c.name} ({c.code})</SelectItem>
+                                                                            ))}
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <Select value={f.operator} onValueChange={(v) => updateFilter(idx, 'operator', v)}>
+                                                                        <SelectTrigger className="h-8 text-xs">
+                                                                            <SelectValue />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            <SelectItem value="=" className="text-xs">Igual a (=)</SelectItem>
+                                                                            <SelectItem value="!=" className="text-xs">Diferente de (!=)</SelectItem>
+                                                                            <SelectItem value="startsWith" className="text-xs">Começa com</SelectItem>
+                                                                            <SelectItem value="contains" className="text-xs">Contém</SelectItem>
+                                                                            <SelectItem value="present" className="text-xs">Preenchido</SelectItem>
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <Input
+                                                                        value={f.value}
+                                                                        onChange={(e) => updateFilter(idx, 'value', e.target.value)}
+                                                                        disabled={f.operator === 'present'}
+                                                                        placeholder="Valor do critério"
+                                                                        className="h-8 text-xs"
+                                                                    />
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        onClick={() => removeFilter(idx)}
+                                                                        className="text-red-500 hover:bg-red-50 h-8 w-8"
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    </Button>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                        {filters.length === 0 && (
+                                                            <TableRow>
+                                                                <TableCell colSpan={4} className="text-center py-10 text-gray-400">
+                                                                    Nenhum filtro cadastrado. Todas as linhas serão processadas.
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        )}
+                                                    </TableBody>
+                                                </Table>
                                             </div>
                                         </CardContent>
                                     </Card>
@@ -499,6 +659,83 @@ export default function ConfigDetailPage() {
                                                             <TableRow>
                                                                 <TableCell colSpan={4} className="text-center py-10 text-gray-400">
                                                                     Nenhum campo de destino cadastrado.
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        )}
+                                                    </TableBody>
+                                                </Table>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </TabsContent>
+
+                                <TabsContent value="launch-integration">
+                                    <Card className="border-none shadow-sm bg-white">
+                                        <CardHeader className="flex flex-row items-center justify-between">
+                                            <div>
+                                                <CardTitle>Integração de Lançamentos</CardTitle>
+                                                <CardDescription>Configure o mapeamento de campos do arquivo para campos do lançamento financeiro.</CardDescription>
+                                            </div>
+                                            <Button type="button" onClick={addLaunchIntegrationRule} size="sm" variant="outline">
+                                                <Plus className="mr-2 h-4 w-4" /> Campo
+                                            </Button>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="overflow-x-auto">
+                                                <Table className="min-w-[600px] md:min-w-full">
+                                                    <TableHeader>
+                                                        <TableRow>
+                                                            <TableHead className="w-[140px]">Campo Destino</TableHead>
+                                                            <TableHead className="w-[140px]">Nome</TableHead>
+                                                            <TableHead>Transformação</TableHead>
+                                                            <TableHead className="w-[60px]"></TableHead>
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {launchIntegrationRules.length > 0 ? (
+                                                            launchIntegrationRules.map((rule, idx) => (
+                                                                <TableRow key={idx}>
+                                                                    <TableCell>
+                                                                        <Input
+                                                                            value={rule.code}
+                                                                            onChange={(e) => updateLaunchIntegrationRule(idx, 'code', e.target.value)}
+                                                                            placeholder="Ex: launchType"
+                                                                            className="h-8 text-xs"
+                                                                        />
+                                                                    </TableCell>
+                                                                    <TableCell>
+                                                                        <Input
+                                                                            value={rule.name}
+                                                                            onChange={(e) => updateLaunchIntegrationRule(idx, 'name', e.target.value)}
+                                                                            placeholder="Nome"
+                                                                            className="h-8 text-xs"
+                                                                        />
+                                                                    </TableCell>
+                                                                    <TableCell>
+                                                                        <TransformationEditor
+                                                                            value={rule.transformation ?? null}
+                                                                            onChange={(step) => updateLaunchIntegrationRule(idx, 'transformation', step)}
+                                                                            sourceColumns={sourceColumns.filter(sc => !!sc.code)}
+                                                                            dbFields={dbFields ?? undefined}
+                                                                        />
+                                                                    </TableCell>
+                                                                    <TableCell>
+                                                                        <Button
+                                                                            type="button"
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            onClick={() => removeLaunchIntegrationRule(idx)}
+                                                                            className="text-red-500 hover:bg-red-50 h-8 w-8"
+                                                                        >
+                                                                            <Trash2 className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </TableCell>
+                                                                </TableRow>
+                                                            ))
+                                                        ) : (
+                                                            <TableRow>
+                                                                <TableCell colSpan={4} className="text-center py-10 text-gray-400">
+                                                                    Nenhum campo de integração cadastrado.
                                                                 </TableCell>
                                                             </TableRow>
                                                         )}

@@ -76,6 +76,7 @@ export default function Reports() {
     const types: { value: string; label: string }[] = []
     const user = session?.user as any
     if (user?.canLaunchTithe) types.push({ value: 'DIZIMO', label: 'Dízimo' })
+      if (user?.canLaunchServiceOffer) types.push({ value: 'OFERTA_CULTO', label: 'Oferta do Culto' })
     if (user?.canLaunchVote) types.push({ value: 'VOTO', label: 'Voto' })
     if (user?.canLaunchEbd) types.push({ value: 'EBD', label: 'EBD' })
     if (user?.canLaunchCampaign) types.push({ value: 'CAMPANHA', label: 'Campanha' })
@@ -83,9 +84,8 @@ export default function Reports() {
     if (user?.canLaunchCircle) types.push({ value: 'CIRCULO', label: 'Círculo' })
     if (user?.canLaunchCarneReviver) types.push({ value: 'CARNE_REVIVER', label: 'Carnê Reviver' })
     if (user?.canLaunchCarneAfrica) types.push({ value: 'CARNE_AFRICA', label: 'Carnê África' })
-    if (user?.canLaunchServiceOffer) types.push({ value: 'OFERTA_CULTO', label: 'Oferta do Culto' })
-    if (user?.canLaunchExpense) types.push({ value: 'SAIDA', label: 'Saída' })
     if (user?.canLaunchRendaBruta) types.push({ value: 'RENDA_BRUTA', label: 'Renda Bruta' })
+    if (user?.canLaunchExpense) types.push({ value: 'SAIDA', label: 'Saída' })
     return types
   }, [session])
 

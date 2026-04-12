@@ -20,21 +20,130 @@ import { PlayCircle, Upload, FileDown, Trash2, CheckCircle2, Eye, AlertCircle, S
 type Batch = {
     id: string
     sequentialNumber: number
-    config: { 
+    config: {
         name: string
         sourceColumns?: { id: string, code: string, name: string }[]
         destinationColumns?: { id: string, code: string, name: string }[]
+        paymentMethodId?: number
+        accountPlan?: string
     }
     financialEntity: { name: string, congregationId?: string }
     importedByUser: { name: string }
     importedAt: string
     status: string
     _count: { rows: number }
+    rows?: any[]
+    integratedLaunches?: any[]
 }
 
 export default function ExecuteIntegrationPage() {
     const { data: session, status } = useSession()
     const router = useRouter()
+    const [classifications, setClassifications] = useState<any[]>([])
+    // Função auxiliar para extrair valor numérico
+    const extractNumericValue = (value: any): number => {
+        if (!value && value !== 0) return 0
+        let s = String(value).trim().replace('R$', '').replace(/\s/g, '')
+        if (!s) return 0
+        
+        // Caso 1: Tem vírgula
+        if (s.includes(',')) {
+            // Se tem ponto também (ex: 1.234,56), remove o ponto
+            if (s.includes('.')) s = s.replace(/\./g, '')
+            // Em qualquer caso, vírgula vira ponto para o parseFloat
+            s = s.replace(',', '.')
+        } 
+        // Caso 2: Não tem vírgula mas tem ponto(s)
+        else if (s.includes('.')) {
+            const parts = s.split('.')
+            if (parts.length > 2) {
+                // Múltiplos pontos (ex: 1.234.567 ou 120.505.30)
+                const lastPart = parts[parts.length - 1]
+                if (lastPart.length === 2 || lastPart.length === 1) {
+                    // O último ponto é decimal, os outros são milhares
+                    const leading = parts.slice(0, -1).join('')
+                    s = leading + '.' + lastPart
+                } else {
+                    // Todos são milhares
+                    s = s.replace(/\./g, '')
+                }
+            } else {
+                // Apenas um ponto (ex: 1.234 ou 675.50)
+                const lastPart = parts[parts.length - 1]
+                if (lastPart.length === 3) {
+                    s = s.replace(/\./g, '')
+                }
+                // Se for seguido de 1 ou 2 dígitos, o parseFloat natural já resolve (mantém o ponto)
+            }
+        }
+        
+        const num = parseFloat(s)
+        return !isNaN(num) ? num : 0
+    }
+
+    // Função para encontrar a coluna de valores
+    const findValueColumn = (columns: any[]) => {
+        return columns?.find((c: any) => {
+            const nk = (c.code || c.name || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '')
+            const isVal = ['valor', 'value', 'vl', 'total', 'amount', 'pagamento'].some(v => nk.includes(v))
+            const isIdOrCode = ['cod', 'num', 'id', 'conta', 'agencia', 'origem'].some(v => nk.includes(v))
+            return isVal && !isIdOrCode
+        })
+    }
+
+    // Função para validar e formatar data
+    const formatDateSafely = (dateValue: any): string => {
+        if (!dateValue) return "—"
+        try {
+            const dateStr = String(dateValue).trim()
+            if (!dateStr) return "—"
+
+            let parsedDate: Date | null = null
+
+            // Tenta parse se já for um ISO string ou timestamp válido
+            const d = new Date(dateStr)
+            if (!isNaN(d.getTime())) {
+                parsedDate = d
+            } else {
+                // Tenta parse manual para formatos dd/MM/yyyy ou dd-MM-yyyy
+                const parts = dateStr.split(/[\/-]/)
+                if (parts.length === 3) {
+                    let day = 0, month = 0, year = 0
+
+                    if (dateStr.includes('/')) {
+                        // Formato dd/MM/yyyy
+                        day = parseInt(parts[0], 10)
+                        month = parseInt(parts[1], 10) - 1
+                        year = parseInt(parts[2], 10)
+                    } else {
+                        // Formato yyyy-MM-dd ou dd-MM-yyyy
+                        if (parts[0].length === 4) {
+                            // yyyy-MM-dd
+                            year = parseInt(parts[0], 10)
+                            month = parseInt(parts[1], 10) - 1
+                            day = parseInt(parts[2], 10)
+                        } else {
+                            // dd-MM-yyyy
+                            day = parseInt(parts[0], 10)
+                            month = parseInt(parts[1], 10) - 1
+                            year = parseInt(parts[2], 10)
+                        }
+                    }
+
+                    if (day > 0 && day <= 31 && month >= 0 && month < 12 && year > 1900) {
+                        parsedDate = new Date(year, month, day)
+                    }
+                }
+            }
+
+            if (parsedDate && !isNaN(parsedDate.getTime())) {
+                return format(parsedDate, "dd/MM/yyyy", { locale: ptBR })
+            }
+            return "—"
+        } catch {
+            return "—"
+        }
+    }
 
     const [batches, setBatches] = useState<Batch[]>([])
     const [loading, setLoading] = useState(true)
@@ -50,6 +159,9 @@ export default function ExecuteIntegrationPage() {
     const [viewRows, setViewRows] = useState<any[]>([])
     const [loadingView, setLoadingView] = useState(false)
     const [currentBatch, setCurrentBatch] = useState<Batch | null>(null)
+    const [launchIntegrationRules, setLaunchIntegrationRules] = useState<any[]>([])
+    const [previewData, setPreviewData] = useState<Record<string, any>>({})
+    const [loadingPreview, setLoadingPreview] = useState(false)
 
     // Calculate dynamic headers for the view dialog
     const sourceHeaders = useMemo(() => {
@@ -71,6 +183,7 @@ export default function ExecuteIntegrationPage() {
             }
             fetchBatches()
             fetchConfigs()
+            fetchClassifications()
         }
     }, [status, session])
 
@@ -92,6 +205,17 @@ export default function ExecuteIntegrationPage() {
             const res = await fetch("/api/bank-integration/config")
             if (res.ok) {
                 setConfigs(await res.json())
+            }
+        } catch (error) {
+            console.error(error)
+        }
+    }
+
+    const fetchClassifications = async () => {
+        try {
+            const res = await fetch("/api/classifications")
+            if (res.ok) {
+                setClassifications(await res.json())
             }
         } catch (error) {
             console.error(error)
@@ -155,7 +279,7 @@ export default function ExecuteIntegrationPage() {
     }
 
     const handleIntegrate = async (id: string) => {
-        if (!confirm("Deseja realizar a integração? Serão criados os lançamentos correspondentes (Dízimo) sem resumo, alterando o status deste lote de importação. Esta ação não pode ser desfeita e os lançamentos não poderão ser modificados por ninguém.")) return
+        if (!confirm("Deseja realizar a integração?")) return
 
         try {
             const res = await fetch(`/api/bank-integration/execute/${id}/integrate`, { method: 'POST' })
@@ -198,22 +322,28 @@ export default function ExecuteIntegrationPage() {
         setLoadingView(true)
         setViewRows([])
         setCurrentBatch(null)
+        setPreviewData({})
 
         try {
             const res = await fetch(`/api/bank-integration/execute/${id}`)
             if (res.ok) {
                 const data = await res.json()
                 setCurrentBatch(data)
+
+                // Load launch integration rules from config
+                const rules = (data.config?.launchIntegrationRules || [])
+                setLaunchIntegrationRules(rules)
+
                 const parsedRows = (data.rows || []).map((r: any) => {
                     let dest = {}
                     let src = {}
                     try {
                         dest = r.destinationData ? JSON.parse(r.destinationData) : {}
-                    } catch (e) {}
+                    } catch (e) { }
                     try {
                         src = r.sourceData ? JSON.parse(r.sourceData) : { raw: r.sourceData }
                     } catch (e) {
-                         src = { raw: r.sourceData }
+                        src = { raw: r.sourceData }
                     }
                     return {
                         _isValid: r.isValid,
@@ -221,11 +351,32 @@ export default function ExecuteIntegrationPage() {
                         _rowIndex: r.rowIndex,
                         _contributorId: r.contributorId,
                         _contributorName: r.contributorName,
+                        _launchId: r.launchId,
                         _source: src,
                         _destination: dest
                     }
                 }).sort((a: any, b: any) => a._rowIndex - b._rowIndex)
                 setViewRows(parsedRows)
+
+                // Auto-load preview if there are launch integration rules
+                if (rules.length > 0) {
+                    setLoadingPreview(true)
+                    try {
+                        const previewRes = await fetch(`/api/bank-integration/execute/${id}/preview`, { method: 'POST' })
+                        if (previewRes.ok) {
+                            const previewResult = await previewRes.json()
+                            const preview: Record<string, any> = {}
+                            for (const row of previewResult.rows) {
+                                preview[row.rowIndex] = row.launchRuleValues
+                            }
+                            setPreviewData(preview)
+                        }
+                    } catch (e) {
+                        console.error("Error loading preview:", e)
+                    } finally {
+                        setLoadingPreview(false)
+                    }
+                }
             } else {
                 alert("Erro ao buscar registros.")
             }
@@ -234,6 +385,28 @@ export default function ExecuteIntegrationPage() {
             alert("Erro de comunicação.")
         } finally {
             setLoadingView(false)
+        }
+    }
+
+    const loadPreviewData = async () => {
+        if (!viewBatchId || loadingPreview) return
+
+        setLoadingPreview(true)
+        try {
+            const res = await fetch(`/api/bank-integration/execute/${viewBatchId}/preview`, { method: 'POST' })
+            if (res.ok) {
+                const data = await res.json()
+                // Create a map of rowId -> ruleValues
+                const preview: Record<string, any> = {}
+                for (const row of data.rows) {
+                    preview[row.rowIndex] = row.launchRuleValues
+                }
+                setPreviewData(preview)
+            }
+        } catch (error) {
+            console.error("Error loading preview:", error)
+        } finally {
+            setLoadingPreview(false)
         }
     }
 
@@ -274,20 +447,7 @@ export default function ExecuteIntegrationPage() {
                         border-bottom: 2px solid #e5e7eb;
                         box-shadow: 0 1px 2px rgba(0,0,0,0.05);
                     }
-                    .fixed-table-container .sticky-col {
-                        position: sticky;
-                        left: 0;
-                        z-index: 10;
-                        background: inherit;
-                        border-right: 1px solid #e5e7eb;
-                    }
-                    .fixed-table-container .sticky-col-header {
-                        position: sticky;
-                        left: 0;
-                        z-index: 30 !important;
-                        background: #f9fafb !important;
-                        border-right: 1px solid #e5e7eb;
-                    }
+
                     /* Scrollbar Styling */
                     .fixed-table-container::-webkit-scrollbar {
                         width: 10px;
@@ -308,8 +468,8 @@ export default function ExecuteIntegrationPage() {
                 <div className="max-w-6xl mx-auto">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                         <div className="flex items-center gap-3">
-                            <h1 className="text-2xl font-bold tracking-tight text-gray-900 border-b pb-2">Integração Bancária</h1>
-                            <Badge variant="outline" className="text-gray-500 font-normal">Execução</Badge>
+                            <h1 className="text-2xl font-bold tracking-tight text-gray-900 pb-2">Integrar</h1>
+                            {/* <Badge variant="outline" className="text-gray-500 font-normal">Execução</Badge> */}
                         </div>
 
                         <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
@@ -346,107 +506,370 @@ export default function ExecuteIntegrationPage() {
                         </Dialog>
 
                         <Dialog open={viewOpen} onOpenChange={setViewOpen}>
-                            <DialogContent className="max-w-[95vw] w-[95vw] max-h-[95vh] h-[95vh] flex flex-col p-6 overflow-hidden">
-                                <DialogHeader className="mb-4">
+                            <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
+                                <DialogHeader>
                                     <DialogTitle className="text-2xl font-bold">Detelhamento do Lote #{batches.find(b => b.id === viewBatchId)?.sequentialNumber}</DialogTitle>
                                     <CardDescription>
                                         Layout: <span className="font-semibold text-gray-900">{batches.find(b => b.id === viewBatchId)?.config.name}</span>
                                     </CardDescription>
                                 </DialogHeader>
-                                
-                                {loadingView ? (
-                                    <div className="p-12 text-center text-gray-500 flex-1 flex items-center justify-center">
-                                        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mr-3"></div>
-                                        Carregando registros...
-                                    </div>
-                                ) : (
-                                    <Tabs defaultValue="destination" className="flex-1 flex flex-col min-h-0">
-                                        <TabsList className="mb-4">
-                                            <TabsTrigger value="source">Arquivo Origem</TabsTrigger>
-                                            <TabsTrigger value="destination">Arquivo Destino (Transformado)</TabsTrigger>
-                                        </TabsList>
+                                <div className="flex-1 overflow-hidden flex flex-col">
 
-                                        <TabsContent value="source" className="flex-1 flex flex-col min-h-0 mt-0">
-                                            <div className="fixed-table-container">
-                                                <Table>
-                                                    <TableHeader>
-                                                        <TableRow>
-                                                            <TableHead className="w-16 text-center sticky-col-header">#</TableHead>
-                                                            {sourceHeaders.map(k => (
-                                                                <TableHead key={k} className="whitespace-nowrap px-4 py-3">
-                                                                    {currentBatch?.config?.sourceColumns?.find(c => c.code === k)?.name || k}
-                                                                </TableHead>
-                                                            ))}
-                                                        </TableRow>
-                                                    </TableHeader>
-                                                    <TableBody>
-                                                        {viewRows.map((row, i) => (
-                                                            <TableRow key={i} className="hover:bg-gray-50">
-                                                                <TableCell className="text-center font-mono text-xs sticky-col bg-white">{row._rowIndex}</TableCell>
+                                    {loadingView ? (
+                                        <div className="p-12 text-center text-gray-500 flex-1 flex items-center justify-center">
+                                            <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mr-3"></div>
+                                            Carregando registros...
+                                        </div>
+                                    ) : (
+                                        <Tabs defaultValue="preview" onValueChange={(value) => {
+                                            if (value === 'preview' && Object.keys(previewData).length === 0 && !loadingPreview) {
+                                                loadPreviewData()
+                                            }
+                                        }} className="flex-1 flex flex-col min-h-0 px-6 pt-4 overflow-hidden">
+                                            <TabsList className="mb-4 shrink-0">
+                                                <TabsTrigger value="source">Arquivo Origem</TabsTrigger>
+                                                <TabsTrigger value="destination">Lanctos a Exportar</TabsTrigger>
+                                                <TabsTrigger value="preview">Lanctos a Integrar</TabsTrigger>
+                                            </TabsList>
+
+                                            <TabsContent value="source" className="flex-1 flex flex-col min-h-0 mt-0">
+                                                <div className="fixed-table-container">
+                                                    <Table>
+                                                        <TableHeader>
+                                                            <TableRow>
+                                                                <TableHead className="w-16 text-center">#</TableHead>
                                                                 {sourceHeaders.map(k => (
-                                                                    <TableCell key={k} className="whitespace-nowrap font-mono text-xs px-4">
-                                                                        {row._source?.[k] !== undefined ? String(row._source[k]) : ""}
-                                                                    </TableCell>
+                                                                    <TableHead key={k} className="whitespace-nowrap px-4 py-3">
+                                                                        {currentBatch?.config?.sourceColumns?.find(c => c.code === k)?.name || k}
+                                                                    </TableHead>
                                                                 ))}
                                                             </TableRow>
-                                                        ))}
-                                                    </TableBody>
-                                                </Table>
-                                            </div>
-                                        </TabsContent>
-
-                                        <TabsContent value="destination" className="flex-1 flex flex-col min-h-0 mt-0">
-                                            <div className="fixed-table-container">
-                                                <Table>
-                                                    <TableHeader>
-                                                        <TableRow>
-                                                            <TableHead className="w-16 text-center sticky-col-header">#</TableHead>
-                                                            <TableHead className="w-24 text-center">Contribuinte</TableHead>
-                                                            <TableHead className="w-24 text-center">Status</TableHead>
-                                                            {destinationHeaders.map(k => (
-                                                                <TableHead key={k} className="whitespace-nowrap px-4 py-3">
-                                                                    {currentBatch?.config?.destinationColumns?.find(c => c.code === k)?.name || k}
-                                                                </TableHead>
+                                                        </TableHeader>
+                                                        <TableBody>
+                                                            {viewRows.map((row, i) => (
+                                                                <TableRow key={i} className="hover:bg-gray-50">
+                                                                    <TableCell className="text-center font-mono text-xs">{row._rowIndex}</TableCell>
+                                                                    {sourceHeaders.map(k => {
+                                                                        const valueColumn = findValueColumn(currentBatch?.config?.sourceColumns)
+                                                                        const isValueCol = k === valueColumn?.code
+                                                                        return (
+                                                                            <TableCell key={k} className={`whitespace-nowrap font-mono text-xs px-4 ${isValueCol ? 'text-right' : ''}`}>
+                                                                                {row._source?.[k] !== undefined ? String(row._source[k]) : ""}
+                                                                            </TableCell>
+                                                                        )
+                                                                    })}
+                                                                </TableRow>
                                                             ))}
-                                                            <TableHead>Ocorrências</TableHead>
-                                                        </TableRow>
-                                                    </TableHeader>
-                                                    <TableBody>
-                                                        {viewRows.map((row, i) => (
-                                                            <TableRow key={i} className={`hover:bg-gray-50 ${!row._isValid ? "bg-red-50" : ""}`}>
-                                                                <TableCell className="text-center font-mono text-xs sticky-col bg-inherit">{row._rowIndex}</TableCell>
-                                                                <TableCell className="text-center py-2 px-1">
-                                                                    {row._contributorId ? (
-                                                                        <Badge title={`Vínculo: ${row._contributorName}`} className="bg-blue-600">Cadastrado</Badge>
-                                                                    ) : (
-                                                                        <Badge variant="outline" className="text-gray-400 border-gray-200">Não Cadastrado</Badge>
-                                                                    )}
-                                                                </TableCell>
-                                                                <TableCell className="text-center py-2 px-1">
-                                                                    {row._isValid ? (
-                                                                        <Badge className="bg-green-600">OK</Badge>
-                                                                    ) : (
-                                                                        <Badge className="bg-red-600">ERRO</Badge>
-                                                                    )}
-                                                                </TableCell>
+                                                            {viewRows.length > 0 && (() => {
+                                                                const valueColumn = findValueColumn(currentBatch?.config?.sourceColumns)
+                                                                if (!valueColumn) return false
+                                                                const valueColIdx = sourceHeaders.indexOf(valueColumn.code)
+                                                                return valueColIdx !== -1
+                                                            })() && (
+                                                                    <TableRow className="bg-gray-50 font-semibold border-t-2 border-gray-300">
+                                                                        <TableCell colSpan={1} className="text-right px-4 py-3">TOTAL:</TableCell>
+                                                                        {sourceHeaders.map((k, idx) => {
+                                                                            const valueColumn = findValueColumn(currentBatch?.config?.sourceColumns)
+                                                                            if (!valueColumn) return <TableCell key={k} className="whitespace-nowrap text-sm px-4"></TableCell>
+
+                                                                            if (k === valueColumn.code) {
+                                                                                const sum = viewRows.reduce((acc, row) => {
+                                                                                    const val = extractNumericValue(row._source?.[k])
+                                                                                    return acc + val
+                                                                                }, 0)
+                                                                                return (
+                                                                                    <TableCell key={k} className="whitespace-nowrap text-sm px-4 text-blue-600 font-bold text-right">
+                                                                                        {sum.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                                                    </TableCell>
+                                                                                )
+                                                                            }
+                                                                            return <TableCell key={k} className="whitespace-nowrap text-sm px-4"></TableCell>
+                                                                        })}
+                                                                    </TableRow>
+                                                                )}
+                                                        </TableBody>
+                                                    </Table>
+                                                </div>
+                                            </TabsContent>
+
+                                            <TabsContent value="destination" className="flex-1 flex flex-col min-h-0 mt-0">
+                                                <div className="fixed-table-container">
+                                                    <Table>
+                                                        <TableHeader>
+                                                            <TableRow>
+                                                                <TableHead className="w-16 text-center">#</TableHead>
+                                                                <TableHead className="w-24 text-center">Contribuinte</TableHead>
+                                                                <TableHead className="w-24 text-center">Status</TableHead>
                                                                 {destinationHeaders.map(k => (
-                                                                    <TableCell key={k} className="whitespace-nowrap text-sm px-4">
-                                                                        {row._destination?.[k] ? String(row._destination[k]) : <span className="text-gray-300 italic">vazio</span>}
-                                                                    </TableCell>
+                                                                    <TableHead key={k} className="whitespace-nowrap px-4 py-3">
+                                                                        {currentBatch?.config?.destinationColumns?.find(c => c.code === k)?.name || k}
+                                                                    </TableHead>
                                                                 ))}
-                                                                <TableCell className="text-red-600 text-[11px] px-4 font-mono">
-                                                                    {row._errorMsg}
-                                                                </TableCell>
+                                                                <TableHead>Ocorrências</TableHead>
                                                             </TableRow>
-                                                        ))}
-                                                    </TableBody>
-                                                </Table>
-                                            </div>
-                                        </TabsContent>
-                                    </Tabs>
-                                )}
-                                <div className="mt-4 flex justify-end shrink-0">
-                                    <Button variant="outline" onClick={() => setViewOpen(false)}>Fechar</Button>
+                                                        </TableHeader>
+                                                        <TableBody>
+                                                            {viewRows.filter(r => r._isValid && previewData[r._rowIndex]).map((row, i) => (
+                                                                <TableRow key={i} className={`hover:bg-gray-50`}>
+                                                                    <TableCell className="text-center font-mono text-xs">{row._rowIndex}</TableCell>
+                                                                    <TableCell className="text-center py-2 px-1">
+                                                                        {row._contributorId ? (
+                                                                            <Badge title={`Vínculo: ${row._contributorName}`} className="bg-blue-600">Cadastrado</Badge>
+                                                                        ) : (
+                                                                            <Badge variant="outline" className="text-gray-400 border-gray-200">Não Cadastrado</Badge>
+                                                                        )}
+                                                                    </TableCell>
+                                                                    <TableCell className="text-center py-2 px-1">
+                                                                        {row._isValid ? (
+                                                                            <Badge className="bg-green-600">OK</Badge>
+                                                                        ) : (
+                                                                            <Badge className="bg-red-600">ERRO</Badge>
+                                                                        )}
+                                                                    </TableCell>
+                                                                    {destinationHeaders.map(k => {
+                                                                        const valueColumn = findValueColumn(currentBatch?.config?.destinationColumns)
+                                                                        const isValueCol = k === valueColumn?.code
+                                                                        return (
+                                                                            <TableCell key={k} className={`whitespace-nowrap text-sm px-4 ${isValueCol ? 'text-right' : ''}`}>
+                                                                                {row._destination?.[k] ? String(row._destination[k]) : <span className="text-gray-300 italic">vazio</span>}
+                                                                            </TableCell>
+                                                                        )
+                                                                    })}
+                                                                    <TableCell className="text-red-600 text-[11px] px-4 font-mono">
+                                                                        {row._errorMsg}
+                                                                    </TableCell>
+                                                                </TableRow>
+                                                            ))}
+                                                            {viewRows.length > 0 && (() => {
+                                                                const valueColumn = findValueColumn(currentBatch?.config?.destinationColumns)
+                                                                if (!valueColumn) return false
+                                                                const valueColIdx = destinationHeaders.indexOf(valueColumn.code)
+                                                                return valueColIdx !== -1
+                                                            })() && (
+                                                                    <TableRow className="bg-gray-50 font-semibold border-t-2 border-gray-300">
+                                                                        <TableCell colSpan={3} className="text-right px-4 py-3">TOTAL:</TableCell>
+                                                                        {destinationHeaders.map((k, idx) => {
+                                                                            const valueColumn = findValueColumn(currentBatch?.config?.destinationColumns)
+                                                                            if (!valueColumn) return <TableCell key={k} className="whitespace-nowrap text-sm px-4"></TableCell>
+
+                                                                            if (k === valueColumn.code) {
+                                                                                const sum = viewRows.filter(r => r._isValid && previewData[r._rowIndex]).reduce((acc, row) => {
+                                                                                    const val = extractNumericValue(row._destination?.[k])
+                                                                                    return acc + val
+                                                                                }, 0)
+                                                                                return (
+                                                                                    <TableCell key={k} className="whitespace-nowrap text-sm px-4 text-blue-600 font-bold text-right">
+                                                                                        {sum.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                                                    </TableCell>
+                                                                                )
+                                                                            }
+                                                                            return <TableCell key={k} className="whitespace-nowrap text-sm px-4"></TableCell>
+                                                                        })}
+                                                                        <TableCell></TableCell>
+                                                                    </TableRow>
+                                                                )}
+                                                        </TableBody>
+                                                    </Table>
+                                                </div>
+                                            </TabsContent>
+
+                                            <TabsContent value="preview" className="flex-1 flex flex-col min-h-0 mt-0">
+                                                <div className="fixed-table-container">
+                                                    <Table>
+                                                        <TableHeader>
+                                                            <TableRow>
+                                                                <TableHead className="w-16 text-center">#</TableHead>
+                                                                <TableHead className="w-24 text-center">Tipo</TableHead>
+                                                                <TableHead className="w-40 text-center">Contribuinte</TableHead>
+                                                                <TableHead className="w-28 text-center">Data</TableHead>
+                                                                <TableHead className="w-32 text-right">Valor</TableHead>
+                                                                <TableHead>Descrição</TableHead>
+                                                                <TableHead className="w-24">Conta Contábil</TableHead>
+                                                                <TableHead className="w-32">Forma de Pagamento</TableHead>
+                                                                <TableHead className="w-24">Entidade</TableHead>
+                                                            </TableRow>
+                                                        </TableHeader>
+                                                        <TableBody>
+                                                            {viewRows.filter(r => r._isValid && previewData[r._rowIndex]).map((row, i) => {
+                                                                const launch = currentBatch?.integratedLaunches?.find(l => l.id === row._launchId)
+                                                                const dest = row._destination || {}
+
+                                                                const ruleVals = previewData[row._rowIndex] || {}
+                                                                const findRuleVal = (keywords: string[]) => {
+                                                                    for (const rule of launchIntegrationRules) {
+                                                                        const nk = (rule.name || rule.code).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '')
+                                                                        if (keywords.some(k => nk.includes(k))) return ruleVals[rule.code]
+                                                                    }
+                                                                    for (const k of keywords) if (ruleVals[k]) return ruleVals[k]
+                                                                    return null
+                                                                }
+
+                                                                const dataCols = Object.keys(dest).filter(k => ['data', 'emissao', 'vencimento', 'date', 'dt'].some(d => k.toLowerCase().includes(d)))
+                                                                const ruleDate = findRuleVal(['data', 'vencimento', 'emissao', 'date'])
+                                                                const dataVal = launch ? formatDateSafely(launch.date) : (ruleDate ? formatDateSafely(ruleDate) : (dataCols.length > 0 ? formatDateSafely(dest[dataCols[0]]) : "—"))
+
+                                                                const valorCols = Object.keys(dest).filter(k => ['valor', 'value', 'vl', 'total', 'amount'].some(v => k.toLowerCase().includes(v)))
+                                                                const ruleValor = findRuleVal(['valor', 'total', 'quantia', 'value', 'amount'])
+                                                                const valorVal = launch ? launch.value : (ruleValor !== null ? extractNumericValue(ruleValor) : (valorCols.length > 0 ? extractNumericValue(dest[valorCols[0]]) : 0))
+
+                                                                const descCols = Object.keys(dest).filter(k => ['descricao', 'description', 'historico', 'hist', 'obs', 'nome'].some(d => k.toLowerCase().includes(d)))
+                                                                const descVal = descCols.length > 0 ? dest[descCols[0]] : null
+
+                                                                const paymentCols = Object.keys(dest).filter(k => ['pagamento', 'forma', 'payment', 'method', 'forma_pag', 'tipopag'].some(p => k.toLowerCase().includes(p)))
+                                                                const paymentVal = paymentCols.length > 0 ? dest[paymentCols[0]] : null
+
+                                                                return (
+                                                                    <TableRow key={i} className={`hover:bg-gray-50 ${launch ? "bg-green-50/30" : ""}`}>
+                                                                        <TableCell className="text-center font-mono text-xs">{i + 1}</TableCell>
+                                                                        <TableCell className="text-start py-2 px-1">
+                                                                            {(() => {
+                                                                                const ruleVals = previewData[row._rowIndex] || {}
+                                                                                const findRuleVal = (keywords: string[]) => {
+                                                                                    for (const rule of launchIntegrationRules) {
+                                                                                        const nk = (rule.name || rule.code).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '')
+                                                                                        if (keywords.some(k => nk.includes(k))) return ruleVals[rule.code]
+                                                                                    }
+                                                                                    for (const k of keywords) if (ruleVals[k]) return ruleVals[k]
+                                                                                    return null
+                                                                                }
+                                                                                const typeVal = launch ? launch.type : (findRuleVal(['tipo', 'type', 'launchtype']) || 'DÍZIMO')
+                                                                                return (
+                                                                                    String(typeVal).substring(0, 12)
+                                                                                )
+                                                                            })()}
+                                                                        </TableCell>
+                                                                        <TableCell className="text-left py-2 px-1">
+                                                                            {(() => {
+                                                                                const ruleVals = previewData[row._rowIndex] || {}
+                                                                                const findRuleVal = (keywords: string[]) => {
+                                                                                    for (const rule of launchIntegrationRules) {
+                                                                                        const nk = (rule.name || rule.code).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '')
+                                                                                        if (keywords.some(k => nk.includes(k))) return ruleVals[rule.code]
+                                                                                    }
+                                                                                    for (const k of keywords) if (ruleVals[k]) return ruleVals[k]
+                                                                                    return null
+                                                                                }
+                                                                                const ruleName = findRuleVal(['nome', 'contribuinte', 'contributor', 'name'])
+                                                                                const name = launch ? (launch.contributor?.name || launch.contributorName) : (row._contributorName || ruleName)
+                                                                                const code = launch ? launch.contributor?.code : row._contributorId
+                                                                                return name ? (
+                                                                                    <div className="flex flex-col">
+                                                                                        <span title={name} className={`text-xs font-semibold ${launch ? "text-green-700" : "text-gray-600"}`}>{name}</span>
+                                                                                        {code && <span className="text-[10px] text-gray-400">ID: {code}</span>}
+                                                                                    </div>
+                                                                                ) : (
+                                                                                    <Badge variant="outline" className="text-gray-400 border-gray-200 text-xs">Não Cadastrado</Badge>
+                                                                                )
+                                                                            })()}
+                                                                        </TableCell>
+                                                                        <TableCell className="text-center font-mono text-xs">
+                                                                            {dataVal}
+                                                                        </TableCell>
+                                                                        <TableCell className="text-right font-mono text-sm font-semibold text-blue-600">
+                                                                            {valorVal ? valorVal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : "—"}
+                                                                        </TableCell>
+                                                                        <TableCell className="text-sm px-4 truncate max-w-xs">
+                                                                            {(() => {
+                                                                                const ruleVals = previewData[row._rowIndex] || {}
+                                                                                const findRuleVal = (keywords: string[]) => {
+                                                                                    for (const rule of launchIntegrationRules) {
+                                                                                        const nk = (rule.name || rule.code).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '')
+                                                                                        if (keywords.some(k => nk.includes(k))) return ruleVals[rule.code]
+                                                                                    }
+                                                                                    for (const k of keywords) if (ruleVals[k]) return ruleVals[k]
+                                                                                    return null
+                                                                                }
+                                                                                const descFromRule = findRuleVal(['descricao', 'description', 'historico', 'hist', 'obs'])
+                                                                                const desc = launch ? launch.description : descFromRule
+                                                                                return desc || descVal || "—"
+                                                                            })()}
+                                                                        </TableCell>
+                                                                        <TableCell className="text-sm px-4">
+                                                                            <Badge variant="secondary" className="text-xs">
+                                                                                {(() => {
+                                                                                    if (launch) return launch.classification?.shortCode || launch.classification?.name || "—"
+                                                                                    const ruleVals = previewData[row._rowIndex] || {}
+                                                                                    const findRuleVal = (keywords: string[]) => {
+                                                                                        for (const rule of launchIntegrationRules) {
+                                                                                            const nk = (rule.name || rule.code).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '')
+                                                                                            if (keywords.some(k => nk.includes(k))) return ruleVals[rule.code]
+                                                                                        }
+                                                                                        for (const k of keywords) if (ruleVals[k]) return ruleVals[k]
+                                                                                        return null
+                                                                                    }
+                                                                                    const classIdFromRule = findRuleVal(['conta', 'plano', 'classification', 'idconta', 'classificationid', 'classificacao'])
+                                                                                    if (classIdFromRule) {
+                                                                                        const cls = classifications.find(c => c.id === classIdFromRule || c.code === classIdFromRule || c.shortCode === classIdFromRule)
+                                                                                        return cls ? (cls.shortCode || cls.code || cls.description) : classIdFromRule
+                                                                                    }
+                                                                                    if (currentBatch?.config?.accountPlan) {
+                                                                                        const cls = classifications.find(c => c.id === currentBatch.config.accountPlan)
+                                                                                        return cls ? (cls.shortCode || cls.code) : currentBatch.config.accountPlan
+                                                                                    }
+                                                                                    return "—"
+                                                                                })()}
+                                                                            </Badge>
+                                                                        </TableCell>
+                                                                        <TableCell className="text-sm px-4">
+                                                                            <Badge variant="outline" className={`text-xs ${launch ? "bg-green-100 border-green-300" : ""}`}>
+                                                                                {(() => {
+                                                                                    if (launch) return launch.paymentMethod?.name || "—"
+                                                                                    const ruleVals = previewData[row._rowIndex] || {}
+                                                                                    const findRuleVal = (keywords: string[]) => {
+                                                                                        for (const rule of launchIntegrationRules) {
+                                                                                            const nk = (rule.name || rule.code).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '')
+                                                                                            if (keywords.some(k => nk.includes(k))) return ruleVals[rule.code]
+                                                                                        }
+                                                                                        for (const k of keywords) if (ruleVals[k]) return ruleVals[k]
+                                                                                        return null
+                                                                                    }
+                                                                                    const paymentFromRule = findRuleVal(['pagamento', 'forma', 'payment', 'method', 'formapagamento', 'paymentmethodid'])
+                                                                                    return paymentFromRule || paymentVal ? String(paymentFromRule || paymentVal).substring(0, 20) : "—"
+                                                                                })()}
+                                                                            </Badge>
+                                                                        </TableCell>
+                                                                        <TableCell className="text-xs text-gray-600">
+                                                                            {launch ? launch.financialEntity?.name : (currentBatch?.financialEntity?.name || "—")}
+                                                                        </TableCell>
+                                                                    </TableRow>
+                                                                )
+                                                            })}
+                                                            {viewRows.filter(r => r._isValid && previewData[r._rowIndex]).length > 0 && (
+                                                                <TableRow className="bg-gray-50 font-semibold border-t-2 border-gray-300">
+                                                                    <TableCell colSpan={4} className="text-right px-4 py-3">TOTAL A INTEGRAR:</TableCell>
+                                                                    <TableCell className="text-right font-mono text-sm px-4 text-blue-600 font-bold">
+                                                                        {(() => {
+                                                                            if (currentBatch?.status === 'INTEGRATED') {
+                                                                                return (currentBatch?.integratedLaunches || []).reduce((sum, l) => sum + (l.value || 0), 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                                                                            }
+                                                                            return viewRows.filter(r => r._isValid && previewData[r._rowIndex]).reduce((sum, row) => {
+                                                                                const launch = currentBatch?.integratedLaunches?.find(l => l.id === row._launchId)
+                                                                                const dest = row._destination || {}
+                                                                                const ruleVals = previewData[row._rowIndex] || {}
+                                                                                const findRuleValInternal = (keywords: string[]) => {
+                                                                                    for (const rule of launchIntegrationRules) {
+                                                                                        const nk = (rule.name || rule.code).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '')
+                                                                                        if (keywords.some(k => nk.includes(k))) return ruleVals[rule.code]
+                                                                                    }
+                                                                                    for (const k of keywords) if (ruleVals[k]) return ruleVals[k]
+                                                                                    return null
+                                                                                }
+                                                                                const valorCols = Object.keys(dest).filter(k => ['valor', 'value', 'vl', 'total', 'amount'].some(v => k.toLowerCase().includes(v)))
+                                                                                const ruleValor = findRuleValInternal(['valor', 'total', 'quantia', 'value', 'amount'])
+                                                                                const valorVal = launch ? launch.value : (ruleValor !== null ? extractNumericValue(ruleValor) : (valorCols.length > 0 ? extractNumericValue(dest[valorCols[0]]) : 0))
+                                                                                return sum + (valorVal || 0)
+                                                                            }, 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                                                                        })()}
+                                                                    </TableCell>
+                                                                    <TableCell colSpan={4}></TableCell>
+                                                                </TableRow>
+                                                            )}
+                                                        </TableBody>
+                                                    </Table>
+                                                </div>
+                                            </TabsContent>
+                                        </Tabs>
+                                    )}
                                 </div>
                             </DialogContent>
                         </Dialog>
@@ -462,13 +885,14 @@ export default function ExecuteIntegrationPage() {
                                         <TableHead className="font-bold text-gray-600">Layout</TableHead>
                                         <TableHead className="font-bold text-gray-600">Entidade</TableHead>
                                         <TableHead className="font-bold text-gray-600">Linhas</TableHead>
+                                        <TableHead className="font-bold text-gray-600">Total (R$)</TableHead>
                                         <TableHead className="font-bold text-gray-600">Status</TableHead>
                                         <TableHead className="text-right font-bold text-gray-600">Ações</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {batches.length === 0 ? (
-                                        <TableRow><TableCell colSpan={7} className="text-center py-20 text-gray-400">Nenhum lote importado.</TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={8} className="text-center py-20 text-gray-400">Nenhum lote importado.</TableCell></TableRow>
                                     ) : batches.map(batch => {
                                         const st = statusMap[batch.status] || { label: batch.status, color: "bg-gray-100" }
                                         const isInt = batch.status === 'INTEGRATED'
@@ -478,11 +902,14 @@ export default function ExecuteIntegrationPage() {
                                                 <TableCell className="text-gray-500 whitespace-nowrap text-sm">
                                                     {format(new Date(batch.importedAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                                                 </TableCell>
-                                                <TableCell className="text-gray-900 font-medium">{batch.config.name}</TableCell>
+                                                <TableCell className="text-gray-900 text-sm">{batch.config.name}</TableCell>
                                                 <TableCell className="text-gray-600 text-sm">{batch.financialEntity.name}</TableCell>
-                                                <TableCell className="text-gray-600 text-sm">{batch._count.rows}</TableCell>
+                                                <TableCell className="text-gray-600 text-center text-sm">{batch._count.rows}</TableCell>
+                                                <TableCell className="text-right text-sm font-bold text-blue-600">
+                                                    {(batch.totalAmount || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                </TableCell>
                                                 <TableCell>
-                                                    <Badge variant="secondary" className={`${st.color} border-0 font-bold uppercase text-[10px] tracking-wider px-2`}>{st.label}</Badge>
+                                                    <Badge variant="secondary" className={`${st.color} border-0 font-bold uppercase text-[10px] tracking-wider px-1`}>{st.label}</Badge>
                                                 </TableCell>
                                                 <TableCell className="text-right whitespace-nowrap space-x-2">
                                                     <Button variant="ghost" size="sm" onClick={() => handleView(batch.id)} className="h-8 text-gray-600 hover:text-primary transition-colors">

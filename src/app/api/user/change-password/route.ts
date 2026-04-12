@@ -2,8 +2,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import{ authOptions }from "@/app/api/auth/[...nextauth]/route"
-import prisma from "@/lib/prisma"
 import bcrypt from "bcrypt"
+import { getDb } from "@/lib/getDb"
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,6 +13,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
 
+    const prisma = await getDb(request)
+    
     const body = await request.json()
     const { currentPassword, newPassword } = body
 

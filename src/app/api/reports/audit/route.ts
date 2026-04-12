@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import prisma from "@/lib/prisma"
 import { utcToZonedTime } from 'date-fns-tz'
 import { startOfDay, endOfDay, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import jsPDF from 'jspdf'
 import fs from 'fs'
 import path from 'path'
+import { getDb } from "@/lib/getDb"
 
 const timezone = 'America/Maceio'
 
@@ -35,6 +35,8 @@ function check(value: boolean) {
 export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions)
     if (!session) return new NextResponse('Unauthorized', { status: 401 })
+
+  const prisma = await getDb(request)        
 
     const { searchParams } = new URL(request.url)
     const congregationIds = searchParams.get('congregationIds')?.split(',').filter(Boolean) || []

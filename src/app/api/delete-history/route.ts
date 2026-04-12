@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import prisma from "@/lib/prisma"
 import { authOptions } from "../auth/[...nextauth]/route";
 import { unlink } from "fs/promises";
 import { join } from "path";
+import { getDb } from "@/lib/getDb";
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -16,15 +16,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Sem permissão para excluir histórico" }, { status: 403 })
   }
 
+  const prisma = await getDb(request)
+
   try {
     const body = await request.json()
     const { startDate, endDate, type, congregationIds, launchStatus } = body
 
     const timezone = 'America/Sao_Paulo';
 
-    // Converte strings 'YYYY-MM-DD' para o início e fim do dia no timezone correto
-    const launchDateStart = new Date(`${body.startDate}T00:00:00Z`);
-    const launchDateEnd = new Date(`${body.endDate}T23:59:59Z`);
+    // Converte ISO string para Date
+    const launchDateStart = new Date(startDate);
+    const launchDateEnd = new Date(endDate);
 
     const userCongregations = await prisma.userCongregation.findMany({
       where: {
@@ -51,11 +53,10 @@ export async function POST(request: NextRequest) {
     // Lógica correta de filtragem por status
     if (launchStatus === 'IMPORTED') {
       where.status = "IMPORTED";
+    } else if (launchStatus === 'INTEGRATED') {
+      where.status = "INTEGRATED";
     } else if (launchStatus === 'MANUAL') {
-      where.status = { in: ["CANCELED", "EXPORTED"] };
-    } else {
-      // Caso padrão (todos os removíveis)
-      where.status = { in: ["CANCELED", "EXPORTED", "IMPORTED"] };
+      where.status = { in: ["CANCELED", "EXPORTED", "NORMAL"] };
     }
 
     // Buscar os lançamentos antes de excluir para pegar attachmentUrl e summaryId

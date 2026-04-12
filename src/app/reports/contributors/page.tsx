@@ -520,8 +520,8 @@ export default function ReportsPage() {
                                             <Table>
                                                 <TableHeader>
                                                     <TableRow className="bg-primary/10">
-                                                        <TableHead className="font-bold min-w-[200px]">Nome</TableHead>
-                                                        <TableHead className="font-bold min-w-[100px]">Cargo</TableHead>
+                                                        <TableHead className="font-bold min-w-[250px]">Nome</TableHead>
+                                                        <TableHead className="font-bold min-w-[150px]">Cargo</TableHead>
                                                         {MONTHS.map(month => (
                                                             <TableHead key={month} className="text-center font-bold min-w-[60px]">
                                                                 {month}
@@ -534,7 +534,7 @@ export default function ReportsPage() {
                                                     {cong.contributors.map((contrib, idx) => (
                                                         <TableRow key={idx}>
                                                             <TableCell className="font-medium">
-                                                              <div className="flex items-center gap-2">
+                                                              <div className="flex items-center gap-2 max-w-[250px]">
                                                                 {contrib.photoUrl && (
                                                                   <img
                                                                     src={`/api/uploads/${contrib.photoUrl}`}
@@ -543,10 +543,10 @@ export default function ReportsPage() {
                                                                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                                                                   />
                                                                 )}
-                                                                <span>{contrib.name}</span>
+                                                                <span className="truncate" title={contrib.name}>{contrib.name}</span>
                                                               </div>
                                                             </TableCell>
-                                                            <TableCell>{contrib.position}</TableCell>
+                                                            <TableCell className="truncate max-w-[150px]" title={contrib.position}>{contrib.position}</TableCell>
                                                             {contrib.months.map((val, monthIdx) => (
                                                                 <TableCell
                                                                     key={monthIdx}

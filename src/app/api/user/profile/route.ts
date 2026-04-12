@@ -1,14 +1,16 @@
 
 import { NextRequest, NextResponse } from "next/server"
-import prisma from "@/lib/prisma"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { getDb } from "@/lib/getDb"
 
 export async function PUT(request: NextRequest) {
     const session = await getServerSession(authOptions)
     if (!session) {
         return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
+
+    const prisma = await getDb(request)    
 
     try {
         const payload = await request.json()

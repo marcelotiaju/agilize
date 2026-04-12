@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { getDb } from "@/lib/getDb"
 
 export async function POST(request: NextRequest) {
+
+    const prisma = await getDb(request)
     try {
         // Verificar se a requisição tem um token de autorização
         const authHeader = request.headers.get('authorization')

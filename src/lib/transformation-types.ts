@@ -15,6 +15,14 @@ export type TransformType =
     | 'CONVERT'
     | 'REPLACE'
     | 'FALLBACK'
+    | 'CONDITIONAL'
+
+export interface ConditionalRule {
+    field: string
+    operator: '=' | '<' | '>' | '<=' | '>=' | 'contains' | 'startsWith' | 'endsWith'
+    value: string
+    result: TransformStep
+}
 
 export interface ConvertMap {
     from: string
@@ -41,16 +49,26 @@ export interface TransformStep {
     replaceWith?: string
     // New lookup specific fields
     searchCondition?: 'MEMBRO' | 'CONGREGADO' | 'NONE'
-    fallbackType?: 'EMPTY' | 'SOURCE'
+    fallbackType?: 'EMPTY' | 'SOURCE' | 'FIXED'
     fallbackSourceField?: string
+    fallbackValue?: string
     returnEmptyIfFound?: boolean
+    cleanFallback?: boolean
+    // Conditional fields
+    conditions?: ConditionalRule[]
+    fallback?: TransformStep
 }
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
 
-export function parseTransformation(raw: string | null | undefined): TransformStep | null {
+export function parseTransformation(raw: string | null | undefined | object): TransformStep | null {
     if (!raw) return null
     try {
+        // If it's already an object (from prisma Json field), return it directly
+        if (typeof raw === 'object') {
+            return raw as TransformStep
+        }
+        // If it's a string, parse it
         return JSON.parse(raw) as TransformStep
     } catch {
         return null
@@ -71,15 +89,19 @@ export function describeTransformation(step: TransformStep | null | undefined): 
         case 'CONFIG_FIELD': return `Configuração: ${step.configField}`
         case 'LOOKUP': {
             const cond = step.searchCondition && step.searchCondition !== 'NONE' ? ` [${step.searchCondition}]` : ''
-            const fb = step.fallbackType === 'SOURCE' ? ` (FB: ${step.fallbackSourceField})` : ''
+            let fb = ''
+            if (step.fallbackType === 'SOURCE') fb = ` (FB: ${step.fallbackSourceField})`
+            else if (step.fallbackType === 'FIXED') fb = ` (FB: "${step.fallbackValue}")`
             const effect = step.returnEmptyIfFound ? '→ (Vazio)' : ` → ${step.returnField}`
-            return `Buscar ${step.searchTable}${cond} por ${step.searchBy}${effect}${fb}`
+            const cleaning = step.find ? ` (Limpando "${step.find}")` : ''
+            return `Buscar ${step.searchTable}${cond} por ${step.searchBy}${cleaning}${effect}${fb}`
         }
         case 'FALLBACK': return `Fallback (${step.parts?.length ?? 0} etapas)`
         case 'CONCAT': return `Concat (${step.parts?.length ?? 0} partes)`
         case 'FORMAT_DATE': return `Data: ${step.inputFormat} → ${step.outputFormat}`
         case 'CONVERT': return `Converter ${step.sourceField}`
         case 'REPLACE': return `Substituir "${step.find}" em ${step.sourceField}`
+        case 'CONDITIONAL': return `Condicional (${step.conditions?.length ?? 0} regra${step.conditions?.length !== 1 ? 's' : ''})`
         default: return '(vazio)'
     }
 }

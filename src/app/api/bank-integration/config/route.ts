@@ -14,7 +14,8 @@ export async function GET(request: NextRequest) {
                 financialEntity: { select: { name: true } },
                 paymentMethod: { select: { name: true } },
                 sourceColumns: true,
-                destinationColumns: true
+                destinationColumns: true,
+                launchIntegrationRules: true
             },
             orderBy: { createdAt: 'desc' }
         })
@@ -44,7 +45,9 @@ export async function POST(request: NextRequest) {
             launchTypeSource,
             congregationSource,
             sourceColumns,
-            destinationColumns
+            destinationColumns,
+            launchIntegrationRules,
+            filters
         } = body
 
         if (!code || !name || !financialEntityId || !paymentMethodId || !launchType) {
@@ -53,6 +56,29 @@ export async function POST(request: NextRequest) {
 
         const existing = await prisma.bankIntegrationConfig.findUnique({ where: { code } })
         if (existing) return NextResponse.json({ error: "Código de layout já existe" }, { status: 400 })
+
+        // Filter launch rules to only include those with non-empty code and remove duplicates
+        const validRules = Array.from(
+            new Map(
+                (launchIntegrationRules || [])
+                    .filter((rule: any) => rule.code && rule.code.trim())
+                    .map((rule: any) => [rule.code, rule])
+            ).values()
+        )
+        
+        console.log('✅ Valid rules after filtering:', validRules.length)
+        
+        const rulesToCreate = validRules.map((rule: any) => ({
+            code: rule.code,
+            name: rule.name,
+            transformation: rule.transformation
+                ? (typeof rule.transformation === 'string'
+                    ? JSON.parse(rule.transformation)
+                    : rule.transformation)
+                : null
+        }))
+        
+        console.log('📝 Rules to create:', JSON.stringify(rulesToCreate, null, 2))
 
         const config = await prisma.bankIntegrationConfig.create({
             data: {
@@ -64,6 +90,7 @@ export async function POST(request: NextRequest) {
                 launchType,
                 launchTypeSource: launchTypeSource || "FIXED",
                 congregationSource: congregationSource || "FIXED",
+                filters: filters || [],
                 sourceColumns: {
                     create: sourceColumns?.map((col: any) => ({
                         code: col.code,
@@ -80,13 +107,19 @@ export async function POST(request: NextRequest) {
                                 : JSON.stringify(col.transformation))
                             : null
                     })) || []
+                },
+                launchIntegrationRules: {
+                    create: rulesToCreate
                 }
             },
             include: {
                 sourceColumns: true,
-                destinationColumns: true
+                destinationColumns: true,
+                launchIntegrationRules: true
             }
         })
+
+        console.log('💾 Saved launchIntegrationRules:', JSON.stringify(config.launchIntegrationRules, null, 2))
 
         return NextResponse.json(config, { status: 201 })
     } catch (error) {
