@@ -54,8 +54,6 @@ export async function GET(request: NextRequest) {
 
             for (const row of batch.rows) {
                 const source = JSON.parse((row as any).sourceData || "{}")
-                
-                // Skip rows that don't match filters
                 if (!evaluateFilter(source, filters)) continue
 
                 let rowVal = 0

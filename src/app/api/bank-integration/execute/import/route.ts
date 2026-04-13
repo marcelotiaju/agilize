@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { getDb } from "@/lib/getDb"
 import { getServerSession } from "next-auth"
 import { authOptions } from "../../../auth/[...nextauth]/route"
-import { evaluateTransformation, TransformContext } from "@/lib/transformation-engine"
-import { parseTransformation } from "@/lib/transformation-types"
+import { evaluateFilter, evaluateTransformation, extractNumericValue, TransformContext } from "@/lib/transformation-engine"
+import { parseTransformation } from "@/lib/transformation-engine"
 
 /**
  * Robustly splits a CSV line considering quoted fields with delimiters inside.
@@ -151,42 +151,12 @@ export async function POST(request: NextRequest) {
         console.log(`[CSV Import] Starting transformation for ${rows.length} rows...`)
 
         const filters = (config.filters as any[]) || []
-        const getRowValue = (row: Record<string, string>, field: string): string => {
-            if (!field) return ''
-            const val = row[field];
-            if (val !== undefined) return String(val).trim();
-            const normalize = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9]/g, '')
-            const targetNorm = normalize(field)
-            for (const key of Object.keys(row)) {
-                if (normalize(key) === targetNorm) return String(row[key]).trim()
-            }
-            return ''
-        }
-
         for (let i = 0; i < rows.length; i++) {
             const rawRow = rows[i]
             
             // Apply Filters
-            let isRowFiltered = true
-            let filterReason = ""
-            for (const filter of filters) {
-                const val = getRowValue(rawRow, filter.field)
-                const target = String(filter.value || '').trim()
-                let match = false
-                switch (filter.operator) {
-                    case '=': match = val === target; break
-                    case '!=': match = val !== target; break
-                    case 'startsWith': match = val.toLowerCase().startsWith(target.toLowerCase()); break
-                    case 'contains': match = val.toLowerCase().includes(target.toLowerCase()); break
-                    case 'present': match = !!val; break
-                    default: match = true
-                }
-                if (!match) {
-                    isRowFiltered = false
-                    filterReason = `Filtro: ${filter.field} ${filter.operator} "${filter.value}"`
-                    break
-                }
-            }
+            const isRowFiltered = evaluateFilter(rawRow, filters)
+            const filterReason = !isRowFiltered ? "Não atende aos critérios de filtro configurados." : ""
 
             const ctx: TransformContext = { ...contextBase, row: rawRow, dbFields: {} }
             const destData: Record<string, string> = {}

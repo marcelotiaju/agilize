@@ -90,6 +90,7 @@ export function evaluateFilter(source: Record<string, string>, filters: any[]): 
     for (const filter of filters) {
         const val = getRowValue(source, filter.field)
         const target = String(filter.value || '').trim()
+        const op = filter.operator
         let match = false
         
         const isNumeric = (v: string) => {
@@ -98,7 +99,6 @@ export function evaluateFilter(source: Record<string, string>, filters: any[]): 
             return !isNaN(Number(s))
         }
 
-        const op = filter.operator
         if (['>', '<', '>=', '<='].includes(op)) {
             const nRow = extractNumericValue(val)
             const nRule = extractNumericValue(target)

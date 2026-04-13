@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import prisma from "@/lib/prisma"
+import { getDb } from "@/lib/getDb"
 import { getServerSession } from "next-auth"
 import { authOptions } from "../../../auth/[...nextauth]/route"
 
@@ -12,6 +12,7 @@ export async function GET(
     if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
 
     try {
+        const prisma = await getDb(request)
         const config = await prisma.bankIntegrationConfig.findUnique({
             where: { id },
             include: {
@@ -41,6 +42,7 @@ export async function PUT(
     }
 
     try {
+        const prisma = await getDb(request)
         const body = await request.json()
         const {
             name,
@@ -148,6 +150,7 @@ export async function DELETE(
     }
 
     try {
+        const prisma = await getDb(request)
         await prisma.bankIntegrationConfig.delete({
             where: { id }
         })

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import prisma from "@/lib/prisma"
+import { getDb } from "@/lib/getDb"
 import { getServerSession } from "next-auth"
 import { authOptions } from "../../../../auth/[...nextauth]/route"
 import * as XLSX from 'xlsx-js-style'
@@ -15,6 +15,7 @@ export async function GET(
     }
 
     try {
+        const prisma = await getDb(request)
         const batch = await prisma.bankIntegrationBatch.findUnique({
             where: { id },
             include: {
