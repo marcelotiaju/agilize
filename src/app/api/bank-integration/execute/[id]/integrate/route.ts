@@ -3,9 +3,7 @@ import { getDb } from "@/lib/getDb"
 import { getServerSession } from "next-auth"
 import { authOptions } from "../../../../auth/[...nextauth]/route"
 import { LaunchType, LaunchStatus } from "@prisma/client"
-import { evaluateTransformation } from "@/lib/transformation-engine"
-import { parseTransformation } from "@/lib/transformation-types"
-import { getMappedOffice } from "@/lib/transformation-engine"
+import { evaluateTransformation, evaluateFilter, parseTransformation, getMappedOffice, extractNumericValue } from "@/lib/transformation-engine"
 
 export async function POST(
     request: NextRequest,
@@ -82,43 +80,13 @@ export async function POST(
             return null
         }
 
+        const filters = (batch.config as any).filters || []
+
         for (const row of batch.rows) {
             const dest = JSON.parse(row.destinationData || "{}")
             const source = JSON.parse(row.sourceData || "{}")
 
-            const filters = (batch.config as any).filters || []
-            const getRowValue = (row: Record<string, string>, field: string): string => {
-                if (!field) return ''
-                const val = row[field];
-                if (val !== undefined) return String(val).trim();
-                const normalize = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9]/g, '')
-                const targetNorm = normalize(field)
-                for (const key of Object.keys(row)) {
-                    if (normalize(key) === targetNorm) return String(row[key]).trim()
-                }
-                return ''
-            }
-
-            let matchesFilters = true
-            for (const filter of filters) {
-                const val = getRowValue(source, filter.field)
-                const target = String(filter.value || '').trim()
-                let match = false
-                switch (filter.operator) {
-                    case '=': match = val === target; break
-                    case '!=': match = val !== target; break
-                    case 'startsWith': match = val.toLowerCase().startsWith(target.toLowerCase()); break
-                    case 'contains': match = val.toLowerCase().includes(target.toLowerCase()); break
-                    case 'present': match = !!val; break
-                    default: match = true
-                }
-                if (!match) {
-                    matchesFilters = false
-                    break
-                }
-            }
-
-            if (!matchesFilters) continue
+            if (!evaluateFilter(source, filters)) continue
 
             // Prepare context for launch integration rules evaluation
             const dbFields: Record<string, any> = {}

@@ -41,44 +41,32 @@ export default function ExecuteIntegrationPage() {
     const router = useRouter()
     const [classifications, setClassifications] = useState<any[]>([])
     // Função auxiliar para extrair valor numérico
-    const extractNumericValue = (value: any): number => {
-        if (!value && value !== 0) return 0
-        let s = String(value).trim().replace('R$', '').replace(/\s/g, '')
+    const extractNumericValue = (raw: any): number => {
+        if (!raw && raw !== 0) return 0
+        let s = String(raw).trim().replace('R$', '').replace(/\s/g, '')
         if (!s) return 0
         
-        // Caso 1: Tem vírgula
+        // Brazilian/International numeric formats heuristic
         if (s.includes(',')) {
-            // Se tem ponto também (ex: 1.234,56), remove o ponto
             if (s.includes('.')) s = s.replace(/\./g, '')
-            // Em qualquer caso, vírgula vira ponto para o parseFloat
             s = s.replace(',', '.')
-        } 
-        // Caso 2: Não tem vírgula mas tem ponto(s)
-        else if (s.includes('.')) {
+        } else if (s.includes('.')) {
             const parts = s.split('.')
             if (parts.length > 2) {
-                // Múltiplos pontos (ex: 1.234.567 ou 120.505.30)
                 const lastPart = parts[parts.length - 1]
                 if (lastPart.length === 2 || lastPart.length === 1) {
-                    // O último ponto é decimal, os outros são milhares
                     const leading = parts.slice(0, -1).join('')
                     s = leading + '.' + lastPart
                 } else {
-                    // Todos são milhares
                     s = s.replace(/\./g, '')
                 }
             } else {
-                // Apenas um ponto (ex: 1.234 ou 675.50)
                 const lastPart = parts[parts.length - 1]
-                if (lastPart.length === 3) {
-                    s = s.replace(/\./g, '')
-                }
-                // Se for seguido de 1 ou 2 dígitos, o parseFloat natural já resolve (mantém o ponto)
+                if (lastPart.length === 3) s = s.replace(/\./g, '')
             }
         }
-        
-        const num = parseFloat(s)
-        return !isNaN(num) ? num : 0
+        const numVal = parseFloat(s)
+        return isNaN(numVal) ? 0 : numVal
     }
 
     // Função para encontrar a coluna de valores
@@ -546,7 +534,7 @@ export default function ExecuteIntegrationPage() {
                                                             </TableRow>
                                                         </TableHeader>
                                                         <TableBody>
-                                                            {viewRows.map((row, i) => (
+                                                            {viewRows.filter(r => previewData[r._rowIndex]).map((row, i) => (
                                                                 <TableRow key={i} className="hover:bg-gray-50">
                                                                     <TableCell className="text-center font-mono text-xs">{row._rowIndex}</TableCell>
                                                                     {sourceHeaders.map(k => {
@@ -573,7 +561,7 @@ export default function ExecuteIntegrationPage() {
                                                                             if (!valueColumn) return <TableCell key={k} className="whitespace-nowrap text-sm px-4"></TableCell>
 
                                                                             if (k === valueColumn.code) {
-                                                                                const sum = viewRows.reduce((acc, row) => {
+                                                                                const sum = viewRows.filter(r => previewData[r._rowIndex]).reduce((acc, row) => {
                                                                                     const val = extractNumericValue(row._source?.[k])
                                                                                     return acc + val
                                                                                 }, 0)

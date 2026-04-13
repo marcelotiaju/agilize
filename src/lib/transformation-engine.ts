@@ -38,7 +38,7 @@ export function getMappedOffice(record: any): string {
     return cargo
 }
 
-function getRowValue(row: Record<string, string>, field: string): string {
+export function getRowValue(row: Record<string, string>, field: string): string {
     if (!field) return ''
 
     // 1. Direct match (Fast)
@@ -54,6 +54,87 @@ function getRowValue(row: Record<string, string>, field: string): string {
     }
 
     return ''
+}
+
+export function extractNumericValue(raw: any): number {
+    if (!raw) return 0
+    let s = String(raw).trim().replace('R$', '').replace(/\s/g, '')
+    if (!s) return 0
+    
+    // Brazilian/International numeric formats heuristic
+    if (s.includes(',')) {
+        if (s.includes('.')) s = s.replace(/\./g, '')
+        s = s.replace(',', '.')
+    } else if (s.includes('.')) {
+        const parts = s.split('.')
+        if (parts.length > 2) {
+            const lastPart = parts[parts.length - 1]
+            if (lastPart.length === 2 || lastPart.length === 1) {
+                const leading = parts.slice(0, -1).join('')
+                s = leading + '.' + lastPart
+            } else {
+                s = s.replace(/\./g, '')
+            }
+        } else {
+            const lastPart = parts[parts.length - 1]
+            if (lastPart.length === 3) s = s.replace(/\./g, '')
+        }
+    }
+    const numVal = parseFloat(s)
+    return isNaN(numVal) ? 0 : numVal
+}
+
+export function evaluateFilter(source: Record<string, string>, filters: any[]): boolean {
+    if (!filters || filters.length === 0) return true
+    
+    for (const filter of filters) {
+        const val = getRowValue(source, filter.field)
+        const target = String(filter.value || '').trim()
+        let match = false
+        
+        const isNumeric = (v: string) => {
+            if (!v) return false
+            const s = v.replace('R$', '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.')
+            return !isNaN(Number(s))
+        }
+
+        const op = filter.operator
+        if (['>', '<', '>=', '<='].includes(op)) {
+            const nRow = extractNumericValue(val)
+            const nRule = extractNumericValue(target)
+            switch (op) {
+                case '>': match = nRow > nRule; break;
+                case '<': match = nRow < nRule; break;
+                case '>=': match = nRow >= nRule; break;
+                case '<=': match = nRow <= nRule; break;
+            }
+        } else if (op === '=') {
+            if (isNumeric(val) && isNumeric(target)) {
+                match = extractNumericValue(val) === extractNumericValue(target)
+            } else {
+                match = val === target
+            }
+        } else if (op === '!=') {
+            if (isNumeric(val) && isNumeric(target)) {
+                match = extractNumericValue(val) !== extractNumericValue(target)
+            } else {
+                match = val !== target
+            }
+        } else {
+            switch (op) {
+                case 'contains': match = val.toLowerCase().includes(target.toLowerCase()); break;
+                case 'startsWith': match = val.toLowerCase().startsWith(target.toLowerCase()); break;
+                case 'endsWith': match = val.toLowerCase().endsWith(target.toLowerCase()); break;
+                case 'present': match = !!val && val.trim() !== ''; break;
+                case 'empty': match = !val || val.trim() === ''; break;
+                default: match = true; break;
+            }
+        }
+        
+        if (!match) return false
+    }
+    
+    return true
 }
 
 // ─── Engine ──────────────────────────────────────────────────────────────────
@@ -189,7 +270,7 @@ export async function evaluateTransformation(
                             if (customMapped) cargo = customMapped.to
                         }
 
-                        // "DÍZIMOS E OFERTAS DE  -[CARGO] -[NOME] -[CPF]"
+                        // \"DÍZIMOS E OFERTAS DE  -[CARGO] -[NOME] -[CPF]\"
                         const normalizedName = record.name.toUpperCase()
                         result = `DÍZIMOS E OFERTAS DE  -${cargo} -${normalizedName} -${record.cpf || ''}`
                     } else if (record && isName) {
@@ -314,17 +395,46 @@ export async function evaluateTransformation(
                 const rowVal = getRowValue(ctx.row, rule.field)
                 let match = false
 
-                const ruleVal = rule.value || ''
+                const ruleVal = String(rule.value || '').trim()
+                const op = rule.operator
 
-                switch (rule.operator) {
-                    case '=': match = rowVal === ruleVal; break;
-                    case 'contains': match = rowVal.toLowerCase().includes(ruleVal.toLowerCase()); break;
-                    case 'startsWith': match = rowVal.toLowerCase().startsWith(ruleVal.toLowerCase()); break;
-                    case 'endsWith': match = rowVal.toLowerCase().endsWith(ruleVal.toLowerCase()); break;
-                    case '>': match = parseFloat(rowVal) > parseFloat(ruleVal); break;
-                    case '<': match = parseFloat(rowVal) < parseFloat(ruleVal); break;
-                    case '>=': match = parseFloat(rowVal) >= parseFloat(ruleVal); break;
-                    case '<=': match = parseFloat(rowVal) <= parseFloat(ruleVal); break;
+                // Smart compare for numbers
+                const isNumeric = (val: string) => {
+                    if (!val) return false
+                    const s = val.replace('R$', '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.')
+                    return !isNaN(Number(s))
+                }
+
+                if (['>', '<', '>=', '<='].includes(op)) {
+                    const nRow = extractNumericValue(rowVal)
+                    const nRule = extractNumericValue(ruleVal)
+                    switch (op) {
+                        case '>': match = nRow > nRule; break;
+                        case '<': match = nRow < nRule; break;
+                        case '>=': match = nRow >= nRule; break;
+                        case '<=': match = nRow <= nRule; break;
+                    }
+                } else if (op === '=') {
+                    // Se ambos parecem números, compara numericamente
+                    if (isNumeric(rowVal) && isNumeric(ruleVal)) {
+                        match = extractNumericValue(rowVal) === extractNumericValue(ruleVal)
+                    } else {
+                        match = rowVal === ruleVal
+                    }
+                } else if (op === '!=') {
+                    if (isNumeric(rowVal) && isNumeric(ruleVal)) {
+                        match = extractNumericValue(rowVal) !== extractNumericValue(ruleVal)
+                    } else {
+                        match = rowVal !== ruleVal
+                    }
+                } else {
+                    switch (op) {
+                        case 'contains': match = rowVal.toLowerCase().includes(ruleVal.toLowerCase()); break;
+                        case 'startsWith': match = rowVal.toLowerCase().startsWith(ruleVal.toLowerCase()); break;
+                        case 'endsWith': match = rowVal.toLowerCase().endsWith(ruleVal.toLowerCase()); break;
+                        case 'present': match = !!rowVal && rowVal.trim() !== ''; break;
+                        case 'empty': match = !rowVal || rowVal.trim() === ''; break;
+                    }
                 }
 
                 if (match) {

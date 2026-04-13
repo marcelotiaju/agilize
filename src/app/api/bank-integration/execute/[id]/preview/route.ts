@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getDb } from "@/lib/getDb"
 import { getServerSession } from "next-auth"
 import { authOptions } from "../../../../auth/[...nextauth]/route"
-import { evaluateTransformation } from "@/lib/transformation-engine"
-import { parseTransformation } from "@/lib/transformation-types"
+import { evaluateTransformation, evaluateFilter, parseTransformation } from "@/lib/transformation-engine"
 
 /**
  * Preview endpoint - Processes launchIntegrationRules transformations
@@ -43,45 +42,13 @@ export async function POST(
             return NextResponse.json({ error: "Lote não encontrado" }, { status: 404 })
         }
 
-        // Process each row with launchIntegrationRules transformations
+        const filters = (batch.config as any).filters || []
         const previewRows: any[] = []
 
         for (const row of batch.rows) {
             const source = JSON.parse(row.sourceData || "{}")
 
-            const filters = (batch.config as any).filters || []
-            const getRowValue = (r: Record<string, string>, field: string): string => {
-                if (!field) return ''
-                const val = r[field];
-                if (val !== undefined) return String(val).trim();
-                const normalize = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9]/g, '')
-                const targetNorm = normalize(field)
-                for (const key of Object.keys(r)) {
-                    if (normalize(key) === targetNorm) return String(r[key]).trim()
-                }
-                return ''
-            }
-
-            let matchesFilters = true
-            for (const filter of filters) {
-                const val = getRowValue(source, filter.field)
-                const target = String(filter.value || '').trim()
-                let match = false
-                switch (filter.operator) {
-                    case '=': match = val === target; break
-                    case '!=': match = val !== target; break
-                    case 'startsWith': match = val.toLowerCase().startsWith(target.toLowerCase()); break
-                    case 'contains': match = val.toLowerCase().includes(target.toLowerCase()); break
-                    case 'present': match = !!val; break
-                    default: match = true
-                }
-                if (!match) {
-                    matchesFilters = false
-                    break
-                }
-            }
-
-            if (!matchesFilters) continue
+            if (!evaluateFilter(source, filters)) continue
 
             // Prepare context for evaluating rules
             const ctxForLaunchRules = {
