@@ -61,7 +61,7 @@ export function Footer() {
   const canReportHistoryContribSynthetic = Boolean(session?.user?.canReportHistoryContribSynthetic)
   const canReportHistoryContribAnalytic = Boolean(session?.user?.canReportHistoryContribAnalytic)
   const canReportAudit = Boolean(session?.user?.canReportAudit)
-    const canReportAccountability = Boolean(session?.user?.canReportAccountability)
+  const canReportAccountability = Boolean(session?.user?.canReportAccountability)
 
   const handleSignOut = () => {
     signOut({ callbackUrl: '/' })
@@ -225,9 +225,9 @@ export function Footer() {
                     onClick={() => setIsReportsOpen(false)}
                   >
                     <Printer className="h-4 w-4" />
-                    <span>Relatório de Prestação de Contas</span>
+                    <span>Prestação de Contas</span>
                   </Link>
-                )}                
+                )}
               </div>
             </PopoverContent>
           </Popover>

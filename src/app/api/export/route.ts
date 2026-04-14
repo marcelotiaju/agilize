@@ -259,7 +259,8 @@ export async function POST(request: NextRequest) {
         "Content-Disposition": `attachment; filename="${fileName}"`,
       },
     })
-  } catch (error) {
-    return NextResponse.json({ error: "Erro ao exportar dados" }, { status: 500 })
+  } catch (error: any) {
+    console.error('API Export Error:', error)
+    return NextResponse.json({ error: "Erro ao exportar dados: " + (error.message || 'Erro desconhecido') }, { status: 500 })
   }
 }

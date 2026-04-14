@@ -162,8 +162,8 @@ export default function Export() {
         },
         body: JSON.stringify({
           ...formData,
-          startDate: formData.startDate.toISOString(),
-          endDate: formData.endDate.toISOString()
+          startDate: format(formData.startDate, 'yyyy-MM-dd'),
+          endDate: format(formData.endDate, 'yyyy-MM-dd')
         })
       })
 
