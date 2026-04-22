@@ -59,6 +59,18 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get("id")
     if (!id) return NextResponse.json({ error: "ID obrigatório" }, { status: 400 })
+
+    // Verificar se há usuários associados a este perfil
+    const usersCount = await prisma.user.count({
+      where: { profileId: id }
+    })
+
+    if (usersCount > 0) {
+      return NextResponse.json({ 
+        error: "Não é possível excluir este perfil pois existem usuários associados a ele." 
+      }, { status: 400 })
+    }
+
     await prisma.profile.delete({ where: { id } })
     return NextResponse.json({ message: "Excluído" })
   } catch (error) {

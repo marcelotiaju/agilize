@@ -99,6 +99,8 @@ export const authOptions: NextAuthOptions = {
           canManageBankIntegration: !!p?.canManageBankIntegration,
           canBankIntegrationConfigure: !!p?.canBankIntegrationConfigure,
           canBankIntegrationExecute: !!p?.canBankIntegrationExecute,
+          canToggleLaunchType: !!p?.canToggleLaunchType,
+          canGenerateReceipt: !!p?.canGenerateReceipt,
         }
 
         return {
@@ -202,6 +204,8 @@ export const authOptions: NextAuthOptions = {
           canManageBankIntegration: (user as any).canManageBankIntegration,
           canBankIntegrationConfigure: (user as any).canBankIntegrationConfigure,
           canBankIntegrationExecute: (user as any).canBankIntegrationExecute,
+          canToggleLaunchType: (user as any).canToggleLaunchType,
+          canGenerateReceipt: (user as any).canGenerateReceipt,
           image: (user as any).image,
           forceLogoutAt: (user as any).forceLogoutAt ? new Date((user as any).forceLogoutAt).getTime() : null,
           dbAlias: (user as any).dbAlias,
@@ -298,6 +302,8 @@ export const authOptions: NextAuthOptions = {
         canManageBankIntegration: typeof token.canManageBankIntegration === "boolean" ? token.canManageBankIntegration : undefined,
         canBankIntegrationConfigure: typeof token.canBankIntegrationConfigure === "boolean" ? token.canBankIntegrationConfigure : undefined,
         canBankIntegrationExecute: typeof token.canBankIntegrationExecute === "boolean" ? token.canBankIntegrationExecute : undefined,
+        canToggleLaunchType: typeof token.canToggleLaunchType === "boolean" ? token.canToggleLaunchType : undefined,
+        canGenerateReceipt: typeof token.canGenerateReceipt === "boolean" ? token.canGenerateReceipt : undefined,
         dbAlias: token.dbAlias as string | undefined,
         dbLogoUrl: token.dbLogoUrl as string | undefined
       }

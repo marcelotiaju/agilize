@@ -87,20 +87,30 @@ export async function GET(request: NextRequest) {
     const pageHeight = doc.internal.pageSize.getHeight()
 
     try {
-      const imgPath = path.join(process.cwd(), 'public', 'images', 'Logo.png')
+      const { getToken } = require("next-auth/jwt");
+      const token = await getToken({ req: request });
+      const alias = (token?.dbAlias) || "AGILIZE";
+      let logoFileName = alias === "AGILIZE" ? "Logo.png" : "Logo_" + alias + ".png";
+      let imgPath = path.join(process.cwd(), 'public', 'images', logoFileName);
+      if (!require('fs').existsSync(imgPath)) {
+        imgPath = path.join(process.cwd(), 'public', 'images', 'Logo.png');
+      }
       if (fs.existsSync(imgPath)) {
         const imgData = fs.readFileSync(imgPath).toString('base64')
-        doc.addImage(imgData, 'PNG', margin, y, 20, 20)
+        const imgProps = doc.getImageProperties('data:image/png;base64,' + imgData)
+        const ratio = imgProps.width / imgProps.height
+        const printWidth = 15 * ratio
+        doc.addImage(imgData, 'PNG', margin, y, printWidth, 10)
       }
     } catch {/* ignore */ }
 
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
-    doc.text('IGREJA ASSEMBLEIA DE DEUS NO ESTADO DE SERGIPE', margin + 25, y + 7)
+    doc.text('IGREJA ASSEMBLEIA DE DEUS NO ESTADO DE SERGIPE', margin, y + 15)
 
     doc.setFontSize(11)
-    doc.text('RELATÓRIO RESUMO MENSAL', margin + 25, y + 14)
-    y += 25
+    doc.text('RELATÓRIO RESUMO MENSAL', margin, y + 22)
+    y += 28
 
     doc.setFontSize(9)
     doc.setFont('helvetica', 'normal')
@@ -109,9 +119,9 @@ export async function GET(request: NextRequest) {
     y += 4
     doc.setFontSize(8).text(`TIPOS DE LANÇAMENTO: ${launchTypes.join(', ')}`, margin, y)
     const rightAlignX = pageWidth - margin
-    doc.text(`Usuário: ${session.user?.name || 'N/A'}`, rightAlignX, y - 5, { align: 'right' })
+    doc.text(`Usuário: ${session.user?.name || 'N/A'}`, rightAlignX, y - 10, { align: 'right' })
     const now = new Date()
-    doc.text(` ${format(utcToZonedTime(now, timezone), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`, rightAlignX, y, { align: 'right' })
+    doc.text(` ${format(utcToZonedTime(now, timezone), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`, rightAlignX, y - 5, { align: 'right' })
 
     y += 4
     doc.text(`Origem dos Lançamentos: ${importFilter === 'ALL' ? 'Todos' : importFilter === 'IMPORTED' ? 'Importados' : importFilter === 'INTEGRATED' ? 'Integrados' : 'Apenas Digitados'}`, margin, y)

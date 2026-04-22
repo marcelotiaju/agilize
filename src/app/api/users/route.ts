@@ -3,6 +3,8 @@ import { getDb } from "@/lib/getDb"
 import bcrypt from "bcrypt"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import path from "path"
+import fs from "fs"
 
 export async function GET(request: NextRequest) {
   try {
@@ -206,6 +208,22 @@ export async function DELETE(request: NextRequest) {
 
     const existingUser = await prisma.user.findUnique({ where: { id } })
     if (!existingUser) return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 })
+
+    if (existingUser.image) {
+      try {
+        let cleanPath = existingUser.image.startsWith('/api') ? existingUser.image.replace('/api', '') : existingUser.image;
+        if (cleanPath.startsWith('/')) {
+          cleanPath = cleanPath.substring(1);
+        }
+        
+        const physicalPath = path.join(process.cwd(), 'public', cleanPath);
+        if (fs.existsSync(physicalPath)) {
+          fs.unlinkSync(physicalPath);
+        }
+      } catch (err) {
+        console.error('Erro ao excluir foto do usuário:', err);
+      }
+    }
 
     await prisma.user.delete({ where: { id } })
     return NextResponse.json({ message: "Usuário excluído com sucesso" })

@@ -272,12 +272,25 @@ export async function GET(request: NextRequest) {
       const totalCount = filteredLaunches.length
       const totalPages = Math.ceil(totalCount / limit)
 
+      // Calcular totais de entradas e saídas nos resultados filtrados
+      let totalEntries = 0
+      let totalExits = 0
+      filteredLaunches.forEach(l => {
+        if (l.type === 'SAIDA') {
+          totalExits += (Number(l.value) || 0)
+        } else {
+          totalEntries += (Number(l.value) || 0)
+        }
+      })
+
       return NextResponse.json({
         launches: paginatedLaunches,
         pagination: {
           currentPage: page,
           totalPages,
           totalCount,
+          totalEntries,
+          totalExits,
           limit
         }
       })
@@ -295,7 +308,7 @@ export async function GET(request: NextRequest) {
     // }
 
     // Se não houver termo de busca, fazer busca normal com paginação
-    const [launches, totalCount] = await Promise.all([
+    const [launches, totalCount, allFilteredLaunches] = await Promise.all([
       prisma.launch.findMany({
         where,
         include: {
@@ -314,8 +327,23 @@ export async function GET(request: NextRequest) {
         skip,
         take: limit
       }),
-      prisma.launch.count({ where })
+      prisma.launch.count({ where }),
+      prisma.launch.findMany({
+        where,
+        select: { type: true, value: true }
+      })
     ])
+
+    // Calcular totais de entradas e saídas nos resultados filtrados (todos, não só a página)
+    let totalEntries = 0
+    let totalExits = 0
+    allFilteredLaunches.forEach(l => {
+      if (l.type === 'SAIDA') {
+        totalExits += (Number(l.value) || 0)
+      } else {
+        totalEntries += (Number(l.value) || 0)
+      }
+    })
 
     launches.sort((a, b) => {
       const nameA = extractAfterColon(a.congregation?.name)
@@ -330,6 +358,8 @@ export async function GET(request: NextRequest) {
         currentPage: page,
         totalPages,
         totalCount,
+        totalEntries,
+        totalExits,
         limit
       }
     })
@@ -368,7 +398,8 @@ export async function POST(request: NextRequest) {
       isContributorRegistered,
       isSupplierRegistered,
       attachmentUrl,
-      isRateio
+      isRateio,
+      installments
     } = body
 
     // Verificar permissões de lançamento
@@ -464,56 +495,63 @@ export async function POST(request: NextRequest) {
 
     // Validação de duplicidade baseada no tipo de lançamento
     const numericValue = parseFloat(value) || 0
+    const finalTalonNumber = talonNumber || null
 
-    // Para DÍZIMO e CARNE_REVIVER: verificar Congregação + Data + Valor + Contribuinte apenas se contributorId estiver preenchido
+    // Para DÍZIMO, CARNE_REVIVER e CARNE_AFRICA: verificar Congregação + Data + Valor + Contribuinte + Talão
     if (type === "DIZIMO" || type === "CARNE_REVIVER" || type === "CARNE_AFRICA") {
-      // Validação de duplicidade apenas se o contribuinte estiver registrado (contributorId preenchido)
+      const whereClause: any = {
+        congregationId,
+        date: launchDate,
+        type: type,
+        value: numericValue,
+        talonNumber: finalTalonNumber,
+        status: { in: ["NORMAL", "APPROVED"] }
+      }
+
       if (isContributorRegistered && contributorId) {
-        const whereClause: any = {
-          congregationId,
-          date: launchDate,
-          type: type,
-          value: numericValue,
-          contributorId,
-          status: { in: ["NORMAL", "APPROVED"] }
-        }
-
-        const existingLaunch = await prisma.launch.findFirst({
-          where: whereClause
-        })
-
-        if (existingLaunch) {
-          return NextResponse.json({
-            error: `Já existe um lançamento de ${type === "DIZIMO" ? "Dízimo" : type === "CARNE_REVIVER" ? "Carne Reviver" : "Carne África"} com a mesma congregação, data, valor e contribuinte`
-          }, { status: 400 })
-        }
+        whereClause.contributorId = contributorId
+      } else {
+        whereClause.contributorName = contributorName
+        whereClause.contributorId = null
       }
-      // Se não tiver contributorId (contribuinte anônimo ou não cadastrado), permite duplicação
+
+      const existingLaunch = await prisma.launch.findFirst({
+        where: whereClause
+      })
+
+      if (existingLaunch) {
+        return NextResponse.json({
+          error: `Já existe um lançamento de ${type === "DIZIMO" ? "Dízimo" : type === "CARNE_REVIVER" ? "Carne Reviver" : "Carne África"} com a mesma congregação, data, valor, ${finalTalonNumber ? 'nro talão, ' : ''}e contribuinte`
+        }, { status: 400 })
+      }
     }
-    // Para SAÍDA: verificar Congregação + Data + Valor + Fornecedor apenas se supplierId estiver preenchido
+    // Para SAÍDA: verificar Congregação + Data + Valor + Fornecedor + Talão
     else if (type === "SAIDA") {
-      // Validação de duplicidade apenas se o fornecedor estiver registrado (supplierId preenchido)
-      if (isSupplierRegistered && supplierId) {
-        const whereClause: any = {
-          congregationId,
-          date: launchDate,
-          type: "SAIDA",
-          value: numericValue,
-          supplierId,
-          status: { in: ["NORMAL", "APPROVED"] }
-        }
-
-        const existingLaunch = await prisma.launch.findFirst({
-          where: whereClause
-        })
-
-        if (existingLaunch) {
-          return NextResponse.json({
-            error: "Já existe um lançamento de saída com a mesma congregação, data, valor e fornecedor"
-          }, { status: 400 })
-        }
+      const whereClause: any = {
+        congregationId,
+        date: launchDate,
+        type: "SAIDA",
+        value: numericValue,
+        talonNumber: finalTalonNumber,
+        status: { in: ["NORMAL", "APPROVED"] }
       }
-      // Se não tiver supplierId (fornecedor não cadastrado), permite duplicação
+
+      if (isSupplierRegistered && supplierId) {
+        whereClause.supplierId = supplierId
+      } else {
+        whereClause.supplierName = supplierName
+        whereClause.supplierId = null
+      }
+
+      const existingLaunch = await prisma.launch.findFirst({
+        where: whereClause
+      })
+
+      if (existingLaunch) {
+        return NextResponse.json({
+          error: `Já existe um lançamento de saída com a mesma congregação, data, valor, ${finalTalonNumber ? 'nro talão, ' : ''}e fornecedor`
+        }, { status: 400 })
+      }
     }
     // Para os demais tipos (VOTO, EBD, CAMPANHA, MISSAO, CIRCULO, OFERTA_CULTO): verificar Congregação + Data + Valor
     else {
@@ -547,13 +585,14 @@ export async function POST(request: NextRequest) {
           date: launchDate,
           type,
           value: numericValue,
+          talonNumber: finalTalonNumber,
           status: { in: ["NORMAL", "APPROVED"] }
         }
       })
 
       if (existingLaunch) {
         return NextResponse.json({
-          error: `Já existe um lançamento do tipo ${type === "VOTO" ? "Voto" : type === "EBD" ? "EBD" : type === "CAMPANHA" ? "Campanha" : type === "MISSAO" ? "Missão" : type === "CIRCULO" ? "Círculo de Oração" : "Oferta do Culto"} com a mesma congregação, data e valor`
+          error: `Já existe um lançamento do tipo ${type === "VOTO" ? "Voto" : type === "EBD" ? "EBD" : type === "CAMPANHA" ? "Campanha" : type === "MISSAO" ? "Missão" : type === "CIRCULO" ? "Círculo de Oração" : "Oferta do Culto"} com a mesma congregação, data, valor${finalTalonNumber ? ' e nro talão' : ''}`
         }, { status: 400 })
       }
     }
@@ -604,14 +643,22 @@ export async function POST(request: NextRequest) {
         paymentMethodId: paymentMethodId || null,
         createdBy: session.user.name,
         attachmentUrl,
-        isRateio: type === "CARNE_REVIVER" || type === "CARNE_AFRICA" ? !!isRateio : false
+        isRateio: !!isRateio,
+        installments: isRateio && installments && installments.length > 0 ? {
+          create: installments.map((inst: any) => ({
+            month: inst.month,
+            year: inst.year,
+            value: inst.value
+          }))
+        } : undefined
       },
       include: {
         congregation: true,
         contributor: true,
         supplier: true,
         classification: true,
-        paymentMethod: true
+        paymentMethod: true,
+        installments: true
       }
     })
 
@@ -641,7 +688,8 @@ export async function PUT(request: NextRequest) {
       include: {
         congregation: true,
         contributor: true,
-        supplier: true
+        supplier: true,
+        installments: true
       }
     })
 
@@ -763,78 +811,68 @@ export async function PUT(request: NextRequest) {
     const finalContributorName = updateData.contributorName !== undefined ? (updateData.contributorName || null) : launch.contributorName
     const finalSupplierId = updateData.supplierId !== undefined ? (updateData.supplierId || null) : launch.supplierId
     const finalSupplierName = updateData.supplierName !== undefined ? (updateData.supplierName || null) : launch.supplierName
+    const finalTalonNumber = updateData.talonNumber !== undefined ? (updateData.talonNumber || null) : launch.talonNumber
 
-    // Para DÍZIMO e CARNE_REVIVER: verificar Congregação + Data + Valor + Contribuinte
-    if (finalType === "DIZIMO" || finalType === "CARNE_REVIVER") {
+    // Validação de duplicidade na atualização (excluindo o próprio registro)
+    if (finalType === "DIZIMO" || finalType === "CARNE_REVIVER" || finalType === "CARNE_AFRICA") {
       const whereClause: any = {
         congregationId: finalCongregationId,
         date: finalDate,
         type: finalType,
         value: finalValue,
+        talonNumber: finalTalonNumber,
         status: { in: ["NORMAL", "APPROVED"] },
-        id: { not: id } // Excluir o próprio registro
+        id: { not: id }
       }
 
       if (finalContributorId) {
         whereClause.contributorId = finalContributorId
-      } else if (finalContributorName) {
+      } else {
         whereClause.contributorName = finalContributorName
         whereClause.contributorId = null
       }
 
-      const existingLaunch = await prisma.launch.findFirst({
-        where: whereClause
-      })
-
+      const existingLaunch = await prisma.launch.findFirst({ where: whereClause })
       if (existingLaunch) {
         return NextResponse.json({
-          error: `Já existe um lançamento de ${finalType === "DIZIMO" ? "dízimo" : "carne reviver"} com a mesma congregação, data, valor e contribuinte`
+          error: `Já existe um lançamento de ${finalType.toLowerCase().replace('_', ' ')} com a mesma congregação, data, valor, ${finalTalonNumber ? 'nro talão, ' : ''}e contribuinte`
         }, { status: 400 })
       }
-    }
-    // Para SAÍDA: verificar Congregação + Data + Valor + Fornecedor
-    else if (finalType === "SAIDA") {
+    } else if (finalType === "SAIDA") {
       const whereClause: any = {
         congregationId: finalCongregationId,
         date: finalDate,
         type: "SAIDA",
         value: finalValue,
+        talonNumber: finalTalonNumber,
         status: { in: ["NORMAL", "APPROVED"] },
         id: { not: id }
       }
 
       if (finalSupplierId) {
         whereClause.supplierId = finalSupplierId
-      } else if (finalSupplierName) {
+      } else {
         whereClause.supplierName = finalSupplierName
         whereClause.supplierId = null
       }
 
-      const existingLaunch = await prisma.launch.findFirst({
-        where: whereClause
-      })
-
+      const existingLaunch = await prisma.launch.findFirst({ where: whereClause })
       if (existingLaunch) {
         return NextResponse.json({
-          error: "Já existe um lançamento de saída com a mesma congregação, data, valor e fornecedor"
+          error: `Já existe um lançamento de saída com a mesma congregação, data, valor, ${finalTalonNumber ? 'nro talão, ' : ''}e fornecedor`
         }, { status: 400 })
       }
-    }
-    // Para os demais tipos: verificar Congregação + Data + Valor
-    else {
+    } else {
       // Validação específica para Círculo de Oração: 1 por semana por congregação
       if (finalType === 'CIRCULO') {
-        const weekStart = startOfWeek(finalDate, { weekStartsOn: 0 }); // Domingo
-        const weekEnd = endOfWeek(finalDate, { weekStartsOn: 0 }); // Sábado
+        const weekStart = startOfWeek(finalDate, { weekStartsOn: 0 });
+        const weekEnd = endOfWeek(finalDate, { weekStartsOn: 0 });
 
         const existingWeeklyLaunch = await prisma.launch.findFirst({
           where: {
             congregationId: finalCongregationId,
             type: 'CIRCULO',
-            date: {
-              gte: weekStart,
-              lte: weekEnd
-            },
+            date: { gte: weekStart, lte: weekEnd },
             status: { in: ["NORMAL", "APPROVED"] },
             id: { not: id }
           }
@@ -842,7 +880,7 @@ export async function PUT(request: NextRequest) {
 
         if (existingWeeklyLaunch) {
           return NextResponse.json({
-            error: "Já existe um lançamento de Círculo de Oração para esta congregação nesta semana. É permitido apenas um por semana."
+            error: "Já existe um lançamento de Círculo de Oração para esta congregação nesta semana."
           }, { status: 400 });
         }
       }
@@ -853,30 +891,56 @@ export async function PUT(request: NextRequest) {
           date: finalDate,
           type: finalType,
           value: finalValue,
+          talonNumber: finalTalonNumber,
           status: { in: ["NORMAL", "APPROVED"] },
           id: { not: id }
         }
       })
-
       if (existingLaunch) {
-        return NextResponse.json({
-          error: `Já existe um lançamento do tipo ${finalType === "VOTO" ? "Voto" : finalType === "EBD" ? "EBD" : finalType === "CAMPANHA" ? "Campanha" : finalType === "MISSAO" ? "Missão" : finalType === "CIRCULO" ? "Círculo de Oração" : "Oferta do Culto"} com a mesma congregação, data e valor`
-        }, { status: 400 })
+        return NextResponse.json({ error: "Já existe um lançamento com estes dados." }, { status: 400 })
       }
     }
 
-    const updatedLaunch = await prisma.launch.update({
-      where: { id },
-      data: dataToUpdate,
-      include: {
-        congregation: true,
-        contributor: true,
-        supplier: true,
-        classification: true,
-        paymentMethod: true,
-        financialEntity: true
+    const updatedLaunch = await prisma.$transaction(async (tx) => {
+      // Se for rateio e tiver parcelas, atualizar as parcelas
+      if (updateData.isRateio && updateData.installments) {
+        // Remover parcelas antigas
+        await tx.launchInstallment.deleteMany({
+          where: { launchId: id }
+        })
+
+        // Criar novas parcelas
+        if (updateData.installments.length > 0) {
+          await tx.launchInstallment.createMany({
+            data: updateData.installments.map((inst: any) => ({
+              launchId: id,
+              month: inst.month,
+              year: inst.year,
+              value: inst.value
+            }))
+          })
+        }
+      } else if (updateData.isRateio === false) {
+        // Se desmarcou o rateio (ou veio explicitamente false), remove as parcelas
+        await tx.launchInstallment.deleteMany({
+          where: { launchId: id }
+        })
       }
+
+      return await tx.launch.update({
+        where: { id },
+        data: dataToUpdate,
+        include: {
+          congregation: true,
+          contributor: true,
+          supplier: true,
+          classification: true,
+          paymentMethod: true,
+          installments: true
+        }
+      })
     })
+
     return NextResponse.json(updatedLaunch)
   } catch (error) {
     console.error("Erro ao atualizar lançamento:", error ?? error, { stack: (error as any)?.stack })

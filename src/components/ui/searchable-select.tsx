@@ -176,7 +176,7 @@ export function SearchableSelect({
                     <div className="shrink-0">
                       {item.photoUrl && item.photoExists ? (
                         <img 
-                        src={getUploadUrl(`/uploads/${item.photoUrl}`)} 
+                        src={getUploadUrl(item.photoUrl)} 
                         alt="Foto"
                         className="h-12 w-12 rounded-full object-cover border"
                         />

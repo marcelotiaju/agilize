@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { getDb } from "@/lib/getDb"
 import { authOptions } from "../../auth/[...nextauth]/route"
 import { getServerSession } from "next-auth"
+import fs from "fs"
+import path from "path"
 
 export async function PUT(request: NextRequest, props: any) {
   const session = await getServerSession(authOptions)
@@ -155,7 +157,7 @@ export async function DELETE(request: NextRequest, props: any) {
 
     const existingLaunch = await prisma.launch.findUnique({
       where: { id },
-      select: { isIntegrated: true, summaryId: true, integrationBatchId: true }
+      select: { isIntegrated: true, summaryId: true, integrationBatchId: true, attachmentUrl: true }
     })
 
     if (!existingLaunch) {
@@ -188,6 +190,26 @@ export async function DELETE(request: NextRequest, props: any) {
             where: { id }
         })
     })
+
+    // Excluir anexo fisicamente se existir
+    if (existingLaunch.attachmentUrl) {
+      try {
+        let relativePath = existingLaunch.attachmentUrl
+        if (relativePath.startsWith('/api/uploads/')) {
+          relativePath = relativePath.slice('/api/uploads/'.length)
+        }
+        
+        const filePath = path.join(process.cwd(), "public", "uploads", relativePath)
+        
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath)
+          console.log(`Arquivo removido: ${filePath}`)
+        }
+      } catch (err) {
+        console.error("Erro ao remover arquivo físico:", err)
+        // Não retornar erro 500 aqui para não impedir a conclusão da exclusão do registro no banco
+      }
+    }
 
     return NextResponse.json({ message: "Lançamento excluído com sucesso" })
   } catch (error) {

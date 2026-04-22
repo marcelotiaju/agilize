@@ -59,6 +59,7 @@ export default function ReportsPage() {
     const [selectedYear, setSelectedYear] = useState("")
     const [showValues, setShowValues] = useState(true)
     const [contributionFilter, setContributionFilter] = useState('WITH_LAUNCH') // BOTH, WITH_LAUNCH, WITHOUT_LAUNCH
+    const [statusFilter, setStatusFilter] = useState('ACTIVE') // ACTIVE, INACTIVE, ALL
     const [importFilter, setImportFilter] = useState<'ALL' | 'IMPORTED' | 'INTEGRATED' | 'MANUAL'>('MANUAL');
 
     //const years = Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString())
@@ -117,7 +118,7 @@ export default function ReportsPage() {
         } else {
             setPreviewData(null)
         }
-    }, [selectedCongregations, selectedTypes, selectedYear, selectedLaunchTypes, contributionFilter, importFilter])
+    }, [selectedCongregations, selectedTypes, selectedYear, selectedLaunchTypes, contributionFilter, importFilter, statusFilter])
 
     const fetchCongregations = async () => {
         try {
@@ -146,7 +147,8 @@ export default function ReportsPage() {
                 congregationIds: selectedCongregations.join(','),
                 timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                 preview: 'true',
-                importFilter: importFilter
+                importFilter: importFilter,
+                statusFilter: statusFilter
             })
 
             const response = await fetch(`/api/reports/contributors?${params.toString()}`)
@@ -222,7 +224,8 @@ export default function ReportsPage() {
                 showValues: showValues.toString(),
                 congregationIds: selectedCongregations.join(','),
                 timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                importFilter: importFilter
+                importFilter: importFilter,
+                statusFilter: statusFilter
             })
 
             const response = await fetch(`/api/reports/contributors?${params.toString()}`)
@@ -380,6 +383,20 @@ export default function ReportsPage() {
                                         {contributionFilter === 'WITH_LAUNCH' && "* Filtrando apenas registros com valor maior que zero em algum mês."}
                                         {contributionFilter === 'WITHOUT_LAUNCH' && "* Filtrando apenas registros sem nenhuma contribuição no período."}
                                     </p> */}
+                                </div>
+                                
+                                <div className="space-y-2">
+                                    <Label>Situação do Contribuinte</Label>
+                                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Selecione" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="ACTIVE">Apenas Ativos</SelectItem>
+                                            <SelectItem value="INACTIVE">Apenas Inativos</SelectItem>
+                                            <SelectItem value="ALL">Todos</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
 
                             </div>

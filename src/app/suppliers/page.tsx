@@ -23,6 +23,8 @@ interface Supplier {
   razaoSocial: string
   tipoPessoa: string
   cpfCnpj: string
+  pix?: string
+  isActive: boolean
   createdAt: string
   updatedAt: string
 }
@@ -41,6 +43,7 @@ export default function Suppliers() {
     razaoSocial: '',
     tipoPessoa: 'FISICA',
     cpfCnpj: '',
+    pix: '',
     isActive: true
   })
 
@@ -132,7 +135,8 @@ export default function Suppliers() {
       razaoSocial: supplier.razaoSocial,
       tipoPessoa: supplier.tipoPessoa,
       cpfCnpj: supplier.cpfCnpj,
-      isActive: supplier.isActive
+      pix: supplier.pix || '',
+      isActive: supplier.isActive ?? true
     })
     setIsDialogOpen(true)
   }
@@ -165,7 +169,9 @@ export default function Suppliers() {
       code: '',
       razaoSocial: '',
       tipoPessoa: 'FISICA',
-      cpfCnpj: ''
+      cpfCnpj: '',
+      pix: '',
+      isActive: true
     })
   }
 
@@ -321,6 +327,20 @@ export default function Suppliers() {
                         </div>
 
                         <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="pix" className="text-right">
+                            PIX
+                          </Label>
+                          <Input
+                            id="pix"
+                            name="pix"
+                            value={formData.pix}
+                            onChange={handleInputChange}
+                            className="col-span-3"
+                            placeholder="Chave PIX do fornecedor"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-4 items-center gap-4">
                           <Label htmlFor="isActive" className="text-right">
                             Ativo
                           </Label>
@@ -428,6 +448,7 @@ export default function Suppliers() {
                       <TableHead>Razão Social</TableHead>
                       <TableHead>Tipo Pessoa</TableHead>
                       <TableHead>CPF/CNPJ</TableHead>
+                      <TableHead>PIX</TableHead>
                       <TableHead>Data de Criação</TableHead>
                       <TableHead>Ações</TableHead>
                     </TableRow>
@@ -445,6 +466,7 @@ export default function Suppliers() {
                           </Badge>
                         </TableCell>
                         <TableCell className="font-mono">{supplier.cpfCnpj}</TableCell>
+                        <TableCell className="max-w-[150px] truncate" title={supplier.pix || ''}>{supplier.pix || '-'}</TableCell>
                         <TableCell>
                           {format(new Date(supplier.createdAt), 'dd/MM/yyyy', { locale: ptBR })}
                         </TableCell>

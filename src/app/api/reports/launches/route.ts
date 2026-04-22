@@ -145,20 +145,30 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      const imgPath = path.join(process.cwd(), 'public', 'images', 'Logo.png')
+      const { getToken } = require("next-auth/jwt");
+      const token = await getToken({ req: request });
+      const alias = (token?.dbAlias) || "AGILIZE";
+      let logoFileName = alias === "AGILIZE" ? "Logo.png" : "Logo_" + alias + ".png";
+      let imgPath = path.join(process.cwd(), 'public', 'images', logoFileName);
+      if (!require('fs').existsSync(imgPath)) {
+        imgPath = path.join(process.cwd(), 'public', 'images', 'Logo.png');
+      }
       if (fs.existsSync(imgPath)) {
         const imgData = fs.readFileSync(imgPath).toString('base64')
-        doc.addImage(imgData, 'PNG', margin, yPos, 20, 20)
+        const imgProps = doc.getImageProperties('data:image/png;base64,' + imgData)
+        const ratio = imgProps.width / imgProps.height
+        const printWidth = 15 * ratio
+        doc.addImage(imgData, 'PNG', margin, yPos, printWidth, 10)
       }
     } catch {/* ignore */ }
 
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
-    doc.text('IGREJA ASSEMBLEIA DE DEUS NO ESTADO DE SERGIPE', margin + 25, yPos + 7)
+    doc.text('IGREJA ASSEMBLEIA DE DEUS NO ESTADO DE SERGIPE', margin, yPos + 15)
 
     doc.setFontSize(11)
-    doc.text('RELAÇÃO DE LANÇAMENTOS', margin + 25, yPos + 14)
-    yPos += 25
+    doc.text('RELAÇÃO DE LANÇAMENTOS', margin, yPos + 22)
+    yPos += 28
 
     doc.setFontSize(9)
     doc.setFont('helvetica', 'normal')
@@ -255,11 +265,11 @@ export async function GET(request: NextRequest) {
         const tipo = formatLaunchType(launch.type)
         const nome = launch.contributor?.name || launch.supplier?.razaoSocial || launch.contributorName || launch.supplierName || launch.description || '-'
         const nro = launch.talonNumber || '-'
-        const statusStr = launch.status === 'INTEGRATED' ? 'Integrado' : 
-                          launch.status === 'IMPORTED' ? 'Importado' : 
-                          launch.status === 'CANCELED' ? 'Cancelado' : 
-                          launch.status === 'APPROVED' ? 'Aprovado' :
-                          launch.status === 'EXPORTED' ? 'Exportado' : 'Normal'
+        const statusStr = launch.status === 'INTEGRATED' ? 'Integrado' :
+          launch.status === 'IMPORTED' ? 'Importado' :
+            launch.status === 'CANCELED' ? 'Cancelado' :
+              launch.status === 'APPROVED' ? 'Aprovado' :
+                launch.status === 'EXPORTED' ? 'Exportado' : 'Normal'
         const valor = launch.value || 0
 
         const nomeTruncado = doc.splitTextToSize(nome, colWidths[2] - 2)

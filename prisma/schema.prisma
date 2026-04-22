@@ -127,6 +127,8 @@ model Profile {
   canManageBankIntegration         Boolean @default(false)
   canBankIntegrationConfigure      Boolean @default(false)
   canBankIntegrationExecute        Boolean @default(false)
+  canToggleLaunchType              Boolean @default(false)
+  canGenerateReceipt               Boolean @default(false)
   defaultLaunchType                String? @default("DIZIMO")
 
   users     User[]
@@ -325,6 +327,9 @@ model Launch {
   financialEntity      FinancialEntity?      @relation(fields: [financialEntityId], references: [id])
   paymentMethodId      Int?
   paymentMethod        PaymentMethod?        @relation(fields: [paymentMethodId], references: [id])
+  receiptGeneratedBy   String?
+  receiptGeneratedAt   DateTime?             @db.DateTime(0)
+  installments         LaunchInstallment[]
 
   @@index([financialEntityId])
   @@index([congregationId])
@@ -334,6 +339,19 @@ model Launch {
   @@index([classificationId])
   @@index([integrationBatchId])
   @@index([paymentMethodId])
+}
+
+model LaunchInstallment {
+  id        String   @id @default(cuid())
+  launchId  String
+  launch    Launch   @relation(fields: [launchId], references: [id], onDelete: Cascade)
+  month     Int
+  year      Int
+  value     Float
+  createdAt DateTime @default(now()) @db.DateTime(0)
+  updatedAt DateTime @updatedAt @db.DateTime(0)
+
+  @@index([launchId])
 }
 
 model Contributor {
@@ -362,6 +380,7 @@ model Supplier {
   isActive    Boolean     @default(true)
   tipoPessoa  PessoaType?
   cpfCnpj     String?
+  pix         String?
   createdAt   DateTime    @default(now()) @db.DateTime(0)
   updatedAt   DateTime    @updatedAt @db.DateTime(0)
   Launch      Launch[]

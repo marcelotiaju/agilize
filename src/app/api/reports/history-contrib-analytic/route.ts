@@ -48,7 +48,7 @@ async function handleRequest(request: NextRequest) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
 
-  const prisma = await getDb(request)  
+  const prisma = await getDb(request)
 
   try {
     // Determine input source (GET params or POST body)
@@ -198,6 +198,28 @@ async function handleRequest(request: NextRequest) {
     const pageHeight = doc.internal.pageSize.getHeight();
     let isFirstPage = true;
 
+    // Load logo once before the loops
+    let logoData: string | null = null;
+    let logoPrintWidth = 0;
+    try {
+      const { getToken } = require("next-auth/jwt");
+      const token = await getToken({ req: request });
+      const alias = (token?.dbAlias) || "AGILIZE";
+      let logoFileName = alias === "AGILIZE" ? "Logo.png" : "Logo_" + alias + ".png";
+      let imgPath = path.join(process.cwd(), 'public', 'images', logoFileName);
+      
+      if (!fs.existsSync(imgPath)) {
+        imgPath = path.join(process.cwd(), 'public', 'images', 'Logo.png');
+      }
+
+      if (fs.existsSync(imgPath)) {
+        logoData = fs.readFileSync(imgPath).toString('base64');
+        const imgProps = doc.getImageProperties('data:image/png;base64,' + logoData);
+        const ratio = imgProps.width / imgProps.height;
+        logoPrintWidth = 15 * ratio;
+      }
+    } catch { /* ignore */ }
+
     groupedData.forEach(congregation => {
       congregation.contributors.forEach(contributor => {
         if (!isFirstPage) {
@@ -209,22 +231,18 @@ async function handleRequest(request: NextRequest) {
 
         // Header
         doc.setFillColor(200, 200, 200);
-        try {
-          const imgPath = path.join(process.cwd(), 'public', 'images', 'Logo.png')
-          if (fs.existsSync(imgPath)) {
-            const imgData = fs.readFileSync(imgPath).toString('base64')
-            doc.addImage(imgData, 'PNG', margin, y, 20, 20)
-          }
-        } catch {/* ignore */ }
+        if (logoData) {
+          doc.addImage(logoData, 'PNG', margin, y, logoPrintWidth, 10);
+        }
         //doc.addImage(base64String, 'PNG', margin, y, 20, 20);
 
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
-        doc.text('IGREJA ASSEMBLEIA DE DEUS NO ESTADO DE SERGIPE', margin + 25, y + 7);
+        doc.text('IGREJA ASSEMBLEIA DE DEUS NO ESTADO DE SERGIPE', margin, y + 15);
 
         doc.setFontSize(11);
-        doc.text('HISTÓRICO DE CONTRIBUIÇÕES ANALÍTICO', margin + 25, y + 14);
-        y += 25;
+        doc.text('HISTÓRICO DE CONTRIBUIÇÕES ANALÍTICO', margin, y + 22);
+        y += 28;
 
         // Report Info
         doc.setFontSize(10);

@@ -13,6 +13,7 @@ import { Eye, EyeOff, Lock, User, Save } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { SelectContent, SelectValue, Select, SelectItem, SelectTrigger } from '@/components/ui/select'
 import { ImageUpload } from '@/components/ui/image-upload'
+import { Badge } from '@/components/ui/badge'
 
 export default function ProfilePage() {
   const { data: session } = useSession()
@@ -138,6 +139,28 @@ export default function ProfilePage() {
       }
     } catch (error) {
       setMessage({ type: 'error', text: 'Ocorreu um erro ao alterar a senha' })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleToggleLaunchType = async () => {
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/user/toggle-launch-type', {
+        method: 'POST',
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setDefaultLaunchType(data.defaultLaunchType)
+        setMessage({ type: 'success', text: data.message })
+      } else {
+        const error = await response.json()
+        setMessage({ type: 'error', text: error.error || 'Erro ao alterar tipo de lançamento' })
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Ocorreu um erro ao alterar o tipo de lançamento' })
     } finally {
       setIsLoading(false)
     }

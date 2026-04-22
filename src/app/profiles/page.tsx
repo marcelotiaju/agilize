@@ -80,7 +80,9 @@ export default function Profiles() {
     canTechnicalIntervention: false,
     canManageBankIntegration: false,
     canBankIntegrationConfigure: false,
-    canBankIntegrationExecute: false
+    canBankIntegrationExecute: false,
+    canToggleLaunchType: false,
+    canGenerateReceipt: false
   })
 
   useEffect(() => {
@@ -154,7 +156,9 @@ export default function Profiles() {
       canTechnicalIntervention: false,
       canManageBankIntegration: false,
       canBankIntegrationConfigure: false,
-      canBankIntegrationExecute: false
+      canBankIntegrationExecute: false,
+      canToggleLaunchType: false,
+      canGenerateReceipt: false
     })
   }
 
@@ -444,6 +448,10 @@ export default function Profiles() {
                             <Label>Excluir Histórico</Label>
                           </div>
                           <div className="flex items-center space-x-2">
+                            <Checkbox checked={profileForm.canGenerateReceipt} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canGenerateReceipt: v as boolean }))} />
+                            <Label>Gerar Recibo</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canManageBankIntegration} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canManageBankIntegration: v as boolean }))} />
                             <Label>Gerenciar Integração Bancária</Label>
                           </div>
@@ -454,6 +462,10 @@ export default function Profiles() {
                           <div className="flex items-center space-x-2">
                             <Checkbox checked={profileForm.canBankIntegrationExecute} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canBankIntegrationExecute: v as boolean }))} />
                             <Label>Integração Bancária - Executar</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox checked={profileForm.canToggleLaunchType} onCheckedChange={(v) => setProfileForm(prev => ({ ...prev, canToggleLaunchType: v as boolean }))} />
+                            <Label>Alternar Tipo Lançamento (Dízimo/Carnê)</Label>
                           </div>
                         </div>
                       </div>

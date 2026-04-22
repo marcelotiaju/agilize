@@ -17,6 +17,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
+import { SearchableSelect } from '@/components/ui/searchable-select'
 
 interface Congregation {
     id: string
@@ -254,21 +255,17 @@ export default function FinancialEntitiesPage() {
                                         </div>
                                         <div className="grid gap-2">
                                             <Label htmlFor="congregationId">Congregação</Label>
-                                            <Select
+                                            <SearchableSelect
+                                                label="Buscar Congregação"
+                                                placeholder="Selecione a congregação"
                                                 value={formData.congregationId}
-                                                onValueChange={(value) => setFormData(prev => ({ ...prev, congregationId: value }))}
-                                            >
-                                                <SelectTrigger className="bg-gray-50 focus:bg-white">
-                                                    <SelectValue placeholder="Selecione a congregação" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {congregations.map((cong) => (
-                                                        <SelectItem key={cong.id} value={cong.id}>
-                                                            {cong.name} ({cong.code})
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                                onChange={(value) => setFormData(prev => ({ ...prev, congregationId: value }))}
+                                                name="congregationId"
+                                                data={congregations.map(cong => ({ id: cong.id, name: cong.name }))}
+                                                itemRenderMode="congregation"
+                                                searchKeys={['name']}
+                                                required
+                                            />
                                         </div>
                                     </div>
                                     <DialogFooter>

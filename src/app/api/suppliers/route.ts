@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
   const prisma = await getDb(request)
 
   try {
-    const { code, razaoSocial, tipoPessoa, cpfCnpj } = await request.json()
+    const { code, razaoSocial, tipoPessoa, cpfCnpj, pix } = await request.json()
 
     if (!code || !razaoSocial || !tipoPessoa || !cpfCnpj) {
       return NextResponse.json({ error: "Todos os campos são obrigatórios" }, { status: 400 })
@@ -50,7 +50,9 @@ export async function POST(request: NextRequest) {
         code,
         razaoSocial,
         tipoPessoa,
-        cpfCnpj
+        cpfCnpj,
+        pix: pix || null,
+        isActive: true
       }
     })
 
@@ -74,7 +76,7 @@ export async function PUT(request: NextRequest) {
   const prisma = await getDb(request)
 
   try {
-    const { id, code, razaoSocial, tipoPessoa, cpfCnpj, isActive } = await request.json()
+    const { id, code, razaoSocial, tipoPessoa, cpfCnpj, pix, isActive } = await request.json()
 
     if (!id || !code || !razaoSocial || !tipoPessoa || !cpfCnpj) {
       return NextResponse.json({ error: "Todos os campos são obrigatórios" }, { status: 400 })
@@ -87,7 +89,8 @@ export async function PUT(request: NextRequest) {
         razaoSocial,
         tipoPessoa,
         cpfCnpj,
-        isActive
+        pix: pix || null,
+        isActive: isActive ?? true
       }
     })
 

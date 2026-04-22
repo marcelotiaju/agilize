@@ -18,6 +18,7 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { PermissionGuard } from '@/components/auth/PermissionGuard'
 import { SearchInput } from '@/components/ui/search-input'
+import { getUploadUrl } from '@/lib/utils'
 
 interface Contributor {
   id: string
@@ -219,7 +220,7 @@ export default function Contributors() {
       photoUrl: contributor.photoUrl || '',
       isActive: contributor.isActive
     })
-    setPhotoPreview(`uploads/${contributor.photoUrl}` || '')
+    setPhotoPreview(getUploadUrl(contributor.photoUrl))
     setIsDialogOpen(true)
   }
 

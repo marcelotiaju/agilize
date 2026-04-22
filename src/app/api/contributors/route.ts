@@ -66,8 +66,17 @@ export async function GET(request: NextRequest) {
         return { ...c, photoExists: false }
       }
 
-      const fileName = c.photoUrl
-      const filePath = path.join(UPLOADS_DIR, fileName)
+      // Handle both cases: with or without /uploads/ prefix
+      let cleanPath = c.photoUrl.startsWith('/api') ? c.photoUrl.replace('/api', '') : c.photoUrl;
+      if (cleanPath.startsWith('/uploads/')) {
+        cleanPath = cleanPath.replace('/uploads/', '');
+      } else if (cleanPath.startsWith('uploads/')) {
+        cleanPath = cleanPath.replace('uploads/', '');
+      } else if (cleanPath.startsWith('/')) {
+        cleanPath = cleanPath.substring(1);
+      }
+
+      const filePath = path.join(process.cwd(), UPLOADS_FOLDER, cleanPath)
       const fileExists = fs.existsSync(filePath)
 
       return {
@@ -205,6 +214,22 @@ export async function DELETE(request: NextRequest) {
 
     if (!id) {
       return NextResponse.json({ error: "ID do contribuinte é obrigatório" }, { status: 400 })
+    }
+
+    const contributor = await prisma.contributor.findUnique({
+      where: { id },
+      select: { photoUrl: true }
+    });
+
+    if (contributor?.photoUrl) {
+      try {
+        const filePath = path.join(process.cwd(), UPLOADS_FOLDER, contributor.photoUrl);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      } catch (err) {
+        console.error('Erro ao excluir arquivo físico da foto:', err);
+      }
     }
 
     await prisma.contributor.delete({

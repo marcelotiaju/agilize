@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
     const timezone = searchParams.get('timezone') || 'America/Sao_Paulo'
     const contributionFilter = searchParams.get('contributionFilter') || 'BOTH';
     const importFilter = searchParams.get('importFilter') || 'ALL';
+    const statusFilter = searchParams.get('statusFilter') || 'ACTIVE';
     console.log('Import Filter:', importFilter);
     // 1. Buscamos todas as congregações selecionadas para garantir que todas apareçam
     const selectedCongs = await prisma.congregation.findMany({
@@ -48,7 +49,8 @@ export async function GET(request: NextRequest) {
     const contributors = await prisma.contributor.findMany({
       where: {
         congregationId: { in: congregationIds },
-        ecclesiasticalPosition: { in: position }
+        ecclesiasticalPosition: { in: position },
+        ...(statusFilter === 'ACTIVE' ? { isActive: true } : statusFilter === 'INACTIVE' ? { isActive: false } : {})
       },
       include: {
         Launch: {
@@ -59,10 +61,10 @@ export async function GET(request: NextRequest) {
             },
             type: { in: launchTypes as any },
             status: {
-              ...importFilter === 'IMPORTED' ? { equals: 'IMPORTED' } : 
-                 importFilter === 'INTEGRATED' ? { equals: 'INTEGRATED' } :
-                 importFilter === 'MANUAL' ? { not: { in: ['IMPORTED', 'INTEGRATED', 'CANCELED'] } } : 
-                 { not: 'CANCELED' }
+              ...importFilter === 'IMPORTED' ? { equals: 'IMPORTED' } :
+                importFilter === 'INTEGRATED' ? { equals: 'INTEGRATED' } :
+                  importFilter === 'MANUAL' ? { not: { in: ['IMPORTED', 'INTEGRATED', 'CANCELED'] } } :
+                    { not: 'CANCELED' }
             }
           }
         }
@@ -140,17 +142,20 @@ export async function GET(request: NextRequest) {
         where: { id: { in: congregationIds } },
         include: {
           contributors: {
-            where: positions.length > 0 ? { ecclesiasticalPosition: { in: positions } } : {},
+            where: {
+              ...(positions.length > 0 ? { ecclesiasticalPosition: { in: positions } } : {}),
+              ...(statusFilter === 'ACTIVE' ? { isActive: true } : statusFilter === 'INACTIVE' ? { isActive: false } : {})
+            },
             include: {
               Launch: {
                 where: {
                   date: { gte: startDate, lte: endDate },
                   type: { in: launchTypes as any },
                   status: {
-                    ...importFilter === 'IMPORTED' ? { equals: 'IMPORTED' } : 
-                       importFilter === 'INTEGRATED' ? { equals: 'INTEGRATED' } :
-                       importFilter === 'MANUAL' ? { not: { in: ['IMPORTED', 'INTEGRATED', 'CANCELED'] } } : 
-                       { not: 'CANCELED' }
+                    ...importFilter === 'IMPORTED' ? { equals: 'IMPORTED' } :
+                      importFilter === 'INTEGRATED' ? { equals: 'INTEGRATED' } :
+                        importFilter === 'MANUAL' ? { not: { in: ['IMPORTED', 'INTEGRATED', 'CANCELED'] } } :
+                          { not: 'CANCELED' }
                   }
                 }
               }
@@ -239,21 +244,31 @@ export async function GET(request: NextRequest) {
     doc.setFillColor(200, 200, 200)
     //doc.rect(margin, yPos, 20, 20, 'F') 
     try {
-      const imgPath = path.join(process.cwd(), 'public', 'images', 'Logo.png')
+      const { getToken } = require("next-auth/jwt");
+      const token = await getToken({ req: request });
+      const alias = (token?.dbAlias) || "AGILIZE";
+      let logoFileName = alias === "AGILIZE" ? "Logo.png" : "Logo_" + alias + ".png";
+      let imgPath = path.join(process.cwd(), 'public', 'images', logoFileName);
+      if (!require('fs').existsSync(imgPath)) {
+        imgPath = path.join(process.cwd(), 'public', 'images', 'Logo.png');
+      }
       if (fs.existsSync(imgPath)) {
         const imgData = fs.readFileSync(imgPath).toString('base64')
-        doc.addImage(imgData, 'PNG', margin, y, 20, 20)
+        const imgProps = doc.getImageProperties('data:image/png;base64,' + imgData)
+        const ratio = imgProps.width / imgProps.height
+        const printWidth = 15 * ratio
+        doc.addImage(imgData, 'PNG', margin, y, printWidth, 10)
       }
     } catch {/* ignore */ }
     //doc.addImage(base64String, 'PNG', margin, y, 20, 20)
 
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
-    doc.text('IGREJA ASSEMBLEIA DE DEUS NO ESTADO DE SERGIPE', margin + 25, y + 7)
+    doc.text('IGREJA ASSEMBLEIA DE DEUS NO ESTADO DE SERGIPE', margin, y + 15)
 
     doc.setFontSize(11)
-    doc.text('RELAÇÃO DE CONTRIBUINTES', margin + 25, y + 14)
-    y += 25
+    doc.text('RELAÇÃO DE CONTRIBUINTES', margin, y + 22)
+    y += 28
 
     // Informações do relatório
     doc.setFontSize(9)
@@ -262,7 +277,8 @@ export async function GET(request: NextRequest) {
     // Cabeçalho da Página
     //doc.setFontSize(14).setFont('helvetica', 'bold').setTextColor(0, 51, 102)
     //doc.text('RELAÇÃO ANUAL DE CONTRIBUINTES', 148, 15, { align: 'center' })
-    doc.setFontSize(10).text(`ANO: ${year} | FILTRO: ${position}`, margin, y)
+    const statusLabel = statusFilter === 'ACTIVE' ? 'Apenas Ativos' : statusFilter === 'INACTIVE' ? 'Apenas Inativos' : 'Todos';
+    doc.setFontSize(10).text(`ANO: ${year} | CARGOS: ${position.length > 3 ? position.length + ' selecionados' : position.join(', ')} | SITUAÇÃO: ${statusLabel}`, margin, y)
     y += 4
     doc.setFontSize(10).text(`TIPOS DE LANÇAMENTO: ${launchTypes.join(', ')}`, margin, y)
     y += 4
@@ -321,7 +337,12 @@ export async function GET(request: NextRequest) {
       drawTableHeader(cong.name)
 
       // Filtramos os contribuintes desta congregação específica
-      const congContributors = contributors.filter(c => c.congregationId === cong.id && contributionFilter === 'WITH_LAUNCH' ? c.Launch.length > 0 : contributionFilter === 'WITHOUT_LAUNCH' ? c.Launch.length === 0 : true)
+      const congContributors = contributors.filter(c => {
+        if (c.congregationId !== cong.id) return false;
+        if (contributionFilter === 'WITH_LAUNCH') return c.Launch.length > 0;
+        if (contributionFilter === 'WITHOUT_LAUNCH') return c.Launch.length === 0;
+        return true;
+      })
 
 
       if (congContributors.length === 0) {

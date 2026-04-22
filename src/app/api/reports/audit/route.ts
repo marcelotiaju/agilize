@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions)
     if (!session) return new NextResponse('Unauthorized', { status: 401 })
 
-  const prisma = await getDb(request)        
+    const prisma = await getDb(request)
 
     const { searchParams } = new URL(request.url)
     const congregationIds = searchParams.get('congregationIds')?.split(',').filter(Boolean) || []
@@ -203,18 +203,28 @@ export async function GET(request: NextRequest) {
 
         // Try to load logo
         try {
-            const imgPath = path.join(process.cwd(), 'public', 'images', 'Logo.png')
+            const { getToken } = require("next-auth/jwt");
+            const token = await getToken({ req: request });
+            const alias = (token?.dbAlias) || "AGILIZE";
+            let logoFileName = alias === "AGILIZE" ? "Logo.png" : "Logo_" + alias + ".png";
+            let imgPath = path.join(process.cwd(), 'public', 'images', logoFileName);
+            if (!require('fs').existsSync(imgPath)) {
+                imgPath = path.join(process.cwd(), 'public', 'images', 'Logo.png');
+            }
             if (fs.existsSync(imgPath)) {
                 const imgData = fs.readFileSync(imgPath).toString('base64')
-                doc.addImage(imgData, 'PNG', margin, y, 20, 20)
+                const imgProps = doc.getImageProperties('data:image/png;base64,' + imgData)
+                const ratio = imgProps.width / imgProps.height
+                const printWidth = 15 * ratio
+                doc.addImage(imgData, 'PNG', margin, y, printWidth, 10)
             }
         } catch {/* ignore */ }
 
         doc.setFontSize(13)
         doc.setFont('helvetica', 'bold')
-        doc.text('IGREJA ASSEMBLEIA DE DEUS NO ESTADO DE SERGIPE', margin + 25, y + 7)
+        doc.text('IGREJA ASSEMBLEIA DE DEUS NO ESTADO DE SERGIPE', margin, y + 15)
         doc.setFontSize(11)
-        doc.text('RELATÓRIO DE AUDITORIA', margin + 25, y + 15)
+        doc.text('RELATÓRIO DE AUDITORIA', margin, y + 22)
         y += 28
 
         doc.setFontSize(9)

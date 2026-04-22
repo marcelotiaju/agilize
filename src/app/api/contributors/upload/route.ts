@@ -55,9 +55,7 @@ export async function POST(request: NextRequest) {
     await writeFile(path, buffer)
 
     // Retornar a URL do arquivo (exibição usa getUploadUrl() para servir via /api/uploads/ em produção)
-    const fileUrl = `/uploads/${fileName}`
-
-    return NextResponse.json({ url: fileUrl })
+    return NextResponse.json({ url: fileName })
   } catch (error) {
     console.error("Erro ao fazer upload:", error)
     return NextResponse.json({ error: "Erro ao fazer upload" }, { status: 500 })

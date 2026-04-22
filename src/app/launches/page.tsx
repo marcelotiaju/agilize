@@ -10,9 +10,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, Search, Check, X, AlertCircle, CalendarIcon, User, Users, Ghost, List, ArrowUp, Upload, FileText, Building, Loader2, Camera, Paperclip, Star, History } from 'lucide-react'
+import { Plus, Edit, Trash2, Search, Check, X, AlertCircle, CalendarIcon, User, Users, Ghost, List, ArrowUp, ArrowDown, DollarSign, Upload, FileText, Building, Loader2, Camera, Paperclip, Star, History, ListCheck, Layers } from 'lucide-react'
 import { format, startOfDay } from 'date-fns'
 import { zonedTimeToUtc } from 'date-fns-tz'
 import { ptBR } from 'date-fns/locale'
@@ -29,7 +29,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { cn } from "@/lib/utils";
+import { cn, getUploadUrl } from "@/lib/utils";
 import { useRouter } from 'next/navigation'
 import { PieChart } from 'lucide-react'
 import { ImageUpload } from '@/components/ui/image-upload'
@@ -38,7 +38,7 @@ import { ImageUpload } from '@/components/ui/image-upload'
 const USER_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 export default function Launches() {
-  const { data: session } = useSession()
+  const { data: session, update } = useSession()
   const [launches, setLaunches] = useState<Launch[]>([])
   const [congregations, setCongregations] = useState<Congregation[]>([])
   const [contributors, setContributors] = useState<Contributor[]>([])
@@ -66,6 +66,8 @@ export default function Launches() {
   const [itemsPerPage, setItemsPerPage] = useState(50)
   const [totalPages, setTotalPages] = useState(0)
   const [totalCount, setTotalCount] = useState(0)
+  const [totalEntries, setTotalEntries] = useState(0)
+  const [totalExits, setTotalExits] = useState(0)
   const [selectedCongregation, setSelectedCongregation] = useState('all')
   const [selectedType, setSelectedType] = useState('all')
 
@@ -76,55 +78,8 @@ export default function Launches() {
   const [endDateOpen, setEndDateOpen] = useState(false);
   const [pageYPosition, setPageYPosition] = useState(0);
   const router = useRouter()
-  // Dentro do componente principal no page.tsx
-  const [importFilter, setImportFilter] = useState<'ALL' | 'IMPORTED' | 'MANUAL' | 'INTEGRATED'>('MANUAL');
 
-  // Tipos
-  type Congregation = { id: string; name: string }
-  type Contributor = { id: string; name: string; cpf: string; congregationId: string; ecclesiasticalPosition: string, tipo: string, photoUrl: string, photoExists: boolean, isActive: boolean }
-  type Supplier = { id: string; razaoSocial: string; cpfcnpj: string }
-  type Classification = { id: string; description: string }
-  type PaymentMethod = { id: number; name: string }
-
-  type Launch = {
-    id: string
-    congregationId: string
-    type: string
-    date: Date
-    talonNumber?: string
-    value?: number
-    description?: string
-    status: string
-    exported?: boolean
-    congregation?: { id: string; name: string }
-    contributorId?: string
-    contributor?: { id: string; name: string; congregationId: string; ecclesiasticalPosition: string, photoUrl: string }
-    contributorName?: string
-    supplierId?: string
-    supplier?: { id: string; razaoSocial: string; cpfcnpj: string }
-    supplierName?: string
-    classificationId?: string
-    classification?: { id: string; description: string }
-    financialEntityId?: string
-    financialEntity?: { id: string; name: string }
-    paymentMethodId?: number
-    paymentMethod?: { id: number; name: string }
-    //approved?: boolean
-    summaryId?: string
-    createdBy?: string
-    cancelledBy?: string
-    approvedByTreasury?: string
-    approvedByAccountant?: string
-    approvedByDirector?: string
-    approvedVia?: string
-    attachmentUrl?: string
-    isRateio?: boolean
-    isIntegrated?: boolean
-    integrationBatchId?: string
-    createdAt?: string | Date
-  }
-
-  // Permissões (mantém nomes existentes)
+  // Permissões e Configurações da Sessão
   const canLaunchVote = session?.user?.canLaunchVote
   const canLaunchEbd = session?.user?.canLaunchEbd
   const canLaunchCampaign = session?.user?.canLaunchCampaign
@@ -155,7 +110,79 @@ export default function Launches() {
   const canGenerateSummary = session?.user?.canGenerateSummary
   const canListSummary = session?.user?.canListSummary
   const canTechnicalIntervention = session?.user?.canTechnicalIntervention
+  const canToggleLaunchType = session?.user?.canToggleLaunchType
+  const canGenerateReceipt = session?.user?.canGenerateReceipt
   const defaultLaunchType = session?.user?.defaultLaunchType
+
+  // Estados
+  const [importFilter, setImportFilter] = useState<'ALL' | 'IMPORTED' | 'MANUAL' | 'INTEGRATED'>('MANUAL');
+  const [isTogglingLaunchType, setIsTogglingLaunchType] = useState(false);
+
+  // Tipos
+  type Congregation = { id: string; name: string }
+  type Contributor = { id: string; name: string; cpf: string; congregationId: string; ecclesiasticalPosition: string, tipo: string, photoUrl: string, photoExists: boolean, isActive: boolean }
+  type Supplier = { id: string; razaoSocial: string; cpfcnpj: string }
+  type Classification = { id: string; description: string }
+  type PaymentMethod = { id: number; name: string }
+  type LaunchInstallment = {
+    id?: string
+    month: number
+    year: number
+    value: number
+  }
+
+  type Launch = {
+    id: string
+    congregationId: string
+    type: string
+    date: Date
+    talonNumber?: string
+    value?: number
+    description?: string
+    status: string
+    exported?: boolean
+    congregation?: { id: string; name: string }
+    contributorId?: string
+    contributor?: { id: string; name: string; congregationId: string; ecclesiasticalPosition: string, photoUrl: string }
+    contributorName?: string
+    supplierId?: string
+    supplier?: { id: string; razaoSocial: string; cpfcnpj: string }
+    supplierName?: string
+    classificationId?: string
+    classification?: { id: string; description: string }
+    financialEntityId?: string
+    financialEntity?: { id: string; name: string }
+    paymentMethodId?: number
+    paymentMethod?: { id: number; name: string }
+    installments?: LaunchInstallment[]
+    //approved?: boolean
+    summaryId?: string
+    createdBy?: string
+    cancelledBy?: string
+    approvedByTreasury?: string
+    approvedByAccountant?: string
+    approvedByDirector?: string
+    approvedVia?: string
+    attachmentUrl?: string
+    isRateio?: boolean
+    isIntegrated?: boolean
+    integrationBatchId?: string
+    receiptGeneratedBy?: string
+    receiptGeneratedAt?: string | Date
+    createdAt?: string | Date
+  }
+
+  // Permissões (mantém nomes existentes)
+  // const canLaunchVote = session?.user?.canLaunchVote
+  // const canLaunchEbd = session?.user?.canLaunchEbd
+  // const canLaunchCampaign = session?.user?.canLaunchCampaign
+  // const canLaunchTithe = session?.user?.canLaunchTithe
+  // const canLaunchExpense = session?.user?.canLaunchExpense
+  // const canLaunchMission = session?.user?.canLaunchMission
+  // const canLaunchCircle = session?.user?.canLaunchCircle
+  // const canLaunchServiceOffer = session?.user?.canLaunchServiceOffer
+  // const canLaunchCarneReviver = session?.user?.canLaunchCarneReviver
+  // const canLaunchCarneAfrica = session?.user?.canLaunchCarneAfrica
 
   // Adicione esse useMemo para calcular os tipos permitidos
   const allowedLaunchTypes = useMemo(() => {
@@ -204,8 +231,13 @@ export default function Launches() {
     attachmentUrl: '',
     isRateio: false,
     financialEntityName: '',
-    paymentMethodId: undefined
+    paymentMethodId: undefined as number | undefined,
+    installments: [] as LaunchInstallment[]
   })
+
+  // Estados para Rateio
+  const [isInstallmentsDialogOpen, setIsInstallmentsDialogOpen] = useState(false)
+  const [installmentCount, setInstallmentCount] = useState<string>('')
 
   function truncateString(str: string | null | undefined, num: number) {
     return str && str.length > num ? str.slice(0, num) + '...' : str || '-';
@@ -239,6 +271,28 @@ export default function Launches() {
 
     // Caso contrário, desabilita se o status não é NORMAL ou tem resumo vinculado
     return editingLaunch.status !== 'NORMAL' || editingLaunch.summaryId != null;
+  }
+
+  const handleToggleLaunchType = async (launchId: string) => {
+    setIsTogglingLaunchType(true)
+    try {
+      const response = await fetch(`/api/launches/toggle-type?id=${launchId}`, {
+        method: 'POST',
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        // Recarregar a lista para refletir a mudança
+        fetchLaunches()
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Erro ao alterar tipo de lançamento')
+      }
+    } catch (error) {
+      alert('Ocorreu um erro ao alterar o tipo de lançamento')
+    } finally {
+      setIsTogglingLaunchType(false)
+    }
   }
 
   useEffect(() => {
@@ -443,6 +497,8 @@ export default function Launches() {
         setLaunches(data.launches)
         setTotalPages(data.pagination.totalPages)
         setTotalCount(data.pagination.totalCount)
+        setTotalEntries(data.pagination.totalEntries || 0)
+        setTotalExits(data.pagination.totalExits || 0)
       }
     } catch (error) {
       console.error('Erro ao carregar lançamentos:', error)
@@ -579,6 +635,41 @@ export default function Launches() {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
+  const generateInstallments = () => {
+    const count = parseInt(installmentCount)
+    if (isNaN(count) || count <= 0) return
+
+    const totalValue = parseFloat(formData.value?.toString().replace(',', '.') || '0')
+    const installmentValue = parseFloat((totalValue / count).toFixed(2))
+
+    const newInstallments: LaunchInstallment[] = []
+    const [year, month, day] = formData.date.split('-').map(Number)
+    const baseDate = new Date(year, month - 1, day)
+
+    for (let i = 0; i < count; i++) {
+      const d = new Date(baseDate)
+      d.setMonth(d.getMonth() + i)
+
+      const currentVal = i === count - 1
+        ? parseFloat((totalValue - (installmentValue * (count - 1))).toFixed(2))
+        : installmentValue
+
+      newInstallments.push({
+        month: d.getMonth() + 1,
+        year: d.getFullYear(),
+        value: currentVal
+      })
+    }
+
+    setFormData(prev => ({ ...prev, installments: newInstallments }))
+  }
+
+  const updateInstallment = (index: number, field: keyof LaunchInstallment, value: any) => {
+    const newInstallments = [...formData.installments]
+    newInstallments[index] = { ...newInstallments[index], [field]: value }
+    setFormData(prev => ({ ...prev, installments: newInstallments }))
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError(null)
@@ -630,6 +721,16 @@ export default function Launches() {
       }
     }
 
+    if (formData.isRateio && (formData.installments?.length || 0) > 0) {
+      const sum = (formData.installments || []).reduce((acc, curr) => acc + curr.value, 0)
+      const diff = Math.abs(sum - numericValue)
+      if (diff > 0.01) {
+        alert("A soma das parcelas deve ser igual ao valor do lançamento")
+        setSalvando(false)
+        return
+      }
+    }
+
     if (formData.type === 'DIZIMO' && !formData.contributorName && !formData.contributorId) {
       alert(`Nome do contribuinte é obrigatório para lançamentos do tipo ${formData.type === 'DIZIMO' ? 'Dízimo' : 'Carnê Reviver'}`)
       setSalvando(false)
@@ -662,7 +763,8 @@ export default function Launches() {
         // Limpar supplierId se não for fornecedor cadastrado
         supplierId: formData.isSupplierRegistered ? formData.supplierId : '',
         value: Number(parseFloat(formData.value as any) || 0),
-        status: canTechnicalIntervention ? formData.status : undefined
+        status: canTechnicalIntervention ? formData.status : undefined,
+        installments: formData.isRateio ? formData.installments : []
       }
 
       const response = await fetch(url, {
@@ -694,6 +796,35 @@ export default function Launches() {
     }
   }
 
+  const handleGenerateReceipt = async (launch: Launch) => {
+    try {
+      const res = await fetch(`/api/launches/${launch.id}/receipt`)
+      if (!res.ok) {
+        const err = await res.json()
+        alert(err.error || "Erro ao gerar recibo")
+        return
+      }
+
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const contributorName = launch.contributor?.name || launch.contributorName || 'contribuinte'
+      const date = launch.date ? format(new Date(launch.date), 'dd_MM_yyyy') : 'data'
+      a.download = `${contributorName.replace(/\s+/g, '_')}_${date}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+
+      // Atualizar a listagem para mostrar o log atualizado se o usuário estiver vendo os detalhes
+      fetchLaunches()
+    } catch (e) {
+      console.error(e)
+      alert("Erro ao gerar recibo")
+    }
+  }
+
   const handleEdit = (launch: Launch) => {
     setIsTechnicalIntervention(false)
     setEditingLaunch(launch)
@@ -717,7 +848,8 @@ export default function Launches() {
       attachmentUrl: launch.attachmentUrl || '',
       isRateio: !!launch.isRateio,
       financialEntityName: launch.financialEntity?.name || '',
-      paymentMethodId: launch.paymentMethodId || undefined
+      paymentMethodId: launch.paymentMethodId || undefined,
+      installments: launch.installments || []
     })
     setIsDialogOpen(true)
   }
@@ -745,7 +877,8 @@ export default function Launches() {
       attachmentUrl: launch.attachmentUrl || '',
       isRateio: !!launch.isRateio,
       financialEntityName: launch.financialEntity?.name || '',
-      paymentMethodId: launch.paymentMethodId || undefined
+      paymentMethodId: launch.paymentMethodId || undefined,
+      installments: launch.installments || []
     })
     setIsDialogOpen(true)
   }
@@ -869,7 +1002,8 @@ export default function Launches() {
       attachmentUrl: '',
       isRateio: false,
       financialEntityName: '',
-      paymentMethodId: undefined
+      paymentMethodId: undefined,
+      installments: []
     })
     setError(null)
   }
@@ -982,6 +1116,16 @@ export default function Launches() {
                     </TooltipContent>
                   </Tooltip>
                 )}
+              {launch.isRateio && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Layers className="h-4 w-4 text-blue-500 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Lançamento possui rateio/parcelas</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
               {launch.attachmentUrl && (
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -1058,7 +1202,7 @@ export default function Launches() {
                 ) : launch.contributor?.photoUrl ? (
                   <div className="relative h-12 w-12 flex-shrink-0">
                     <img
-                      src={`/uploads/${launch.contributor.photoUrl}`}
+                      src={getUploadUrl(launch.contributor.photoUrl)}
                       alt="Foto do contribuinte"
                       className="h-12 w-12 rounded-full object-cover border-2 border-gray-300"
                       onError={(e) => {
@@ -1099,7 +1243,7 @@ export default function Launches() {
           )}
           {launch.classification && (
             <div className="flex justify-start">
-              <List className="h-4 w-4 mr-1" />
+              <ListCheck className="h-4 w-4 mr-1" />
               {/* <span className="text-sm font-normal">Classificação:</span> */}
               <span className="text-sm font-medium">{launch.classification.description}</span>
             </div>
@@ -1181,6 +1325,54 @@ export default function Launches() {
                 ) : null}
               </>
             )}
+
+            {canToggleLaunchType && (launch.type === 'DIZIMO' || launch.type === 'CARNE_REVIVER') && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleToggleLaunchType(launch.id)}
+                    disabled={isTogglingLaunchType || launch.status === 'CANCELED'}
+                    className={cn(
+                      "transition-colors",
+                      launch.type === 'CARNE_REVIVER' ? "hover:bg-amber-100 border-amber-200" : "hover:bg-blue-100 border-blue-200"
+                    )}
+                  >
+                    <History className={cn("h-4 w-4", launch.type === 'CARNE_REVIVER' ? "text-amber-600" : "text-blue-600")} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Alternar para {launch.type === 'CARNE_REVIVER' ? 'Dízimo' : 'Carnê Reviver'}</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+
+            {launch.type === 'DIZIMO' && launch.status !== 'CANCELED' && canGenerateReceipt && (
+              (() => {
+                const cargo = launch.contributor?.ecclesiasticalPosition?.toLowerCase() || ''
+                if (cargo !== 'membro' && cargo !== 'congregado') {
+                  return (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleGenerateReceipt(launch)}
+                          className="bg-blue-50 hover:bg-blue-100 border-blue-300"
+                        >
+                          <FileText className="h-4 w-4 text-blue-600" />
+                          {/* <span className="ml-1 text-xs text-blue-600 font-bold">RECIBO</span> */}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent><p>Gerar Recibo</p></TooltipContent>
+                    </Tooltip>
+                  )
+                }
+                return null
+              })()
+            )}
+
 
             <Tooltip>
               <TooltipTrigger asChild>
@@ -1289,7 +1481,6 @@ export default function Launches() {
                     <PieChart className="h-4 w-4" />
                     Resumo
                   </Button>}
-                 
 
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                   <DialogTrigger asChild>
@@ -1457,285 +1648,300 @@ export default function Launches() {
                                 </div>
                               </div>
 
-                              {/* Campo único de valor para todos os tipos */}
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                                <div className="sm:col-span-2">
                                   <Label htmlFor="value">Valor</Label>
-                                  {/* {formData.type === 'VOTO' ? 'Valor Voto' : formData.type === 'EBD' ? 'Valor EBD' : formData.type === 'CAMPANHA' ? 'Valor Campanha' : formData.type === 'OFERTA_CULTO' ? 'Valor Oferta' : 'Valor'}</Label> */}
-                                  <NumericFormat
-                                    id="value"
-                                    name="value"
-                                    inputMode="decimal"
-                                    className={cn(
-                                      "col-span-3 h-10 w-full rounded-md border border-input bg-background px-3 py-2",
-                                      isFieldDisabledDuringEdit()
-                                        ? "text-gray-500 cursor-not-allowed opacity-50"
-                                        : ""
-                                    )}
-                                    value={formData.value ?? ''}
-                                    onValueChange={(values) => {
-                                      const { floatValue, value } = values;
-                                      // armazenar como string normalizada
-                                      setFormData(prev => ({ ...prev, value: (floatValue !== undefined ? floatValue : value) as any }))
-                                    }}
-                                    thousandSeparator="."
-                                    decimalSeparator=","
-                                    allowNegative={false}
-                                    //prefix="R$ "
-                                    //decimalScale={2}
-                                    //fixedDecimalScale={true}
-                                    disabled={isFieldDisabledDuringEdit()}
-                                    style={{ fontSize: '16px' }}
-                                    onFocus={(e) => {
-                                      // Scroll para o input quando focado no mobile
-                                      setTimeout(() => {
-                                        e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                                      }, 300)
-                                    }}
-                                  />
-                                </div>
-                                {(formData.type === 'CARNE_REVIVER' || formData.type === 'CARNE_AFRICA') && (
-                                  <div className="flex items-center space-x-2 mt-6">
-                                    <Checkbox
-                                      id="isRateio"
-                                      checked={formData.isRateio}
-                                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isRateio: !!checked }))}
+                                  <div className="flex gap-2 mt-1">
+                                    <NumericFormat
+                                      id="value"
+                                      name="value"
+                                      inputMode="decimal"
+                                      className={cn(
+                                        "flex-1 h-10 rounded-md border border-input bg-background px-3 py-2",
+                                        isFieldDisabledDuringEdit()
+                                          ? "text-gray-500 cursor-not-allowed opacity-50"
+                                          : ""
+                                      )}
+                                      value={formData.value ?? ''}
+                                      onValueChange={(values) => {
+                                        const { floatValue, value } = values;
+                                        setFormData(prev => ({ ...prev, value: (floatValue !== undefined ? floatValue : value) as any }))
+                                      }}
+                                      thousandSeparator="."
+                                      decimalSeparator=","
+                                      allowNegative={false}
                                       disabled={isFieldDisabledDuringEdit()}
+                                      style={{ fontSize: '16px' }}
+                                      onFocus={(e) => {
+                                        setTimeout(() => {
+                                          e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                                        }, 300)
+                                      }}
                                     />
-                                    <Label
-                                      htmlFor="isRateio"
-                                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                    >
-                                      Rateio
-                                    </Label>
                                   </div>
+                                </div>
+                                <div className="flex items-center space-x-2 sm:mt-8">
+                                  <Checkbox
+                                    id="isRateio"
+                                    checked={formData.isRateio}
+                                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isRateio: !!checked }))}
+                                    disabled={isFieldDisabledDuringEdit()}
+                                  />
+                                  <Label
+                                    htmlFor="isRateio"
+                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                                  >
+                                    Competência
+                                  </Label>
+                                </div>
+
+                                {formData.isRateio && (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      if ((formData.installments?.length || 0) > 0) {
+                                        setInstallmentCount(formData.installments!.length.toString())
+                                      } else {
+                                        setInstallmentCount('')
+                                      }
+                                      setIsInstallmentsDialogOpen(true)
+                                    }}
+                                    className="h-10 shrink-0 border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold transition-all px-4"
+                                  >
+                                    <Layers className="h-4 w-4 mr-1 text-blue-600" />
+                                    Parcelas
+                                  </Button>
                                 )}
-                                {/* Verificação de permissão para Intervenção Técnica */}
-                                {canTechnicalIntervention && isTechnicalIntervention && (
-                                  <div className="space-y-2 border-l-4 border-purple-500 pl-4 bg-amber-50/50 py-2">
-                                    <Label htmlFor="status" className="text-purple-700 font-bold flex items-center gap-2">
-                                      <AlertCircle className="h-4 w-4" /> Status do Lançamento
-                                    </Label>
-                                    <Select
-                                      value={formData.status}
-                                      onValueChange={(value) => setFormData({ ...formData, status: value })}
-                                    >
-                                      <SelectTrigger id="status" className="border-purple-300">
-                                        <SelectValue placeholder="Selecione o status" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="NORMAL">Normal</SelectItem>
-                                        <SelectItem value="CANCELED">Cancelado</SelectItem>
-                                        <SelectItem value="APPROVED">Aprovado</SelectItem>
-                                        <SelectItem value="EXPORTED">Exportado</SelectItem>
-                                        <SelectItem value="IMPORTED">Importado</SelectItem>
-                                        <SelectItem value="INTEGRATED">Integrado</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                    {/* <p className="text-xs text-amber-600">
+
+                              </div>
+                              {/* Verificação de permissão para Intervenção Técnica */}
+                              {canTechnicalIntervention && isTechnicalIntervention && (
+                                <div className="space-y-2 border-l-4 border-purple-500 pl-4 bg-amber-50/50 py-2">
+                                  <Label htmlFor="status" className="text-purple-700 font-bold flex items-center gap-2">
+                                    <AlertCircle className="h-4 w-4" /> Status do Lançamento
+                                  </Label>
+                                  <Select
+                                    value={formData.status}
+                                    onValueChange={(value) => setFormData({ ...formData, status: value })}
+                                  >
+                                    <SelectTrigger id="status" className="border-purple-300">
+                                      <SelectValue placeholder="Selecione o status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="NORMAL">Normal</SelectItem>
+                                      <SelectItem value="CANCELED">Cancelado</SelectItem>
+                                      <SelectItem value="APPROVED">Aprovado</SelectItem>
+                                      <SelectItem value="EXPORTED">Exportado</SelectItem>
+                                      <SelectItem value="IMPORTED">Importado</SelectItem>
+                                      <SelectItem value="INTEGRATED">Integrado</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  {/* <p className="text-xs text-amber-600">
                                     Este campo só está visível para usuários com perfil de suporte/técnico.
                                   </p> */}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Dízimo: contribuinte */}
+                            {(formData.type === 'DIZIMO' || formData.type === 'CARNE_REVIVER' || formData.type === 'CARNE_AFRICA') && (
+                              <div className="w-full">
+                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
+                                  {!formData.isAnonymous && (
+                                    <div className="flex items-center space-x-2 w-full sm:w-auto">
+                                      <Button
+                                        type="button"
+                                        variant={formData.isContributorRegistered ? "default" : "outline"}
+                                        size="sm"
+                                        disabled={isFieldDisabledDuringEdit() || !formData.congregationId}
+                                        className={cn(
+                                          "h-9 px-3 transition-all flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start",
+                                          formData.isContributorRegistered
+                                            ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-800 shadow-sm"
+                                            : "text-gray-600 border-gray-300 hover:bg-gray-50"
+                                        )}
+                                        onClick={() => toggleField('isContributorRegistered')}
+                                      >
+                                        {formData.isContributorRegistered && (
+                                          <Check className="h-4 w-4 animate-in zoom-in duration-200 shrink-0" />
+                                        )}
+                                        <Users className="h-4 w-4 shrink-0" />
+                                        <span className="text-sm sm:text-base">Contribuinte Cadastrado</span>
+                                      </Button>
+                                    </div>
+                                  )}
+
+                                  {!formData.isContributorRegistered && (
+                                    <div className="flex items-center space-x-2 w-full sm:w-auto">
+                                      <Button
+                                        type="button"
+                                        variant={formData.isAnonymous ? "default" : "outline"}
+                                        size="sm"
+                                        disabled={isFieldDisabledDuringEdit()}
+                                        className={cn(
+                                          "h-9 px-3 transition-all flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start",
+                                          formData.isAnonymous
+                                            ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-800 shadow-sm"
+                                            : "text-gray-600 border-gray-300 hover:bg-gray-50"
+                                        )}
+                                        onClick={() => toggleField('isAnonymous')}
+                                      >
+                                        {formData.isAnonymous && (
+                                          <Check className="h-4 w-4 animate-in zoom-in duration-200 shrink-0" />
+                                        )}
+                                        <Ghost className="h-4 w-4 shrink-0" />
+                                        <span className="text-sm sm:text-base">Anônimo</span>
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {formData.isContributorRegistered ? (
+                                  <div className="mt-2 w-full">
+                                    <Label htmlFor="contributorId">Contribuinte</Label>
+                                    <SearchableSelect
+                                      key={`${formData.congregationId}-${editingLaunch?.status}`}
+                                      label="Buscar Contribuinte"
+                                      placeholder="Selecione o contribuinte"
+                                      value={formData.contributorId ?? ''}
+                                      disabled={isFieldDisabledDuringEdit()}
+                                      onChange={(value) => handleSelectChange('contributorId', value)}
+                                      name="contributorId"
+                                      data={contributors.filter(f => {
+                                        // Se está editando um lançamento IMPORTED ou INTEGRATED, não filtra por congregação
+                                        if (editingLaunch?.status === 'IMPORTED' || editingLaunch?.status === 'INTEGRATED') {
+                                          return true
+                                        }
+                                        // Se não selecionou congregação, não mostra nada
+                                        if (!formData.congregationId) return false
+                                        // Se é o contribuinte já selecionado, mostra
+                                        if (f.id === formData.contributorId) return true
+                                        // Caso contrário, mostra apenas os ativos da congregação selecionada
+                                        return f.congregationId === formData.congregationId && f.isActive
+                                      }).map(c => ({ key: c.id, id: c.id, name: c.name, document: c.cpf, cargo: c.ecclesiasticalPosition, photoUrl: c.photoUrl, photoExists: c.photoExists }))}
+                                      searchKeys={['name', 'document']}
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="mt-2 w-full">
+                                    <Label htmlFor="contributorName">Nome do Contribuinte</Label>
+                                    <Input
+                                      id="contributorName"
+                                      name="contributorName"
+                                      value={formData.contributorName ?? ''}
+                                      onChange={handleInputChange}
+                                      disabled={formData.isAnonymous || isFieldDisabledDuringEdit()}
+                                      className="w-full"
+                                      //required={!formData.isAnonymous}
+                                      style={{ fontSize: '16px' }}
+                                    />
+                                    {editingLaunch?.status === 'IMPORTED' && (
+                                      <p className="text-xs text-gray-500 mt-1">Campo bloqueado para lançamentos importados</p>
+                                    )}
                                   </div>
                                 )}
                               </div>
+                            )}
 
-                              {/* Dízimo: contribuinte */}
-                              {(formData.type === 'DIZIMO' || formData.type === 'CARNE_REVIVER' || formData.type === 'CARNE_AFRICA') && (
-                                <div className="w-full">
-                                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
-                                    {!formData.isAnonymous && (
-                                      <div className="flex items-center space-x-2 w-full sm:w-auto">
-                                        <Button
-                                          type="button"
-                                          variant={formData.isContributorRegistered ? "default" : "outline"}
-                                          size="sm"
-                                          disabled={isFieldDisabledDuringEdit() || !formData.congregationId}
-                                          className={cn(
-                                            "h-9 px-3 transition-all flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start",
-                                            formData.isContributorRegistered
-                                              ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-800 shadow-sm"
-                                              : "text-gray-600 border-gray-300 hover:bg-gray-50"
-                                          )}
-                                          onClick={() => toggleField('isContributorRegistered')}
-                                        >
-                                          {formData.isContributorRegistered && (
-                                            <Check className="h-4 w-4 animate-in zoom-in duration-200 shrink-0" />
-                                          )}
-                                          <Users className="h-4 w-4 shrink-0" />
-                                          <span className="text-sm sm:text-base">Contribuinte Cadastrado</span>
-                                        </Button>
-                                      </div>
+
+                            {/* Fornecedor para SAIDA */}
+                            {['SAIDA'].includes(formData.type) && (
+                              <>
+                                <div className="flex items-center space-x-2 w-full sm:w-auto">
+                                  <Button
+                                    type="button"
+                                    variant={formData.isSupplierRegistered ? "default" : "outline"}
+                                    size="sm"
+                                    disabled={isFieldDisabledDuringEdit()}
+                                    className={cn(
+                                      "h-9 px-3 transition-all flex items-center gap-2 w-full sm:w-auto",
+                                      formData.isSupplierRegistered
+                                        ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-800 shadow-sm"
+                                        : "text-gray-600 border-gray-300 hover:bg-gray-50"
                                     )}
-
-                                    {!formData.isContributorRegistered && (
-                                      <div className="flex items-center space-x-2 w-full sm:w-auto">
-                                        <Button
-                                          type="button"
-                                          variant={formData.isAnonymous ? "default" : "outline"}
-                                          size="sm"
-                                          disabled={isFieldDisabledDuringEdit()}
-                                          className={cn(
-                                            "h-9 px-3 transition-all flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start",
-                                            formData.isAnonymous
-                                              ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-800 shadow-sm"
-                                              : "text-gray-600 border-gray-300 hover:bg-gray-50"
-                                          )}
-                                          onClick={() => toggleField('isAnonymous')}
-                                        >
-                                          {formData.isAnonymous && (
-                                            <Check className="h-4 w-4 animate-in zoom-in duration-200 shrink-0" />
-                                          )}
-                                          <Ghost className="h-4 w-4 shrink-0" />
-                                          <span className="text-sm sm:text-base">Anônimo</span>
-                                        </Button>
-                                      </div>
+                                    onClick={() => toggleField('isSupplierRegistered')}
+                                  >
+                                    {formData.isSupplierRegistered && (
+                                      <Check className="h-4 w-4 animate-in zoom-in duration-200 shrink-0" />
                                     )}
-                                  </div>
-
-                                  {formData.isContributorRegistered ? (
-                                    <div className="mt-2 w-full">
-                                      <Label htmlFor="contributorId">Contribuinte</Label>
-                                      <SearchableSelect
-                                        key={`${formData.congregationId}-${editingLaunch?.status}`}
-                                        label="Buscar Contribuinte"
-                                        placeholder="Selecione o contribuinte"
-                                        value={formData.contributorId ?? ''}
-                                        disabled={isFieldDisabledDuringEdit()}
-                                        onChange={(value) => handleSelectChange('contributorId', value)}
-                                        name="contributorId"
-                                        data={contributors.filter(f => {
-                                          // Se está editando um lançamento IMPORTED ou INTEGRATED, não filtra por congregação
-                                          if (editingLaunch?.status === 'IMPORTED' || editingLaunch?.status === 'INTEGRATED') {
-                                            return true
-                                          }
-                                          // Se não selecionou congregação, não mostra nada
-                                          if (!formData.congregationId) return false
-                                          // Se é o contribuinte já selecionado, mostra
-                                          if (f.id === formData.contributorId) return true
-                                          // Caso contrário, mostra apenas os ativos da congregação selecionada
-                                          return f.congregationId === formData.congregationId && f.isActive
-                                        }).map(c => ({ key: c.id, id: c.id, name: c.name, document: c.cpf, cargo: c.ecclesiasticalPosition, photoUrl: c.photoUrl, photoExists: c.photoExists }))}
-                                        searchKeys={['name', 'document']}
-                                      />
-                                    </div>
-                                  ) : (
-                                    <div className="mt-2 w-full">
-                                      <Label htmlFor="contributorName">Nome do Contribuinte</Label>
-                                      <Input
-                                        id="contributorName"
-                                        name="contributorName"
-                                        value={formData.contributorName ?? ''}
-                                        onChange={handleInputChange}
-                                        disabled={formData.isAnonymous || isFieldDisabledDuringEdit()}
-                                        className="w-full"
-                                        //required={!formData.isAnonymous}
-                                        style={{ fontSize: '16px' }}
-                                      />
-                                      {editingLaunch?.status === 'IMPORTED' && (
-                                        <p className="text-xs text-gray-500 mt-1">Campo bloqueado para lançamentos importados</p>
-                                      )}
-                                    </div>
-                                  )}
+                                    <User className="h-4 w-4 shrink-0" />
+                                    Fornecedor Cadastrado
+                                  </Button>
                                 </div>
-                              )}
-
-
-                              {/* Fornecedor para SAIDA */}
-                              {['SAIDA'].includes(formData.type) && (
-                                <>
-                                  <div className="flex items-center space-x-2 w-full sm:w-auto">
-                                    <Button
-                                      type="button"
-                                      variant={formData.isSupplierRegistered ? "default" : "outline"}
-                                      size="sm"
+                                {formData.isSupplierRegistered ? (
+                                  <div>
+                                    <Label htmlFor="supplierId">Fornecedor</Label>
+                                    <SearchableSelect
+                                      key={formData.supplierId}
+                                      label="Buscar Fornecedor"
+                                      placeholder="Selecione o fornecedor"
+                                      value={formData.supplierId ?? ''}
                                       disabled={isFieldDisabledDuringEdit()}
-                                      className={cn(
-                                        "h-9 px-3 transition-all flex items-center gap-2 w-full sm:w-auto",
-                                        formData.isSupplierRegistered
-                                          ? "bg-slate-700 hover:bg-slate-800 text-white border-slate-800 shadow-sm"
-                                          : "text-gray-600 border-gray-300 hover:bg-gray-50"
-                                      )}
-                                      onClick={() => toggleField('isSupplierRegistered')}
-                                    >
-                                      {formData.isSupplierRegistered && (
-                                        <Check className="h-4 w-4 animate-in zoom-in duration-200 shrink-0" />
-                                      )}
-                                      <User className="h-4 w-4 shrink-0" />
-                                      Fornecedor Cadastrado
-                                    </Button>
+                                      onChange={(value) => handleSelectChange('supplierId', value)}
+                                      name="supplierId"
+                                      data={suppliers.map(s => ({ key: s.id, id: s.id, name: truncateString(s.razaoSocial, 45), document: s.cpfcnpj }))}
+                                      searchKeys={['name', 'document']}
+                                      itemRenderMode="supplier"
+                                    />
                                   </div>
-                                  {formData.isSupplierRegistered ? (
-                                    <div>
-                                      <Label htmlFor="supplierId">Fornecedor</Label>
-                                      <SearchableSelect
-                                        key={formData.supplierId}
-                                        label="Buscar Fornecedor"
-                                        placeholder="Selecione o fornecedor"
-                                        value={formData.supplierId ?? ''}
-                                        disabled={isFieldDisabledDuringEdit()}
-                                        onChange={(value) => handleSelectChange('supplierId', value)}
-                                        name="supplierId"
-                                        data={suppliers.map(s => ({ key: s.id, id: s.id, name: truncateString(s.razaoSocial, 45), document: s.cpfcnpj }))}
-                                        searchKeys={['name', 'document']}
-                                        itemRenderMode="supplier"
-                                      />
-                                    </div>
-                                  ) : (
-                                    <div>
-                                      <Label htmlFor="supplierName">Nome do Fornecedor</Label>
-                                      <Input
-                                        id="supplierName"
-                                        name="supplierName"
-                                        value={formData.supplierName ?? ''}
-                                        onChange={handleInputChange}
-                                        disabled={isFieldDisabledDuringEdit()}
-                                        style={{ fontSize: '16px' }}
-                                      />
-                                    </div>
-                                  )}
-                                </>
-                              )}
+                                ) : (
+                                  <div>
+                                    <Label htmlFor="supplierName">Nome do Fornecedor</Label>
+                                    <Input
+                                      id="supplierName"
+                                      name="supplierName"
+                                      value={formData.supplierName ?? ''}
+                                      onChange={handleInputChange}
+                                      disabled={isFieldDisabledDuringEdit()}
+                                      style={{ fontSize: '16px' }}
+                                    />
+                                  </div>
+                                )}
+                              </>
+                            )}
 
-                              {editingLaunch && (editingLaunch.status === 'IMPORTED' || editingLaunch.status === 'INTEGRATED') && formData.financialEntityName && (
-                                <div>
-                                  <Label htmlFor="financialEntityName" className="flex items-center gap-2">
-                                    <span className="md:inline">Entidade Financeira</span>
-                                  </Label>
-                                  <Input
-                                    id="financialEntityName"
-                                    name="financialEntityName"
-                                    value={formData.financialEntityName}
-                                    disabled={true}
-                                    style={{ fontSize: '16px' }}
-                                    className="bg-gray-100"
-                                  />
-                                </div>
-                              )}
+                            {editingLaunch && (editingLaunch.status === 'IMPORTED' || editingLaunch.status === 'INTEGRATED') && formData.financialEntityName && (
+                              <div>
+                                <Label htmlFor="financialEntityName" className="flex items-center gap-2">
+                                  <span className="md:inline">Entidade Financeira</span>
+                                </Label>
+                                <Input
+                                  id="financialEntityName"
+                                  name="financialEntityName"
+                                  value={formData.financialEntityName}
+                                  disabled={true}
+                                  style={{ fontSize: '16px' }}
+                                  className="bg-gray-100"
+                                />
+                              </div>
+                            )}
 
-                              {editingLaunch && editingLaunch.status === 'INTEGRATED' && (
-                                <>
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div>
-                                      <Label htmlFor="paymentMethodId">Forma de Pagamento</Label>
-                                      <Select
-                                        value={formData.paymentMethodId?.toString() || ''}
-                                        onValueChange={(value) => handleSelectChange('paymentMethodId', parseInt(value))}
-                                        disabled={isFieldDisabledDuringEdit()}
-                                      >
-                                        <SelectTrigger className="w-full">
-                                          <SelectValue placeholder="Selecione a forma de pagamento" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {paymentMethods.map(pm => (
-                                            <SelectItem key={pm.id} value={pm.id.toString()}>
-                                              {pm.name}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
+                            {editingLaunch && editingLaunch.status === 'INTEGRATED' && (
+                              <>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                  <div>
+                                    <Label htmlFor="paymentMethodId">Forma de Pagamento</Label>
+                                    <Select
+                                      value={formData.paymentMethodId?.toString() || ''}
+                                      onValueChange={(value) => handleSelectChange('paymentMethodId', parseInt(value))}
+                                      disabled={isFieldDisabledDuringEdit()}
+                                    >
+                                      <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Selecione a forma de pagamento" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {paymentMethods.map(pm => (
+                                          <SelectItem key={pm.id} value={pm.id.toString()}>
+                                            {pm.name}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
 
-                                    {/* <div>
+                                  {/* <div>
                                       <Label htmlFor="classificationId">Conta Contábil</Label>
                                       <SearchableSelect
                                         label="Buscar Conta Contábil"
@@ -1749,26 +1955,25 @@ export default function Launches() {
                                         searchKeys={['name']}
                                       />
                                     </div> */}
-                                  </div>
-                                </>
-                              )}
+                                </div>
+                              </>
+                            )}
 
-                              <div>
-                                <Label htmlFor="description" className="flex items-center gap-2">
-                                  {/* <FileText className="h-4 w-4 md:hidden" /> */}
-                                  <span className="md:inline">Anotações</span>
-                                </Label>
-                                <Textarea
-                                  id="description"
-                                  name="description"
-                                  value={formData.description ?? ''}
-                                  onChange={handleInputChange}
-                                  disabled={isFieldDisabledDuringEdit()}
-                                  style={{ fontSize: '16px' }}
-                                />
-                              </div>
-
+                            <div>
+                              <Label htmlFor="description" className="flex items-center gap-2">
+                                {/* <FileText className="h-4 w-4 md:hidden" /> */}
+                                <span className="md:inline">Anotações</span>
+                              </Label>
+                              <Textarea
+                                id="description"
+                                name="description"
+                                value={formData.description ?? ''}
+                                onChange={handleInputChange}
+                                disabled={isFieldDisabledDuringEdit()}
+                                style={{ fontSize: '16px' }}
+                              />
                             </div>
+
                           </div>
                         </TabsContent>
                         {/* <TabsContent value="comprovantes" className="max-w-[calc(105vw-3rem)] p-2 sm:p-0 overflow-x-hidden">
@@ -1841,6 +2046,13 @@ export default function Launches() {
                                           editingLaunch?.approvedVia === 'SUMMARY' ? 'Via Resumo' : '-'}
                                       </TableCell>
                                     </TableRow>
+                                    {editingLaunch?.receiptGeneratedBy && (
+                                      <TableRow className="text-blue-600 bg-blue-50/50">
+                                        <TableCell className="font-medium">Emissão de Recibo</TableCell>
+                                        <TableCell>{editingLaunch.receiptGeneratedBy}</TableCell>
+                                        <TableCell>{editingLaunch.receiptGeneratedAt ? format(new Date(editingLaunch.receiptGeneratedAt), 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
+                                      </TableRow>
+                                    )}
                                   </TableBody>
                                 </Table>
                               </div>
@@ -1862,7 +2074,28 @@ export default function Launches() {
                         </TabsContent>
                       </Tabs>
 
-                      <DialogFooter className="mt-4">
+                      <DialogFooter className="mt-4 flex sm:justify-between items-center">
+                        <div>
+                          {editingLaunch && editingLaunch.type === 'DIZIMO' && editingLaunch.status !== 'CANCELED' && canGenerateReceipt && (
+                            (() => {
+                              const cargo = editingLaunch.contributor?.ecclesiasticalPosition?.toLowerCase() || ''
+                              if (cargo !== 'membro' && cargo !== 'congregado') {
+                                return (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => handleGenerateReceipt(editingLaunch)}
+                                    className="bg-blue-50 hover:bg-blue-100 border-blue-300 text-blue-600 font-bold"
+                                  >
+                                    <FileText className="h-4 w-4 mr-2" />
+                                    RECIBO
+                                  </Button>
+                                )
+                              }
+                              return null
+                            })()
+                          )}
+                        </div>
                         <Button type="submit" disabled={isFieldDisabledDuringEdit() || salvando}>
                           {editingLaunch ? 'Atualizar' : 'Salvar'}
                         </Button>
@@ -2040,8 +2273,8 @@ export default function Launches() {
                       {canLaunchVote && <SelectItem value="VOTO">Voto</SelectItem>}
                       {canLaunchCircle && <SelectItem value="CIRCULO">Círculo de Oração</SelectItem>}
                       {canLaunchCarneReviver && <SelectItem value="CARNE_REVIVER">Carnê Reviver</SelectItem>}
-                      {canLaunchCarneReviver && <SelectItem value="CARNE_AFRICA">Carnê África</SelectItem>}
-                      {canLaunchServiceOffer && <SelectItem value="RENDA_BRUTA">Renda Bruta</SelectItem>}
+                      {canLaunchCarneAfrica && <SelectItem value="CARNE_AFRICA">Carnê África</SelectItem>}
+                      {canLaunchRendaBruta && <SelectItem value="RENDA_BRUTA">Renda Bruta</SelectItem>}
                       {canLaunchExpense && <SelectItem value="SAIDA">Saída</SelectItem>}
                     </SelectContent>
                   </Select>
@@ -2069,8 +2302,15 @@ export default function Launches() {
             {/* Lista Desktop */}
             <div className="hidden lg:block">
               <Card>
-                <CardHeader>
-                  <CardTitle>Lançamentos</CardTitle>
+                <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0">
+                  <div className="flex items-center gap-4">
+                    <CardTitle>Lançamentos</CardTitle>
+                    <div className="flex items-center gap-3 text-sm font-medium">
+                      <span className="text-blue-600 bg-blue-50 px-2 py-1 rounded">Total: {totalCount}</span>
+                      <span className="text-green-600 bg-green-50 px-2 py-1 rounded">Entradas: {formatCurrency(totalEntries)}</span>
+                      <span className="text-red-600 bg-red-50 px-2 py-1 rounded">Saídas: {formatCurrency(totalExits)}</span>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
@@ -2118,11 +2358,60 @@ export default function Launches() {
                             <TableCell>{format(new Date(launch.date), 'dd/MM/yyyy')}</TableCell>
                             <TableCell>{formatCurrency(launch.value)}</TableCell>
                             <TableCell>
-                              {(launch.contributor?.name && truncateString(launch.contributor.name, 30)) ||
-                                (launch.supplier?.razaoSocial && truncateString(launch.supplier.razaoSocial, 30)) ||
-                                (launch.contributorName && truncateString(launch.contributorName, 30)) ||
-                                (launch.supplierName && truncateString(launch.supplierName, 30)) ||
-                                '-'}
+                              <div className="flex items-center gap-2">
+                                {(launch.type === 'DIZIMO' || launch.type === 'CARNE_REVIVER' || launch.type === 'CARNE_AFRICA') ? (
+                                  <>
+                                    {launch.contributor?.photoUrl ? (
+                                      <img
+                                        src={getUploadUrl(launch.contributor.photoUrl)}
+                                        alt=""
+                                        className="h-8 w-8 rounded-full object-cover border border-gray-200"
+                                        onError={(e) => {
+                                          e.currentTarget.style.display = 'none';
+                                          const parent = e.currentTarget.parentElement;
+                                          if (parent) {
+                                            const placeholder = parent.querySelector('.photo-placeholder');
+                                            if (placeholder) (placeholder as HTMLElement).style.display = 'flex';
+                                          }
+                                        }}
+                                      />
+                                    ) : (
+                                      <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center border border-gray-200">
+                                        <User className="h-4 w-4 text-gray-400" />
+                                      </div>
+                                    )}
+                                    <div className="photo-placeholder hidden h-8 w-8 rounded-full bg-gray-100 items-center justify-center border border-gray-200">
+                                      <User className="h-4 w-4 text-gray-400" />
+                                    </div>
+                                  </>
+                                ) : launch.type === 'SAIDA' ? (
+                                  <div className="h-8 w-8 rounded-full bg-red-50 flex items-center justify-center border border-red-100 relative shrink-0">
+                                    <DollarSign className="h-4 w-4 text-red-500" />
+                                    <ArrowUp className="h-3 w-3 text-red-500 absolute -bottom-0.5 -right-0.5 bg-white rounded-full" />
+                                  </div>
+                                ) : launch.type === 'CIRCULO' ? (
+                                  <div className="h-8 w-8 rounded-full bg-pink-50 flex items-center justify-center border border-pink-100 shrink-0">
+                                    <svg viewBox="0 0 24 24" className="h-5 w-5 text-pink-500" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                      <path d="M12 2C12 2 15 6 15 11C15 16 12 21 12 21" />
+                                      <path d="M12 2C12 2 9 6 9 11C9 16 12 21 12 21" />
+                                      <path d="M10 13C10 13 11 14 12 14C13 14 14 13 14 13" />
+                                      <path d="M12 21V22" />
+                                    </svg>
+                                  </div>
+                                ) : (
+                                  <div className="h-8 w-8 rounded-full bg-green-50 flex items-center justify-center border border-green-100 relative shrink-0">
+                                    <DollarSign className="h-4 w-4 text-green-500" />
+                                    <ArrowDown className="h-3 w-3 text-green-500 absolute -bottom-0.5 -right-0.5 bg-white rounded-full" />
+                                  </div>
+                                )}
+                                <span className="truncate">
+                                  {(launch.contributor?.name && truncateString(launch.contributor.name, 30)) ||
+                                    (launch.supplier?.razaoSocial && truncateString(launch.supplier.razaoSocial, 30)) ||
+                                    (launch.contributorName && truncateString(launch.contributorName, 30)) ||
+                                    (launch.supplierName && truncateString(launch.supplierName, 30)) ||
+                                    '-'}
+                                </span>
+                              </div>
                             </TableCell>
                             <TableCell>{launch.talonNumber}</TableCell>
                             <TableCell>
@@ -2145,17 +2434,17 @@ export default function Launches() {
                                         launch.status === 'IMPORTED' ? 'Importado' :
                                           launch.status === 'INTEGRATED' ? 'Integrado' : 'Cancelado'}
                                 </Badge>
-                                {/* {launch.approvedBy && (
-                                 <Tooltip>
-                                   <TooltipTrigger asChild>
-                                     <div className="text-xs text-gray-500 cursor-help">ℹ️</div>
-                                   </TooltipTrigger>
-                                   <TooltipContent>
-                                     <p>Aprovado por: {launch.approvedBy}</p>
-                                     <p>{launch.approvedAt ? format(new Date(launch.approvedAt), 'dd/MM/yyyy HH:mm') : ''}</p>
-                                   </TooltipContent>
-                                 </Tooltip>
-                               )} */}
+                                {launch.status === 'APPROVED' && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="text-xs text-gray-500 cursor-help">ℹ️</div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Aprovado por: {launch.approvedBy}</p>
+                                      <p>{launch.approvedAt ? format(new Date(launch.approvedAt), 'dd/MM/yyyy HH:mm') : ''}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
                               </div>
                             </TableCell>
                             <TableCell>
@@ -2171,6 +2460,8 @@ export default function Launches() {
                                     <TooltipContent><p>Intervenção Técnica - Editar Sem Restrições</p></TooltipContent>
                                   </Tooltip>
                                 )}
+
+
 
                                 {(launch.status === 'CANCELED' || launch.status === 'IMPORTED' || launch.status === 'INTEGRATED' || launch.status === 'NORMAL') && launch.summaryId == null && canDeleteLaunch && (
                                   <Tooltip>
@@ -2247,12 +2538,36 @@ export default function Launches() {
                                   (launch.type === 'SAIDA' && canLaunchExpense) ||
                                   (launch.type === 'MISSAO' && canLaunchMission) ||
                                   (launch.type === 'CIRCULO' && canLaunchCircle) ? (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button variant="outline" size="sm" onClick={() => handleEdit(launch)}><Edit className="h-4 w-4" /></Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent><p>Editar</p></TooltipContent>
-                                  </Tooltip>
+                                  <>
+                                    {canToggleLaunchType && (launch.type === 'DIZIMO' || launch.type === 'CARNE_REVIVER') && (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleToggleLaunchType(launch.id)}
+                                            disabled={isTogglingLaunchType || launch.status === 'CANCELED'}
+                                            className={cn(
+                                              "transition-colors",
+                                              launch.type === 'CARNE_REVIVER' ? "hover:bg-amber-100 border-amber-200" : "hover:bg-blue-100 border-blue-200"
+                                            )}
+                                          >
+                                            <History className={cn("h-4 w-4", launch.type === 'CARNE_REVIVER' ? "text-amber-600" : "text-blue-600")} />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Alternar para {launch.type === 'CARNE_REVIVER' ? 'Dízimo' : 'Carnê Reviver'}</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    )}
+
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button variant="outline" size="sm" onClick={() => handleEdit(launch)}><Edit className="h-4 w-4" /></Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent><p>Editar</p></TooltipContent>
+                                    </Tooltip>
+                                  </>
                                 ) : null}
 
                               </div>
@@ -2297,27 +2612,144 @@ export default function Launches() {
         </div>
       </div>
       {/* Botão flutuante de voltar ao topo - apenas mobile */}
-      {pageYPosition > 10 && (
-        <a
-          href="#container"
-          style={{
-            position: "fixed",
-            bottom: "80px",
-            right: "15px",
-            background: "#333",
-            color: "white",
-            padding: "10px 15px",
-            borderRadius: "5px",
-            textDecoration: "none",
-            zIndex: 40,
-          }}
-          onClick={(e) => {
-            e.preventDefault();
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          }}
-        >
-          <ArrowUp className="h-6 w-6" />
-        </a>)}
-    </PermissionGuard>
+      {
+        pageYPosition > 10 && (
+          <a
+            href="#container"
+            style={{
+              position: "fixed",
+              bottom: "80px",
+              right: "15px",
+              background: "#333",
+              color: "white",
+              padding: "10px 15px",
+              borderRadius: "5px",
+              textDecoration: "none",
+              zIndex: 40,
+            }}
+            onClick={(e) => {
+              e.preventDefault();
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          >
+            <ArrowUp className="h-6 w-6" />
+          </a>)
+      }
+
+      <Dialog open={isInstallmentsDialogOpen} onOpenChange={setIsInstallmentsDialogOpen}>
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-blue-700">
+              <Layers className="h-5 w-5" />
+              Rateio de Parcelas
+            </DialogTitle>
+            <DialogDescription>
+              Informe a quantidade de parcelas e ajuste os valores e meses.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="flex items-end gap-2 bg-blue-50/50 p-3 rounded-lg border border-blue-100">
+              <div className="flex-1">
+                <Label htmlFor="installmentCount" className="text-blue-900 font-semibold mb-1 block">Quantidade de Parcelas</Label>
+                <Input
+                  id="installmentCount"
+                  type="number"
+                  inputMode="numeric"
+                  value={installmentCount}
+                  onChange={(e) => setInstallmentCount(e.target.value)}
+                  placeholder="Ex: 12"
+                  className="h-10 border-blue-200 focus:ring-blue-500"
+                />
+              </div>
+              <Button
+                type="button"
+                onClick={generateInstallments}
+                className="h-10 bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-sm"
+              >
+                Gerar Parcelas
+              </Button>
+            </div>
+
+            {(formData.installments?.length || 0) > 0 && (
+              <div className="border rounded-lg overflow-hidden border-gray-200 shadow-sm">
+                <Table>
+                  <TableHeader className="bg-gray-50 border-b">
+                    <TableRow>
+                      <TableHead className="w-[120px] text-gray-700 font-bold">Mês / Ano</TableHead>
+                      <TableHead className="text-gray-700 font-bold text-right pr-6">Valor Individual</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {formData.installments?.map((inst, index) => (
+                      <TableRow key={index} className="hover:bg-blue-50/30 transition-colors group">
+                        <TableCell className="py-2">
+                          <div className="flex gap-1 items-center">
+                            <Input
+                              className="h-9 w-12 px-1 text-center border-gray-200 focus:border-blue-400"
+                              value={inst.month}
+                              type="number"
+                              onChange={(e) => updateInstallment(index, 'month', parseInt(e.target.value) || 1)}
+                            />
+                            <span className="text-gray-400 font-bold">/</span>
+                            <Input
+                              className="h-9 w-24 px-1 text-center border-gray-200 focus:border-blue-400"
+                              value={inst.year}
+                              type="number"
+                              onChange={(e) => updateInstallment(index, 'year', parseInt(e.target.value) || 2024)}
+                            />
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-2 pr-4">
+                          <NumericFormat
+                            className="h-9 w-full rounded-md border border-gray-200 px-3 py-1 text-right font-medium focus:border-blue-400 focus:ring-1 focus:ring-blue-100 outline-none"
+                            value={inst.value}
+                            onValueChange={(values) => updateInstallment(index, 'value', values.floatValue || 0)}
+                            thousandSeparator="."
+                            decimalSeparator=","
+                            decimalScale={2}
+                            fixedDecimalScale
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                  <TableFooter className="bg-slate-50 border-t-2 border-slate-100">
+                    <TableRow>
+                      <TableCell className="font-bold text-slate-700">Soma Total</TableCell>
+                      <TableCell className="text-right pr-6 font-bold text-slate-900 text-lg">
+                        R$ {(formData.installments || []).reduce((acc, curr) => acc + curr.value, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </TableCell>
+                    </TableRow>
+                  </TableFooter>
+                </Table>
+              </div>
+            )}
+
+            <div className="flex justify-center items-center p-2 rounded-md bg-white border border-gray-100">
+              <span className={cn(
+                "font-bold flex items-center gap-2 transition-all duration-300",
+                Math.abs((formData.installments || []).reduce((acc, curr) => acc + curr.value, 0) - parseFloat(formData.value?.toString().replace(',', '.') || '0')) > 0.01
+                  ? "text-red-500 scale-105"
+                  : "text-emerald-600"
+              )}>
+                {Math.abs((formData.installments || []).reduce((acc, curr) => acc + curr.value, 0) - parseFloat(formData.value?.toString().replace(',', '.') || '0')) > 0.01
+                  ? <><AlertCircle className="h-5 w-5" /> Soma difere do valor total</>
+                  : <><Check className="h-5 w-5" /> Valores conferem com o lançamento</>}
+              </span>
+            </div>
+          </div>
+          <DialogFooter className="bg-gray-50 -mx-6 -mb-6 p-4 border-t">
+            <Button
+              type="button"
+              onClick={() => setIsInstallmentsDialogOpen(false)}
+              className="w-full sm:w-auto px-8 bg-blue-600 hover:bg-blue-700 shadow-md"
+            >
+              Confirmar Rateio
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+    </PermissionGuard >
   )
 }
