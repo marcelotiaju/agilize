@@ -13,6 +13,18 @@ export function getDefaultAlias(): string {
 }
 
 /**
+ * Retorna todos os aliases configurados no DB_ALIASES.
+ * Formato esperado: ALIAS1:url1,ALIAS2:url2
+ */
+export function getAllDbAliases(): string[] {
+  const aliasesEnv = process.env.DB_ALIASES || ""
+  return aliasesEnv
+    .split(',')
+    .map(pair => pair.split(':')[0].trim())
+    .filter(alias => alias.length > 0)
+}
+
+/**
  * Retorna uma instância do Prisma Client para o alias fornecido.
  * Se a instância já existir no cache, ela é reutilizada.
  */
