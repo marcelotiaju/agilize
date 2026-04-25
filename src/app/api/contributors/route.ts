@@ -124,20 +124,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Acesso não autorizado a esta congregação" }, { status: 403 })
     }
 
-    const existingContributor = await prisma.contributor.findFirst({
-      where: {
-        congregationId,
-        code,
-        name,
-        cpf,
-        ecclesiasticalPosition,
-        tipo: type,
-        photoUrl
-      }
+    const existingCode = await prisma.contributor.findFirst({
+      where: { code }
     })
 
-    if (existingContributor) {
-      return NextResponse.json({ error: "Já existe um contribuinte com estes dados" }, { status: 400 })
+    if (existingCode) {
+      return NextResponse.json({ error: "Já existe um contribuinte com este código" }, { status: 400 })
     }
 
     const contributor = await prisma.contributor.create({
@@ -180,9 +172,19 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Contribuinte não encontrado" }, { status: 404 })
     }
 
+    if (body.code && body.code !== contributor.code) {
+      const existingCode = await prisma.contributor.findFirst({
+        where: { code: body.code }
+      })
+      if (existingCode) {
+        return NextResponse.json({ error: "Já existe um contribuinte com este código" }, { status: 400 })
+      }
+    }
+
     const updatedContributor = await prisma.contributor.update({
       where: { id },
       data: { 
+        congregationId: body.congregationId,
         code: body.code, 
         name: body.name, 
         cpf: body.cpf, 

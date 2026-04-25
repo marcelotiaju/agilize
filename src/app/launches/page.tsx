@@ -435,8 +435,12 @@ export default function Launches() {
     if (!confirm('Tem certeza que deseja excluir este lançamento?')) return
     try {
       const response = await fetch(`/api/launches/${id}`, { method: 'DELETE' })
-      if (response.ok) fetchLaunches()
-      else setError('Erro ao excluir lançamento.')
+      if (response.ok) {
+        fetchLaunches()
+      } else {
+        const errorData = await response.json()
+        setError(errorData.error || 'Erro ao excluir lançamento.')
+      }
     } catch (error) {
       console.error('Erro ao excluir:', error)
       setError('Erro ao excluir lançamento.')
@@ -826,6 +830,7 @@ export default function Launches() {
   }
 
   const handleEdit = (launch: Launch) => {
+    setError(null)
     setIsTechnicalIntervention(false)
     setEditingLaunch(launch)
     setFormData({
@@ -980,6 +985,7 @@ export default function Launches() {
 
 
   const resetForm = () => {
+    setError(null)
     setEditingLaunch(null)
     setIsTechnicalIntervention(false)
     setFormData({
@@ -1146,6 +1152,44 @@ export default function Launches() {
                   </TooltipContent>
                 </Tooltip>
               )}
+
+              {launch.status === 'APPROVED' && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="text-xs text-gray-500 cursor-help flex items-center">ℹ️</div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {launch.approvedByTreasury && (
+                      <div className="mb-1">
+                        <p className="font-semibold text-xs">Tesoureiro:</p>
+                        <p>{launch.approvedByTreasury}</p>
+                        <p>{launch.approvedAtTreasury ? format(new Date(launch.approvedAtTreasury), 'dd/MM/yyyy HH:mm') : ''}</p>
+                      </div>
+                    )}
+                    {launch.approvedByAccountant && (
+                      <div className="mb-1">
+                        <p className="font-semibold text-xs">Contador:</p>
+                        <p>{launch.approvedByAccountant}</p>
+                        <p>{launch.approvedAtAccountant ? format(new Date(launch.approvedAtAccountant), 'dd/MM/yyyy HH:mm') : ''}</p>
+                      </div>
+                    )}
+                    {launch.approvedByDirector && (
+                      <div className="mb-1">
+                        <p className="font-semibold text-xs">Dirigente:</p>
+                        <p>{launch.approvedByDirector}</p>
+                        <p>{launch.approvedAtDirector ? format(new Date(launch.approvedAtDirector), 'dd/MM/yyyy HH:mm') : ''}</p>
+                      </div>
+                    )}
+                    {!launch.approvedByTreasury && !launch.approvedByAccountant && !launch.approvedByDirector && launch.approvedBy && (
+                      <div className="mb-1">
+                        <p>Aprovado por: {launch.approvedBy}</p>
+                        <p>{launch.approvedAt ? format(new Date(launch.approvedAt), 'dd/MM/yyyy HH:mm') : ''}</p>
+                      </div>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              )}
+
               <Badge className={cn(
                 "w-24 text-center justify-center py-1 rounded font-medium",
                 launch.status === 'EXPORTED' ? 'text-black' : 'text-white',
@@ -1648,8 +1692,8 @@ export default function Launches() {
                                 </div>
                               </div>
 
-                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-                                <div className="sm:col-span-2">
+                              <div className="flex justify-start gap-4 mb-4">
+                                <div>
                                   <Label htmlFor="value">Valor</Label>
                                   <div className="flex gap-2 mt-1">
                                     <NumericFormat
@@ -1657,7 +1701,7 @@ export default function Launches() {
                                       name="value"
                                       inputMode="decimal"
                                       className={cn(
-                                        "flex-1 h-10 rounded-md border border-input bg-background px-3 py-2",
+                                        "flex-1 h-10 rounded-md border border-input bg-background px-1 py-2",
                                         isFieldDisabledDuringEdit()
                                           ? "text-gray-500 cursor-not-allowed opacity-50"
                                           : ""
@@ -1680,21 +1724,24 @@ export default function Launches() {
                                     />
                                   </div>
                                 </div>
-                                <div className="flex items-center space-x-2 sm:mt-8">
-                                  <Checkbox
-                                    id="isRateio"
-                                    checked={formData.isRateio}
-                                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isRateio: !!checked }))}
-                                    disabled={isFieldDisabledDuringEdit()}
-                                  />
-                                  <Label
-                                    htmlFor="isRateio"
-                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                                  >
-                                    Competência
-                                  </Label>
+                                <div className="flex flex-wrap items-center gap-4">
+                                  <div className="flex items-center space-x-2 h-10">
+                                    <Checkbox
+                                      id="isRateio"
+                                      checked={formData.isRateio}
+                                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isRateio: !!checked }))}
+                                      disabled={isFieldDisabledDuringEdit()}
+                                    />
+                                    <Label
+                                      htmlFor="isRateio"
+                                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                                    >
+                                      Competência
+                                    </Label>
+                                  </div>
                                 </div>
-
+                              </div>
+                              <div className="flex flex-wrap items-center gap-4">
                                 {formData.isRateio && (
                                   <Button
                                     type="button"
@@ -1714,7 +1761,6 @@ export default function Launches() {
                                     Parcelas
                                   </Button>
                                 )}
-
                               </div>
                               {/* Verificação de permissão para Intervenção Técnica */}
                               {canTechnicalIntervention && isTechnicalIntervention && (
@@ -2440,8 +2486,34 @@ export default function Launches() {
                                       <div className="text-xs text-gray-500 cursor-help">ℹ️</div>
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                      <p>Aprovado por: {launch.approvedBy}</p>
-                                      <p>{launch.approvedAt ? format(new Date(launch.approvedAt), 'dd/MM/yyyy HH:mm') : ''}</p>
+                                      {launch.approvedByTreasury && (
+                                        <div className="mb-1">
+                                          <p className="font-semibold text-xs">Tesoureiro:</p>
+                                          <p>{launch.approvedByTreasury}</p>
+                                          <p>{launch.approvedAtTreasury ? format(new Date(launch.approvedAtTreasury), 'dd/MM/yyyy HH:mm') : ''}</p>
+                                        </div>
+                                      )}
+                                      {launch.approvedByAccountant && (
+                                        <div className="mb-1">
+                                          <p className="font-semibold text-xs">Contador:</p>
+                                          <p>{launch.approvedByAccountant}</p>
+                                          <p>{launch.approvedAtAccountant ? format(new Date(launch.approvedAtAccountant), 'dd/MM/yyyy HH:mm') : ''}</p>
+                                        </div>
+                                      )}
+                                      {launch.approvedByDirector && (
+                                        <div className="mb-1">
+                                          <p className="font-semibold text-xs">Dirigente:</p>
+                                          <p>{launch.approvedByDirector}</p>
+                                          <p>{launch.approvedAtDirector ? format(new Date(launch.approvedAtDirector), 'dd/MM/yyyy HH:mm') : ''}</p>
+                                        </div>
+                                      )}
+                                      {/* Fallback para legado */}
+                                      {!launch.approvedByTreasury && !launch.approvedByAccountant && !launch.approvedByDirector && launch.approvedBy && (
+                                        <div className="mb-1">
+                                          <p>Aprovado por: {launch.approvedBy}</p>
+                                          <p>{launch.approvedAt ? format(new Date(launch.approvedAt), 'dd/MM/yyyy HH:mm') : ''}</p>
+                                        </div>
+                                      )}
                                     </TooltipContent>
                                   </Tooltip>
                                 )}

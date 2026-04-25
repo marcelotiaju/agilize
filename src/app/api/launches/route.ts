@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
           },
           AND: [
             { contributorId: null },
-            { contributorName: '' }
+            { OR: [{ contributorName: '' }, { contributorName: null }] }, { type: { not: 'RENDA_BRUTA' } }
           ]
         },
         include: {

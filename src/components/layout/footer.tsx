@@ -178,16 +178,6 @@ export function Footer() {
                     <span>Contribuintes</span>
                   </Link>
                 )}
-                {canReportMonthlySummary && (
-                  <Link
-                    href="/reports/monthly-summary"
-                    className="px-3 py-2 text-sm hover:bg-indigo-50 flex items-center gap-2 transition-colors"
-                    onClick={() => setIsReportsOpen(false)}
-                  >
-                    <Printer className="h-4 w-4" />
-                    <span>Resumo Mensal</span>
-                  </Link>
-                )}
                 {canReportHistoryContribSynthetic && (
                   <Link
                     href="/reports/history-contrib-synthetic"
@@ -195,7 +185,7 @@ export function Footer() {
                     onClick={() => setIsReportsOpen(false)}
                   >
                     <Printer className="h-4 w-4" />
-                    <span>Histórico Sintético</span>
+                    <span>Contrib Sintético</span>
                   </Link>
                 )}
                 {canReportHistoryContribAnalytic && (
@@ -205,7 +195,17 @@ export function Footer() {
                     onClick={() => setIsReportsOpen(false)}
                   >
                     <Printer className="h-4 w-4" />
-                    <span>Histórico Analítico</span>
+                    <span>Contrib Analítico</span>
+                  </Link>
+                )}
+                {canReportMonthlySummary && (
+                  <Link
+                    href="/reports/monthly-summary"
+                    className="px-3 py-2 text-sm hover:bg-indigo-50 flex items-center gap-2 transition-colors"
+                    onClick={() => setIsReportsOpen(false)}
+                  >
+                    <Printer className="h-4 w-4" />
+                    <span>Resumo Mensal</span>
                   </Link>
                 )}
                 {canReportAudit && (
