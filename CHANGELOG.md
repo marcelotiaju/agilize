@@ -1,5 +1,13 @@
 # Histórico de Alterações
 
+### [1.4.13](https://github.com/marcelotiaju/agilize/compare/v1.4.12...v1.4.13) (2026-04-25)
+
+
+### 🐛 Correções de Erros
+
+* Ajuste Diversos 25042026 ([9d92794](https://github.com/marcelotiaju/agilize/commit/9d92794ff2db237dad7cc92f1bbced93545226da))
+* **test-logout:** logout all database aliases simultaneously ([79d7e70](https://github.com/marcelotiaju/agilize/commit/79d7e70d0927daa9f2f718999098e534003a43f1))
+
 ### [1.4.12](https://github.com/marcelotiaju/agilize/compare/v1.4.11...v1.4.12) (2026-04-22)
 
 
